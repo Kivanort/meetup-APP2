@@ -1033,19 +1033,7 @@
       friendsList.style.display = '';
       
       setTimeout(() => {
-        const requests = JSON.parse(localStorage.getItem('meetup_friend_requests') || '[]');
-        const users = UserSystem.getUsers();
-        
-        // Находим подтвержденных друзей
-        const friendRequests = requests.filter(req => 
-          (req.fromUserId === currentUser.id || req.toUserId === currentUser.id) && 
-          req.status === 'accepted'
-        );
-        
-        const friends = friendRequests.map(req => {
-          const friendId = req.fromUserId === currentUser.id ? req.toUserId : req.fromUserId;
-          return users.find(u => u.id === friendId);
-        }).filter(friend => friend !== undefined);
+        const friends = UserSystem.getUserFriends(currentUser.id);
         
         if(!friends || !friends.length) {
           friendsList.innerHTML = `<div class="addfriend-modal__msg" style="display:flex;color:#888;">У вас пока нет друзей</div>`;
@@ -1076,7 +1064,6 @@
         friendsList.style.display = '';
       }, 500);
     }
-
-  </script>
+</script>
 </body>
 </html>
