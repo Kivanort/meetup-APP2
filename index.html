@@ -10,7 +10,7 @@
   <style>
     :root {
       --bg-form: #121212;
-      --bg-card: rgba(30, 30, 30, 0.95);
+      --card-bg: rgba(30, 30, 30, 0.95);
       --text-primary: #fff;
       --text-secondary: #888888;
       --border-active: #00FFFF;
@@ -51,7 +51,7 @@
     .form-container {
       width: 100%;
       max-width: 400px;
-      background: var(--bg-card);
+      background: var(--card-bg);
       border-radius: var(--radius-card);
       padding: 30px 25px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.3);
@@ -290,6 +290,67 @@
       display: none;
     }
     
+    /* Стили для ввода кода */
+    .code-inputs {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    
+    .code-input {
+      width: 50px;
+      height: 60px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 600;
+      background: #1a1a1a;
+      border: 2px solid var(--border-inactive);
+      border-radius: 10px;
+      color: var(--text-primary);
+    }
+    
+    .code-input:focus {
+      border-color: var(--accent-cyan);
+      outline: none;
+    }
+    
+    .timer {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin: 10px 0;
+    }
+    
+    .resend-link {
+      text-align: center;
+      margin: 15px 0;
+    }
+    
+    .resend-btn {
+      background: none;
+      border: none;
+      color: var(--accent-cyan);
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    
+    .resend-btn:disabled {
+      color: var(--text-secondary);
+      cursor: not-allowed;
+    }
+    
+    .demo-hint {
+      background: rgba(0, 255, 255, 0.1);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 15px 0;
+      font-size: 13px;
+      text-align: center;
+    }
+    
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -345,6 +406,16 @@
         width: 100%;
         justify-content: center;
       }
+      
+      .code-input {
+        width: 45px;
+        height: 55px;
+        font-size: 20px;
+      }
+      
+      .code-inputs {
+        gap: 8px;
+      }
     }
     
     @media (max-width: 320px) {
@@ -359,6 +430,12 @@
       
       .main-title {
         font-size: 20px;
+      }
+      
+      .code-input {
+        width: 40px;
+        height: 50px;
+        font-size: 18px;
       }
     }
   </style>
@@ -512,33 +589,122 @@
       </div>
     </div>
 
-    <!-- Форма восстановления пароля -->
-    <div class="form-view" id="forgot-view">
+    <!-- Форма ввода email для восстановления -->
+    <div class="form-view" id="forgot-email-view">
       <h2 class="form-title">Восстановление пароля</h2>
-      <form id="forgot-form">
+      <form id="forgot-email-form">
         <div class="form-group">
           <div class="input-wrapper">
             <input type="email" class="form-input" id="forgot-email" placeholder="Ваш email" required>
             <span class="material-icons input-icon">email</span>
           </div>
-          <div class="error-message" id="forgot-error">
+          <div class="error-message" id="forgot-email-error">
             <span class="material-icons">error</span>
-            <span id="forgot-error-text"></span>
+            <span id="forgot-email-error-text"></span>
           </div>
-          <div class="success-message" id="forgot-success">
+          <div class="success-message" id="forgot-email-success">
             <span class="material-icons">check_circle</span>
-            Ссылка для восстановления отправлена на email
+            Код отправлен на ваш email
           </div>
         </div>
         
         <button type="submit" class="btn-primary">
           <span class="material-icons">send</span>
-          Отправить ссылку
+          Отправить код
+        </button>
+      </form>
+      
+      <div class="demo-hint" id="demo-hint" style="display: none;">
+        <strong>Демо-режим:</strong> Код сохранен в консоли браузера
+      </div>
+      
+      <div class="form-links">
+        <a href="#" class="form-link" id="link-back-to-login-from-email">Вернуться к входу</a>
+      </div>
+    </div>
+
+    <!-- Форма ввода кода -->
+    <div class="form-view" id="forgot-code-view">
+      <h2 class="form-title">Введите код</h2>
+      <p style="text-align: center; color: var(--text-secondary); margin-bottom: 20px; font-size: 14px;">
+        Код отправлен на <span id="user-email" style="color: var(--accent-cyan);"></span>
+      </p>
+      
+      <form id="forgot-code-form">
+        <div class="code-inputs">
+          <input type="text" class="code-input" id="code-1" maxlength="1" required>
+          <input type="text" class="code-input" id="code-2" maxlength="1" required>
+          <input type="text" class="code-input" id="code-3" maxlength="1" required>
+          <input type="text" class="code-input" id="code-4" maxlength="1" required>
+          <input type="text" class="code-input" id="code-5" maxlength="1" required>
+          <input type="text" class="code-input" id="code-6" maxlength="1" required>
+        </div>
+        
+        <div class="error-message" id="code-error">
+          <span class="material-icons">error</span>
+          Неверный код
+        </div>
+        
+        <div class="timer" id="timer">
+          Отправить код повторно через: <span id="time-left">05:00</span>
+        </div>
+        
+        <div class="resend-link">
+          <button type="button" class="resend-btn" id="resend-btn" disabled>
+            Отправить код повторно
+          </button>
+        </div>
+        
+        <button type="submit" class="btn-primary">
+          <span class="material-icons">check_circle</span>
+          Продолжить
         </button>
       </form>
       
       <div class="form-links">
-        <a href="#" class="form-link" id="link-back-to-login">Вернуться к входу</a>
+        <a href="#" class="form-link" id="link-back-to-email">Изменить email</a>
+      </div>
+    </div>
+
+    <!-- Форма нового пароля -->
+    <div class="form-view" id="new-password-view">
+      <h2 class="form-title">Новый пароль</h2>
+      
+      <form id="new-password-form">
+        <div class="form-group">
+          <div class="input-wrapper">
+            <input type="password" class="form-input" id="new-password" placeholder="Новый пароль" required>
+            <span class="material-icons input-icon">lock</span>
+            <button type="button" class="toggle-password" id="toggle-new-password">
+              <span class="material-icons">visibility_off</span>
+            </button>
+          </div>
+          <div class="error-message" id="new-password-error">
+            <span class="material-icons">error</span>
+            Пароль должен быть не менее 8 символов и содержать буквы и цифры
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <div class="input-wrapper">
+            <input type="password" class="form-input" id="new-password-confirm" placeholder="Подтвердите пароль" required>
+            <span class="material-icons input-icon">check_circle</span>
+          </div>
+          <div class="error-message" id="new-password-confirm-error">
+            <span class="material-icons">error</span>
+            Пароли не совпадают
+          </div>
+        </div>
+        
+        <button type="submit" class="btn-primary">
+          <span class="material-icons">lock_reset</span>
+          Сбросить пароль
+        </button>
+      </form>
+      
+      <div class="success-message" id="password-reset-success" style="display: none;">
+        <span class="material-icons">check_circle</span>
+        Пароль успешно изменен
       </div>
     </div>
 
@@ -553,6 +719,9 @@
       });
       document.getElementById(viewName + '-view').classList.add('active');
       hideAllMessages();
+      
+      // Скрываем спиннер при переключении
+      document.getElementById('form-spinner').style.display = 'none';
     }
 
     function hideAllMessages() {
@@ -560,6 +729,11 @@
         msg.style.display = 'none';
       });
     }
+
+    // Переменные для восстановления пароля
+    let resetEmail = '';
+    let resetTimer = null;
+    let timeLeft = 300; // 5 минут в секундах
 
     // Переключение видимости пароля
     function setupPasswordToggle(inputId, buttonId) {
@@ -614,11 +788,15 @@
     });
     document.getElementById('link-forgot').addEventListener('click', (e) => {
       e.preventDefault();
-      showView('forgot');
+      showView('forgot-email');
     });
-    document.getElementById('link-back-to-login').addEventListener('click', (e) => {
+    document.getElementById('link-back-to-login-from-email').addEventListener('click', (e) => {
       e.preventDefault();
       showView('login');
+    });
+    document.getElementById('link-back-to-email').addEventListener('click', (e) => {
+      e.preventDefault();
+      showView('forgot-email');
     });
 
     // Социальные кнопки
@@ -633,6 +811,7 @@
     // Настройка переключателей пароля
     setupPasswordToggle('login-password', 'toggle-login-password');
     setupPasswordToggle('register-password', 'toggle-register-password');
+    setupPasswordToggle('new-password', 'toggle-new-password');
 
     // Валидация подтверждения пароля
     document.getElementById('register-confirm').addEventListener('input', function() {
@@ -646,6 +825,75 @@
         error.style.display = 'none';
       }
     });
+
+    // Валидация нового пароля
+    document.getElementById('new-password-confirm').addEventListener('input', function() {
+      const password = document.getElementById('new-password').value;
+      const confirm = this.value;
+      const error = document.getElementById('new-password-confirm-error');
+      
+      if (confirm && password !== confirm) {
+        error.style.display = 'flex';
+      } else {
+        error.style.display = 'none';
+      }
+    });
+
+    // Логика ввода кода
+    const codeInputs = [
+      document.getElementById('code-1'),
+      document.getElementById('code-2'),
+      document.getElementById('code-3'),
+      document.getElementById('code-4'),
+      document.getElementById('code-5'),
+      document.getElementById('code-6')
+    ];
+
+    codeInputs.forEach((input, index) => {
+      input.addEventListener('input', (e) => {
+        // Автопереход к следующему полю
+        if (e.target.value.length === 1 && index < codeInputs.length - 1) {
+          codeInputs[index + 1].focus();
+        }
+        
+        // Проверка на удаление
+        if (e.target.value.length === 0 && index > 0) {
+          codeInputs[index - 1].focus();
+        }
+      });
+      
+      // Обработка клавиш
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && e.target.value.length === 0 && index > 0) {
+          codeInputs[index - 1].focus();
+        }
+      });
+    });
+
+    // Таймер для повторной отправки кода
+    function startTimer() {
+      clearInterval(resetTimer);
+      timeLeft = 300;
+      updateTimerDisplay();
+      
+      resetTimer = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+        
+        if (timeLeft <= 0) {
+          clearInterval(resetTimer);
+          document.getElementById('resend-btn').disabled = false;
+          document.getElementById('timer').style.display = 'none';
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      document.getElementById('time-left').textContent = 
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
 
     // Форма входа
     document.getElementById('login-form').addEventListener('submit', function(e) {
@@ -680,7 +928,6 @@
       
       UserSystem.setCurrentUser(user);
       
-      // Показываем спиннер и редирект
       document.getElementById('form-spinner').style.display = 'block';
       setTimeout(() => {
         window.location.href = 'map.html';
@@ -779,40 +1026,172 @@
       }
     });
 
-    // Форма восстановления пароля
-    document.getElementById('forgot-form').addEventListener('submit', function(e) {
+    // Форма запроса сброса пароля
+    document.getElementById('forgot-email-form').addEventListener('submit', async function(e) {
       e.preventDefault();
       
       const email = document.getElementById('forgot-email').value.trim();
-      const error = document.getElementById('forgot-error');
-      const success = document.getElementById('forgot-success');
+      const error = document.getElementById('forgot-email-error');
+      const success = document.getElementById('forgot-email-success');
+      const demoHint = document.getElementById('demo-hint');
       
       hideAllMessages();
       
       if (!email) {
-        document.getElementById('forgot-error-text').textContent = 'Введите email';
+        document.getElementById('forgot-email-error-text').textContent = 'Введите email';
         error.style.display = 'flex';
         return;
       }
       
       const user = UserSystem.findUser(email);
       if (!user) {
-        document.getElementById('forgot-error-text').textContent = 'Пользователь с таким email не найден';
+        document.getElementById('forgot-email-error-text').textContent = 'Пользователь с таким email не найден';
         error.style.display = 'flex';
         return;
       }
       
-      // Имитация отправки email
+      // Показываем спиннер
       document.getElementById('form-spinner').style.display = 'block';
-      setTimeout(() => {
+      
+      try {
+        // Создаем запрос на сброс
+        const resetCode = UserSystem.createPasswordResetRequest(email);
+        
+        if (!resetCode) {
+          throw new Error('Не удалось создать запрос на сброс пароля');
+        }
+        
+        // Имитируем отправку email
+        await UserSystem.simulateEmailSend(email, resetCode);
+        
+        // Сохраняем email для следующих шагов
+        resetEmail = email;
+        
+        // Показываем успех
         document.getElementById('form-spinner').style.display = 'none';
         success.style.display = 'flex';
+        demoHint.style.display = 'block';
         
+        // Показываем код в консоли для демонстрации
+        console.log('🔐 Демо-режим: Код для сброса пароля:', resetCode);
+        console.log('📧 Email:', email);
+        
+        // Переходим к вводу кода через 2 секунды
+        setTimeout(() => {
+          document.getElementById('user-email').textContent = email;
+          showView('forgot-code');
+          startTimer();
+        }, 2000);
+        
+      } catch (error) {
+        document.getElementById('form-spinner').style.display = 'none';
+        document.getElementById('forgot-email-error-text').textContent = 'Ошибка при отправке кода';
+        error.style.display = 'flex';
+      }
+    });
+
+    // Повторная отправка кода
+    document.getElementById('resend-btn').addEventListener('click', async function() {
+      if (!resetEmail) return;
+      
+      this.disabled = true;
+      document.getElementById('timer').style.display = 'block';
+      
+      document.getElementById('form-spinner').style.display = 'block';
+      
+      try {
+        const resetCode = UserSystem.createPasswordResetRequest(resetEmail);
+        
+        if (resetCode) {
+          await UserSystem.simulateEmailSend(resetEmail, resetCode);
+          
+          // Показываем код в консоли для демонстрации
+          console.log('🔐 Демо-режим: Новый код для сброса пароля:', resetCode);
+          console.log('📧 Email:', resetEmail);
+          
+          startTimer();
+        }
+      } catch (error) {
+        console.error('Error resending code:', error);
+      } finally {
+        document.getElementById('form-spinner').style.display = 'none';
+      }
+    });
+
+    // Форма ввода кода
+    document.getElementById('forgot-code-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const code = codeInputs.map(input => input.value).join('');
+      const error = document.getElementById('code-error');
+      
+      hideAllMessages();
+      
+      if (code.length !== 6) {
+        error.style.display = 'flex';
+        return;
+      }
+      
+      // Проверяем код
+      if (UserSystem.verifyResetCode(resetEmail, code)) {
+        showView('new-password');
+      } else {
+        error.style.display = 'flex';
+      }
+    });
+
+    // Форма нового пароля
+    document.getElementById('new-password-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const code = codeInputs.map(input => input.value).join('');
+      const newPassword = document.getElementById('new-password').value;
+      const confirmPassword = document.getElementById('new-password-confirm').value;
+      
+      hideAllMessages();
+      
+      let hasErrors = false;
+      
+      // Валидация пароля
+      if (!newPassword || newPassword.length < 8 || !/[a-zA-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
+        document.getElementById('new-password-error').style.display = 'flex';
+        hasErrors = true;
+      }
+      
+      // Подтверждение пароля
+      if (newPassword !== confirmPassword) {
+        document.getElementById('new-password-confirm-error').style.display = 'flex';
+        hasErrors = true;
+      }
+      
+      if (hasErrors) return;
+      
+      // Сбрасываем пароль
+      document.getElementById('form-spinner').style.display = 'block';
+      
+      if (UserSystem.resetPassword(resetEmail, code, newPassword)) {
+        document.getElementById('form-spinner').style.display = 'none';
+        document.getElementById('password-reset-success').style.display = 'flex';
+        
+        // Очищаем поля
+        codeInputs.forEach(input => input.value = '');
+        document.getElementById('new-password').value = '';
+        document.getElementById('new-password-confirm').value = '';
+        
+        // Возвращаем к форме входа через 2 секунды
         setTimeout(() => {
           showView('login');
-        }, 3000);
-      }, 1500);
+          resetEmail = '';
+        }, 2000);
+      } else {
+        document.getElementById('form-spinner').style.display = 'none';
+        document.getElementById('code-error').style.display = 'flex';
+      }
     });
+
+    // Инициализация
+    document.getElementById('timer').style.display = 'block';
+    document.getElementById('resend-btn').disabled = true;
   </script>
 </body>
 </html>
