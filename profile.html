@@ -657,9 +657,10 @@
     }
 
     // Функция для удаления аватара
-    function removeAvatar() {
+        // Функция для удаления аватара
+        function removeAvatar() {
       const avatarImg = document.getElementById('avatar-img');
-      const avatarPlaceholder = document.getElementById('avatar-placeholder');
+      const avatarPlaceholder = document.querySelector('.avatar-placeholder-svg');
       const avatar = document.getElementById('profile-avatar');
       const btnRemove = document.getElementById('btn-remove-avatar');
       const avatarUpload = document.getElementById('avatar-upload');
