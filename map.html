@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Карта друзей — MeetUP</title>
+  <!-- Material Icons (Google Fonts) -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://unpkg.com/feather-icons"></script>
+  <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=90b86ccd-906b-465a-a7bc-4aa12e596aec" type="text/javascript"></script>
+  <!-- User System -->
+  <script src="userSystem.js"></script>
+  <link rel="icon" href="meetup-logo.png" type="image/x-icon">  
+  <!-- Стили под дизайн registration.html -->
+  <style>
+    :root {
+      --main-bg: #0B1222;
+      --container: #181F31;
+      --primary: #2CB4FF;
+      --primary-gradient: linear-gradient(92.03deg, #2CB4FF 0%, #B970FE 100%);
+      --secondary: #B970FE;
+      --border-radius: 24px;
+      --border-input: #222A3A;
+      --text-light: #fff;
+      --text-muted: #9FAFD4;
+      --shadow: 0px 2px 18px 0px #0000003e;
+      --avatar-bg: #222C48;
+      --avatar-status-online: #2cb4ff;
+      --avatar-status-offline: #697999;
+      --avatar-status-invisible: #d82222;
+      --button-radius: 16px;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+      background: var(--main-bg);
+      color: var(--text-light);
+      min-height: 100vh;
+      min-width: 100vw;
+      width: 100vw;
+      overflow: hidden;
+    }
+    #app-root {
+      height: 100vh;
+      width: 100vw;
+      min-height: 100vh;
+      min-width: 100vw;
+      display: flex;
+      flex-direction: column;
+    }
+    header.meetup-header {
+      background: var(--container);
+      box-shadow: var(--shadow);
+      border-radius: 0 0 var(--border-radius) var(--border-radius);
+      padding: 32px 0 18px 0;
+      text-align: center;
+      margin: 0;
+      z-index: 2;
+      position: relative;
+    }
+    .meetup-header__logo {
+      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+      font-weight: 800;
+      font-size: 2rem;
+      letter-spacing: -1px;
+      background: var(--primary-gradient);
+      color: transparent;
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      vertical-align: middle;
+      line-height: 1;
+      margin-bottom: 4px;
+      display: inline-block;
+    }
+    .meetup-header__subtitle {
+      color: var(--text-muted);
+      font-size: 1.08rem;
+      font-weight: 500;
+      margin: 0 auto 2px auto;
+      letter-spacing: 0.01em;
+      display: block;
+    }
+    /* Новая кнопка профиля */
+    .profile-btn-main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      top: 18px;
+      right: 28px;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--container);
+      border: none;
+      box-shadow: 0 2.2px 12px #2cb4ff30, 0 1.2px 10px #25274522;
+      cursor: pointer;
+      outline: none;
+      z-index: 22;
+      transition: box-shadow 0.17s, background 0.14s;
+    }
+    .profile-btn-main:active,
+    .profile-btn-main:focus {
+      background: linear-gradient(92deg, #2CB4FF 14%, #876AE6 96%);
+      box-shadow: 0 4px 24px #2cb4ff55;
+    }
+    .profile-btn-main .material-icons {
+      font-size: 2em;
+      color: var(--primary);
+      transition: color 0.18s;
+    }
+    .profile-btn-main:active .material-icons,
+    .profile-btn-main:focus .material-icons {
+      color: #fff;
+    }
+    @media (max-width: 800px) {
+      .profile-btn-main {
+        width: 40px;
+        height: 40px;
+        top: 8px;
+        right: 8px;
+      }
+      .profile-btn-main .material-icons {
+        font-size: 1.6em;
+      }
+    }
+    .friends-map-container {
+      flex: 1 1 auto;
+      position: relative;
+      width: 100vw;
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+      background: var(--main-bg);
+      /* map will fully fill this container */
+      display: block;
+      /* no padding needed so it fully aligns with viewport */
+    }
+    #map {
+      position: absolute;
+      left: 0; right: 0; top: 0; bottom: 0;
+      width: 100vw;
+      height: 100%;
+      box-shadow: none;
+      border-radius: 0;
+      margin: 0;
+      max-width: none;
+      min-width: 0;
+      min-height: 0;
+      background: #131827;
+      z-index: 0;
+    }
+    .add-friend-btn-main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: var(--primary-gradient);
+      border: none;
+      color: var(--text-light);
+      border-radius: var(--button-radius);
+      font-size: 1.12em;
+      font-weight: 600;
+      padding: 16px 32px 16px 20px;
+      box-shadow: 0 2px 12px var(--primary), 0 1.5px 10px #2527452b;
+      cursor: pointer;
+      transition: box-shadow 0.2s, background 0.21s;
+      outline: none;
+      position: absolute;
+      right: 36px;
+      bottom: 44px;
+      z-index: 10;
+    }
+    @media (max-width: 800px) {
+      .add-friend-btn-main {
+        font-size: 1em;
+        padding: 14px 18px;
+        right: 13px;
+        bottom: 18px;
+      }
+    }
+    .add-friend-btn-main:active,
+    .add-friend-btn-main:focus {
+      box-shadow: 0 4px 22px #2cb4ff65, 0 1.5px 14px #25274544;
+      background: linear-gradient(92deg, #2CB4FF 14%, #876AE6 96%);
+    }
+    .add-friend-btn-main .material-icons {
+      font-size: 1.41em;
+      vertical-align: middle;
+    }
+    /* Кнопка навигатора */
+    .navigator-center-btn {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 44px;
+      z-index: 15;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      border: none;
+      background: var(--container);
+      box-shadow: 0 2.2px 12px #2cb4ff30, 0 1.2px 10px #25274522;
+      cursor: pointer;
+      outline: none;
+      transition: box-shadow 0.19s, background 0.16s;
+    }
+    .navigator-center-btn:active,
+    .navigator-center-btn:focus {
+      background: linear-gradient(92deg, #2CB4FF 14%, #876AE6 96%);
+      box-shadow: 0 4px 24px #2cb4ff55;
+    }
+    .navigator-center-btn .material-icons {
+      font-size: 2.3em;
+      color: var(--primary);
+      transition: color 0.18s;
+    }
+    .navigator-center-btn:active .material-icons,
+    .navigator-center-btn:focus .material-icons {
+      color: #fff;
+    }
+    @media (max-width: 800px) {
+      .navigator-center-btn {
+        width: 46px;
+        height: 46px;
+        bottom: 18px;
+      }
+      .navigator-center-btn .material-icons {
+        font-size: 2em;
+      }
+    }
+    /* Карточка балуна */
+    .card {
+      background: var(--container);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 24px 20px 18px 20px;
+      margin: 0;
+      font-size: 1.09em;
+      color: var(--text-light);
+      border: none;
+      min-width: 220px;
+    }
+    .card .avatar-base.profile {
+      margin-right: 20px;
+    }
+    .avatar-base {
+      width: 48px;
+      height: 48px;
+      display: inline-block;
+      border-radius: 50%;
+      background: var(--avatar-bg);
+      position: relative;
+      overflow: hidden;
+      border: 3px solid var(--container);
+      box-shadow: 0 1px 8px #2cb4ff33;
+    }
+    .avatar-base.profile {
+      width: 100px;
+      height: 100px;
+    }
+    .avatar-base svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .avatar-status-indicator {
+      position: absolute;
+      right: 6px;
+      bottom: 7px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 3px solid var(--container);
+      box-shadow: 0 1px 8px #0008;
+    }
+    .status-online    { background: var(--avatar-status-online);}
+    .status-offline   { background: var(--avatar-status-offline);}
+    .status-invisible { background: var(--avatar-status-invisible);}
+    .card .avatar-status-indicator {
+      right: 6px;
+      bottom: 12px;
+    }
+    .card .btn-profile-open {
+      margin-top: 14px;
+      background: var(--primary-gradient);
+      color: var(--text-light);
+      font-weight: 600;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 14px;
+      box-shadow: 0 1.5px 9px #2cb4ffa8;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .card .btn-profile-open:active,
+    .card .btn-profile-open:focus {
+      background: linear-gradient(92deg, #2CB4FF 19%, #876AE6 83%);
+      color: #fff;
+    }
+    /* Мелкие стили: */
+    .muted {
+      color: var(--text-muted);
+      font-size: 0.98em;
+      font-weight: 500;
+    }
+    /* Медиа-запросы */
+    @media (max-width: 800px) {
+      #map { height: 100%; min-height: 0;}
+      header.meetup-header { padding: 28px 0 13px 0; }
+      .card { min-width: 120px; padding: 17px 10px 14px 10px;}
+    }
+  </style>
+</head>
+<body>
+  <div id="app-root">
+    <header class="meetup-header">
+      <span class="meetup-header__logo">meetup</span>
+      <div class="meetup-header__subtitle">Карта друзей</div>
+      <!-- Кнопка профиля в правом верхнем углу -->
+      <button class="profile-btn-main" id="profile-btn" title="Профиль">
+        <span class="material-icons">person</span>
+      </button>
+    </header>
+    <div class="friends-map-container">
+      <div id="map"></div>
+      <button class="add-friend-btn-main" id="add-friend-btn">
+        <span class="material-icons">person_add</span>
+        Добавить друга
+      </button>
+      <!-- Кнопка для центрирования карты на пользователе -->
+      <button class="navigator-center-btn" id="navigator-center-btn" title="Показать моё местоположение">
+        <span class="material-icons">navigation</span>
+      </button>
+    </div>
+  </div>
+  <script>
+    const MIN_ZOOM = 3;
+    const GEOLOCATION_ZOOM = 15;
+    const RESTRICTED_BOUNDS = [
+      [-85, -179.99999],   // southwest: минимальная широта/долгота
+      [85, 179.99999]      // northeast: максимальная широта/долгота
+    ];
+    let map = null;
+    
+    // Функция для получения всех пользователей (кроме текущего)
+    function getAllUsers() {
+      const currentUser = UserSystem.getCurrentUser();
+      const allUsers = UserSystem.getUsers();
+      
+      // Фильтруем текущего пользователя и возвращаем остальных
+      return allUsers.filter(user => user.id !== currentUser.id);
+    }
+    
+    // Функция для получения текущего пользователя
+    function getCurrentUser() {
+      return UserSystem.getCurrentUser();
+    }
+
+    // Функция для создания балуна пользователя
+    function createUserBalloon(user, isCurrentUser = false) {
+      const statusClass = user.invisible ? 'status-invisible'
+                        : (user.status === 'online' || user.online) ? 'status-online'
+                        : 'status-offline';
+      
+      // Базовый SVG аватар для балуна (большой)
+      const baseAvatarSVG = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="50" fill="#222C48"/>
+          <ellipse cx="50" cy="42" rx="23" ry="25" fill="#fff"/>
+          <ellipse cx="50" cy="77" rx="35" ry="21" fill="#fff"/>
+        </svg>
+      `;
+      
+      const avatarContent = user.avatar 
+        ? `<img src="${user.avatar}" alt="${user.nickname}" style="width:100px;height:100px;border-radius:50%;object-fit:cover;">`
+        : baseAvatarSVG;
+      
+      const statusText = user.invisible ? 'Скрыт' 
+                        : (user.status === 'online' || user.online) ? 'В сети' 
+                        : 'Не в сети';
+      
+      const displayName = isCurrentUser ? 'Вы' : (user.nickname || 'Пользователь');
+      
+      return `
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:18px;">
+            <span class="avatar-base profile">
+              ${avatarContent}
+              <span class="avatar-status-indicator ${statusClass}"></span>
+            </span>
+            <div>
+              <div style="font-size:1.12em;font-weight:600;">${displayName}</div>
+              <div class="muted">${statusText}</div>
+              ${!isCurrentUser ? '<button class="btn-profile-open">Открыть профиль</button>' : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ИНИЦИАЛИЗАЦИЯ КАРТЫ
+    document.addEventListener('DOMContentLoaded', function() {
+      // Проверяем авторизацию
+      const currentUser = UserSystem.getCurrentUser();
+      if (!currentUser) {
+        window.location.href = 'registration.html';
+        return;
+      }
+
+      if (window.ymaps && ymaps.ready) {
+        ymaps.ready(function () {
+          // Используем позицию текущего пользователя или позицию по умолчанию
+          const initialPosition = currentUser.position || [55.751244, 37.618423];
+          
+          map = new ymaps.Map('map', {
+            center: initialPosition,
+            zoom: 13,
+            controls: []
+          });
+          
+          map.setBounds(RESTRICTED_BOUNDS, {
+            checkZoomRange: true,
+            duration: 0
+          });
+          map.options.set('restrictMapArea', RESTRICTED_BOUNDS);
+          map.options.set('minZoom', MIN_ZOOM);
+          map.events.add('boundschange', function(e) {
+            var newZoom = map.getZoom();
+            if (newZoom < MIN_ZOOM) {
+              map.setZoom(MIN_ZOOM);
+            }
+          });
+          
+          // ДОБАВЛЯЕМ ПРОСТУЮ ГОЛУБУЮ ТОЧКУ ДЛЯ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
+          const currentUserPlacemark = new ymaps.Placemark(
+            initialPosition,
+            {
+              balloonContent: createUserBalloon(currentUser, true)
+            },
+            {
+              preset: 'islands#blueCircleDotIcon',
+              iconColor: '#2CB4FF'
+            }
+          );
+          map.geoObjects.add(currentUserPlacemark);
+          
+          // Добавляем маркеры других пользователей
+          const otherUsers = getAllUsers();
+          console.log('Найдено пользователей для отображения:', otherUsers.length);
+          
+          otherUsers.forEach(function(user) {
+            // Используем позицию пользователя или случайную позицию рядом с текущим пользователем
+            let userPosition = user.position;
+            if (!userPosition) {
+              // Генерируем случайную позицию рядом с текущим пользователем
+              const lat = initialPosition[0] + (Math.random() - 0.5) * 0.02;
+              const lon = initialPosition[1] + (Math.random() - 0.5) * 0.02;
+              userPosition = [lat, lon];
+            }
+            
+            // Определяем цвет точки в зависимости от статуса
+            let preset = 'islands#circleDotIcon';
+            let iconColor = '#697999'; // по умолчанию серый
+            
+            if (user.invisible) {
+              iconColor = '#d82222'; // красный для скрытых
+            } else if (user.status === 'online' || user.online) {
+              iconColor = '#2cb4ff'; // синий для онлайн
+            }
+            
+            const userPlacemark = new ymaps.Placemark(
+              userPosition,
+              {
+                balloonContent: createUserBalloon(user, false)
+              },
+              {
+                preset: preset,
+                iconColor: iconColor
+              }
+            );
+            
+            userPlacemark.events.add('click', function (e) {
+              userPlacemark.balloon.open();
+            });
+            
+            map.geoObjects.add(userPlacemark);
+          });
+          
+          // Подгоняем карту при изменении размера
+          function fitMapHeight() {
+            var header = document.querySelector('header.meetup-header');
+            var container = document.querySelector('.friends-map-container');
+            var h = window.innerHeight - (header ? header.offsetHeight : 0);
+            container.style.height = h + "px";
+            document.getElementById('map').style.height = "100%";
+          }
+          fitMapHeight();
+          window.addEventListener('resize', fitMapHeight);
+          
+          // навигация на своё местоположение
+          var navigatorBtn = document.getElementById('navigator-center-btn');
+          if(navigatorBtn) {
+            navigatorBtn.addEventListener('click', function() {
+              if (!navigator.geolocation) {
+                alert('Ваш браузер не поддерживает геолокацию.');
+                return;
+              }
+              navigatorBtn.disabled = true;
+              navigatorBtn.classList.add('nav-busy');
+              navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                  var coords = [pos.coords.latitude, pos.coords.longitude];
+                  map.setCenter(coords, GEOLOCATION_ZOOM, {duration: 400});
+                  
+                  // Обновляем позицию текущего пользователя
+                  if(window._currentUserPlacemark) {
+                    map.geoObjects.remove(window._currentUserPlacemark);
+                  }
+                  
+                  // Обновляем позицию в данных пользователя
+                  const users = UserSystem.getUsers();
+                  const currentUser = UserSystem.getCurrentUser();
+                  const userIndex = users.findIndex(u => u.id === currentUser.id);
+                  
+                  if (userIndex !== -1) {
+                    users[userIndex].position = coords;
+                    UserSystem.saveUsers(users);
+                    UserSystem.setCurrentUser(users[userIndex]);
+                  }
+                  
+                  window._currentUserPlacemark = new ymaps.Placemark(
+                    coords,
+                    {
+                      balloonContent: createUserBalloon(currentUser, true)
+                    },
+                    {
+                      preset: 'islands#blueCircleDotIcon',
+                      iconColor: '#2CB4FF'
+                    }
+                  );
+                  map.geoObjects.add(window._currentUserPlacemark);
+                  
+                  navigatorBtn.disabled = false;
+                  navigatorBtn.classList.remove('nav-busy');
+                },
+                function(err) {
+                  alert('Не удалось получить местоположение: ' + (
+                    err.message || 'Ошибка'
+                  ));
+                  navigatorBtn.disabled = false;
+                  navigatorBtn.classList.remove('nav-busy');
+                },
+                {enableHighAccuracy:true, timeout:10000, maximumAge:180000}
+              );
+            });
+          }
+        });
+      } else {
+        console.error('Yandex Maps не загрузились');
+      }
+    });
+    
+    // FAB: добавить друга
+    document.getElementById("add-friend-btn").onclick = function() {
+      window.location.href = 'addfriend.html';
+    };
+    
+    // Кнопка профиля: просто открывать profile.html
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.feather) feather.replace();
+      
+      // Подгоняем высоту карты при загрузке
+      var header = document.querySelector('header.meetup-header');
+      var container = document.querySelector('.friends-map-container');
+      var h = window.innerHeight - (header ? header.offsetHeight : 0);
+      container.style.height = h + "px";
+      document.getElementById('map').style.height = "100%";
+      
+      // ФУНКЦИОНАЛ ДЛЯ КНОПКИ ПРОФИЛЯ (редирект на profile.html)
+      var profileBtn = document.getElementById('profile-btn');
+      if (profileBtn) {
+        profileBtn.addEventListener('click', function() {
+          window.location.href = 'profile.html';
+        });
+      }
+    });
+  </script>
+</body>
+</html>

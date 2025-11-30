@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Настройки профиля — MeetUP</title>
+  <!-- Material Icons (Google Fonts) -->
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- User System -->
+  <script src="userSystem.js"></script>
+  <link rel="icon" href="meetup-logo.png" type="image/x-icon"> 
+  <style>
+    :root {
+      --modal-bg: rgba(30, 30, 30, 0.95);
+      --modal-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      --modal-radius: 12px;
+      --red: #FF0000;
+      --green: #00FF00;
+      --grey: #888888;
+      --btn-cancel-bg: #333333;
+      --btn-cancel-color: #fff;
+      --btn-radius: 8px;
+      --btn-delete-bg: #FF0000;
+      --btn-delete-shadow-hover: 0 2px 6px rgba(255,0,0,0.4);
+      --spinner-color: #00FFFF;
+    }
+    body {
+      background: #121212;
+      color: #fff;
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .settings-card {
+      background: rgba(30,30,30,0.87);
+      border-radius: 16px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.32);
+      width: 480px;
+      max-width: 98vw;
+      margin: 0 auto;
+      padding: 42px 40px 40px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      animation: settings-fadein 0.55s cubic-bezier(.27,.69,.51,1.35);
+    }
+    @media (max-width: 600px) {
+      .settings-card {
+        width: 100vw;
+        min-width: 0;
+        max-width: 100vw;
+        border-radius: 0;
+        padding: 24px 10px 24px 10px;
+      }
+    }
+    .settings-title {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      margin-bottom: 16px;
+      opacity: 0.98;
+      text-align: center;
+    }
+    .settings-options {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+    
+    /* Стили для формы смены пароля */
+    .password-form {
+      display: none;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 10px;
+      padding: 15px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .password-form.active {
+      display: flex;
+    }
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-label {
+      color: #b0b0b0;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .form-input {
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid #333333;
+      border-radius: 8px;
+      padding: 12px 15px;
+      color: #fff;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .form-input:focus {
+      border-color: #00FFFF;
+      box-shadow: 0 0 6px #00FFFF;
+    }
+    .form-input.error {
+      border-color: var(--red);
+    }
+    .form-hint {
+      color: var(--grey);
+      font-size: 12px;
+      margin-top: 3px;
+    }
+    .form-error {
+      color: var(--red);
+      font-size: 12px;
+      margin-top: 4px;
+      display: none;
+    }
+    .form-error.active {
+      display: block;
+    }
+    .password-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .btn-save-password {
+      background: linear-gradient(92deg, #00FFFF 0%, #9400D3 100%);
+      color: #fff;
+      border: none;
+      border-radius: var(--btn-radius);
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter 0.14s;
+    }
+    .btn-save-password:hover {
+      filter: brightness(1.1);
+    }
+    .btn-cancel-password {
+      background: var(--btn-cancel-bg);
+      color: #fff;
+      border: none;
+      border-radius: var(--btn-radius);
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: filter 0.14s;
+    }
+    .btn-cancel-password:hover {
+      filter: brightness(1.1);
+    }
+    
+    .delete-account-row {
+      margin-top: 44px;
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn-delete-account {
+      background: var(--btn-delete-bg);
+      color: #fff;
+      border: none;
+      border-radius: var(--btn-radius);
+      padding: 13px 22px 13px 17px;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: none;
+      cursor: pointer;
+      transition: box-shadow 0.18s, filter 0.18s, background 0.16s;
+      outline: none;
+    }
+    .btn-delete-account .material-icons {
+      font-size: 18px;
+      vertical-align: -2px;
+    }
+    .btn-delete-account:hover, .btn-delete-account:focus-visible {
+      box-shadow: var(--btn-delete-shadow-hover);
+      filter: brightness(103%);
+    }
+
+    /* Кнопка назад (Arrow) - ИСПРАВЛЕНА */
+    .back-arrow-btn {
+      position: absolute;
+      left: 24px;
+      top: 22px;
+      background: #232323;
+      border: none;
+      border-radius: 50%;
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.17s, filter 0.19s;
+      z-index: 3;
+      outline: none;
+      box-shadow: 0 2.5px 12px rgba(0,0,0,0.4);
+      text-decoration: none;
+    }
+    .back-arrow-btn:focus-visible, .back-arrow-btn:hover {
+      background: #2b2b2b;
+      filter: brightness(1.08);
+    }
+    .back-arrow-btn .material-icons {
+      font-size: 24px;
+      color: #fff;
+      vertical-align: middle;
+    }
+    @media (max-width: 600px) {
+      .back-arrow-btn {
+        left: 12px;
+        top: 13px;
+        width: 40px;
+        height: 40px;
+      }
+      .back-arrow-btn .material-icons {
+        font-size: 20px;
+      }
+    }
+
+    /* Информация об удалении */
+    .deletion-info {
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px solid rgba(255, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      width: 100%;
+      display: none;
+    }
+    .deletion-info.active {
+      display: block;
+      animation: fadeIn 0.3s ease-in;
+    }
+    .deletion-title {
+      color: var(--red);
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .deletion-text {
+      color: var(--grey);
+      font-size: 14px;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+    .deletion-timer {
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      background: rgba(255, 0, 0, 0.2);
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .btn-cancel-deletion {
+      background: var(--btn-cancel-bg);
+      color: #fff;
+      border: none;
+      border-radius: var(--btn-radius);
+      padding: 8px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: filter 0.14s;
+      margin-top: 10px;
+    }
+    .btn-cancel-deletion:hover {
+      filter: brightness(1.1);
+    }
+
+    /* МОДАЛЬНОЕ ОКНО */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.44);
+      display: none;
+      z-index: 1010;
+      transition: opacity 0.2s;
+    }
+    .modal-backdrop.active {
+      display: block;
+      opacity: 1;
+      animation: modal-fade-bg 0.26s;
+    }
+    @keyframes modal-fade-bg {
+      from { opacity: 0;}
+      to   { opacity: 1;}
+    }
+    .modal-dialog {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%,-50%) scale(0.9);
+      min-width: 0;
+      width: 400px;
+      max-width: 94vw;
+      background: var(--modal-bg);
+      border-radius: var(--modal-radius);
+      box-shadow: var(--modal-shadow);
+      z-index: 1020;
+      opacity: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      padding: 0;
+      transition: none;
+    }
+    .modal-dialog.active {
+      opacity: 1;
+      pointer-events: auto;
+      animation: modal-dialog-pop-in 0.30s cubic-bezier(.34,1.56,.64,1) forwards;
+    }
+    .modal-dialog.hide {
+      animation: modal-dialog-pop-out 0.23s cubic-bezier(.41,-0.21,.68,0.93) forwards;
+      pointer-events: none;
+    }
+    @media (max-width:500px) {
+      .modal-dialog, .modal-dialog.active {
+        width: 90vw;
+        min-width: 0;
+        padding: 0;
+      }
+    }
+    @keyframes modal-dialog-pop-in {
+      from { opacity: 0; transform: translate(-50%,-50%) scale(0.90);}
+      to   { opacity: 1; transform: translate(-50%,-50%) scale(1);}
+    }
+    @keyframes modal-dialog-pop-out {
+      from { opacity: 1; transform: translate(-50%,-50%) scale(1);}
+      to   { opacity: 0; transform: translate(-50%,-50%) scale(0.92);}
+    }
+    .modal-content {
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      border-radius: var(--modal-radius);
+      gap: 18px;
+    }
+    .modal-title {
+      color: var(--red);
+      font-size: 18px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 7px;
+      letter-spacing: 0.01em;
+    }
+    .modal-warning {
+      color: var(--grey);
+      font-size: 14px;
+      line-height: 1.55;
+      text-align: left;
+      margin-bottom: 7px;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      width: 100%;
+      flex-direction: row;
+      justify-content: flex-end;
+    }
+    .btn-modal-cancel {
+      background: var(--btn-cancel-bg);
+      color: var(--btn-cancel-color);
+      border: none;
+      border-radius: var(--btn-radius);
+      font-size: 14px;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: filter 0.14s;
+      font-weight: 500;
+      outline: none;
+    }
+    .btn-modal-cancel:hover, .btn-modal-cancel:focus-visible {
+      filter: brightness(1.10);
+    }
+    .btn-modal-delete {
+      background: var(--btn-delete-bg);
+      color: #fff;
+      border: none;
+      border-radius: var(--btn-radius);
+      font-size: 14px;
+      padding: 10px 21px 10px 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: box-shadow 0.13s, filter 0.17s, background 0.13s;
+      outline: none;
+      box-shadow: none;
+      position: relative;
+    }
+    .btn-modal-delete .material-icons {
+      font-size: 18px;
+      margin-right: 0;
+      vertical-align: -3px;
+      color: #fff;
+    }
+    .btn-modal-delete:hover, .btn-modal-delete:focus-visible {
+      box-shadow: var(--btn-delete-shadow-hover);
+      filter: brightness(1.03);
+    }
+    .modal-spinner-wrap {
+      width: 100%;
+      min-height: 66px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid var(--spinner-color);
+      border-top: 4px solid transparent;
+      border-radius: 50%;
+      animation: modal-spin 0.95s linear infinite;
+      margin: 8px 0;
+    }
+    @keyframes modal-spin {
+      to { transform: rotate(360deg);}
+    }
+    .modal-error {
+      color: var(--red);
+      font-size: 14px;
+      margin-bottom: 7px;
+      animation: fade-in-error 0.2s;
+      text-align: center;
+      width: 100%;
+    }
+    @keyframes fade-in-error {
+      from { opacity:0; transform:translateY(-7px);}
+      to   { opacity:1; transform:translateY(0);}
+    }
+    .btn-retry-delete {
+      background: var(--btn-cancel-bg);
+      color: #fff;
+      border: none;
+      border-radius: var(--btn-radius);
+      font-size: 14px;
+      padding: 9px 18px;
+      cursor: pointer;
+      margin-top: 3px;
+      transition: filter 0.13s;
+      font-weight: 500;
+    }
+    .btn-retry-delete:hover, .btn-retry-delete:focus-visible {
+      filter: brightness(1.10);
+    }
+    @keyframes settings-fadein {
+      from { opacity:0; transform:translateY(25px);}
+      to   { opacity:1; transform:translateY(0);}
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="settings-card" role="main" tabindex="-1">
+    <!-- Кнопка "назад" (вверх слева) - ИСПРАВЛЕНА -->
+    <a class="back-arrow-btn" id="btn-back-arrow" href="profile.html" title="Назад в профиль" aria-label="Вернуться в профиль">
+      <span class="material-icons" aria-hidden="true">arrow_back</span>
+    </a>
+    <div class="settings-title">Настройки профиля</div>
+    <div class="settings-options">
+      <!-- Смена пароля -->
+      <div>
+        <label style="color:#b0b0b0; font-size:14px; font-weight:500; margin-bottom:6px; display:block; opacity:0.94;">Изменить пароль</label>
+        <button style="margin-bottom:0; background:#333333; color:#fff; border:none; padding:11px 18px; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer;" id="btn-change-password">
+          Сменить пароль
+        </button>
+        
+        <!-- Форма смены пароля -->
+        <div class="password-form" id="password-form">
+          <div class="form-field">
+            <label class="form-label">Текущий пароль</label>
+            <input type="password" class="form-input" id="current-password" placeholder="Введите текущий пароль">
+            <div class="form-error" id="current-password-error">Неверный текущий пароль</div>
+          </div>
+          
+          <div class="form-field">
+            <label class="form-label">Новый пароль</label>
+            <input type="password" class="form-input" id="new-password" placeholder="Введите новый пароль">
+            <div class="form-hint">Пароль должен содержать минимум 8 символов, буквы и цифры</div>
+            <div class="form-error" id="new-password-error">Слабый пароль</div>
+          </div>
+          
+          <div class="form-field">
+            <label class="form-label">Подтвердите новый пароль</label>
+            <input type="password" class="form-input" id="confirm-password" placeholder="Повторите новый пароль">
+            <div class="form-error" id="confirm-password-error">Пароли не совпадают</div>
+          </div>
+          
+          <div class="password-actions">
+            <button class="btn-save-password" id="btn-save-password">Сохранить</button>
+            <button class="btn-cancel-password" id="btn-cancel-password">Отменить</button>
+          </div>
+        </div>
+      </div>
+      
+      <div>
+        <label style="color:#b0b0b0; font-size:14px; font-weight:500; margin-bottom:6px; display:block; opacity:0.94;">Уведомления</label>
+        <input type="checkbox" id="notif-toggle" style="accent-color:#00ffff; vertical-align:-2px; margin-right:6px;">
+        <label for="notif-toggle" style="font-size:14px; color:#ededed; letter-spacing:0.01em;">Push-уведомления</label>
+      </div>
+    </div>
+
+    <!-- Информация об отложенном удалении -->
+    <div class="deletion-info" id="deletion-info">
+      <div class="deletion-title">
+        <span class="material-icons">warning</span>
+        Аккаунт помечен на удаление
+      </div>
+      <div class="deletion-text">
+        Ваш аккаунт будет полностью удален через:
+      </div>
+      <div class="deletion-timer" id="deletion-timer"></div>
+      <button class="btn-cancel-deletion" id="btn-cancel-deletion">Отменить удаление</button>
+    </div>
+
+    <div class="delete-account-row">
+      <button class="btn-delete-account" id="btn-delete-account" type="button">
+        <span class="material-icons" aria-hidden="true">delete</span>
+        Удалить аккаунт
+      </button>
+    </div>
+  </div>
+
+  <!-- Модальное подтверждение -->
+  <div class="modal-backdrop" id="modal-delete-backdrop" tabindex="-1" aria-hidden="true"></div>
+  <div class="modal-dialog" id="modal-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <form class="modal-content" id="delete-modal-content" autocomplete="off" onsubmit="return false;">
+      <div class="modal-title" id="delete-modal-title">Вы уверены, что хотите удалить аккаунт?</div>
+      <div class="modal-warning">
+        Ваш аккаунт будет немедленно деактивирован и вы больше не сможете входить в систему.<br><br>
+        Все данные будут полностью удалены через 30 дней. В течение этого времени вы можете отменить удаление, войдя в систему.
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancel" id="btn-modal-cancel">Отменить</button>
+        <button type="submit" class="btn-modal-delete" id="btn-modal-delete" >
+          <span class="material-icons" aria-hidden="true">delete</span>
+          Удалить аккаунт
+        </button>
+      </div>
+    </form>
+    <!-- Здесь показываем спиннер/ошибку -->
+    <div id="modal-spinner-block" style="display:none;">
+      <div class="modal-spinner-wrap">
+        <div class="modal-spinner" role="status" aria-label="Загрузка"></div>
+      </div>
+    </div>
+    <div id="modal-error-block" style="display:none;">
+      <div class="modal-error" id="delete-error-text"></div>
+      <button type="button" class="btn-retry-delete" id="btn-retry-delete">Повторить</button>
+    </div>
+  </div>
+
+  <script>
+    // Переменные элементов
+    const btnDelete = document.getElementById('btn-delete-account');
+    const modalBackdrop = document.getElementById('modal-delete-backdrop');
+    const modalDialog = document.getElementById('modal-delete-dialog');
+    const modalContent = document.getElementById('delete-modal-content');
+    const btnModalCancel = document.getElementById('btn-modal-cancel');
+    const btnModalDelete = document.getElementById('btn-modal-delete');
+    const spinnerBlock = document.getElementById('modal-spinner-block');
+    const errorBlock = document.getElementById('modal-error-block');
+    const errorText = document.getElementById('delete-error-text');
+    const btnRetryDelete = document.getElementById('btn-retry-delete');
+    const deletionInfo = document.getElementById('deletion-info');
+    const deletionTimer = document.getElementById('deletion-timer');
+    const btnCancelDeletion = document.getElementById('btn-cancel-deletion');
+
+    // Элементы для смены пароля
+    const btnChangePassword = document.getElementById('btn-change-password');
+    const passwordForm = document.getElementById('password-form');
+    const btnSavePassword = document.getElementById('btn-save-password');
+    const btnCancelPassword = document.getElementById('btn-cancel-password');
+    const currentPasswordInput = document.getElementById('current-password');
+    const newPasswordInput = document.getElementById('new-password');
+    const confirmPasswordInput = document.getElementById('confirm-password');
+
+    let modalPreviouslyFocused = null;
+    let modalOpen = false;
+    let errorTimeout = null;
+    let timerInterval = null;
+
+    // Функция для проверки статуса удаления аккаунта
+    function checkDeletionStatus() {
+      const currentUser = UserSystem.getCurrentUser();
+      if (!currentUser) return;
+
+      // Проверяем, помечен ли аккаунт на удаление
+      if (currentUser.scheduledForDeletion) {
+        const deletionTime = currentUser.scheduledForDeletion;
+        const now = Date.now();
+        
+        if (now >= deletionTime) {
+          // Время удаления наступило - удаляем аккаунт
+          deleteUserAccount(currentUser.id);
+          UserSystem.logout();
+          // Перенаправляем на страницу входа с сообщением
+          showDeletionCompleteMessage();
+          return;
+        }
+        
+        // Показываем информацию об отложенном удалении
+        showDeletionInfo(deletionTime);
+        btnDelete.style.display = 'none';
+      } else {
+        // Аккаунт не помечен на удаление
+        deletionInfo.classList.remove('active');
+        btnDelete.style.display = 'flex';
+      }
+    }
+
+    // Функция для показа сообщения о завершении удаления
+    function showDeletionCompleteMessage() {
+      // Создаем модальное окно с сообщением
+      const messageModal = document.createElement('div');
+      messageModal.innerHTML = `
+        <div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999;">
+          <div style="background:var(--modal-bg); padding:30px; border-radius:12px; text-align:center; max-width:400px;">
+            <div style="color:var(--red); font-size:20px; margin-bottom:15px;">
+              <span class="material-icons" style="font-size:40px;">delete</span>
+            </div>
+            <div style="color:#fff; font-size:18px; margin-bottom:10px;">Аккаунт удален</div>
+            <div style="color:var(--grey); margin-bottom:20px;">Ваш аккаунт был полностью удален из системы.</div>
+            <button onclick="redirectToRegistration()" style="background:var(--btn-delete-bg); color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">
+              Перейти к регистрации
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(messageModal);
+    }
+
+    // Функция для перенаправления на регистрацию
+    function redirectToRegistration() {
+      window.location.href = 'registration.html?deleted=true';
+    }
+
+    // Функция для показа информации об отложенном удалении
+    function showDeletionInfo(deletionTime) {
+      deletionInfo.classList.add('active');
+      
+      function updateTimer() {
+        const now = Date.now();
+        const timeLeft = deletionTime - now;
+        
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          deletionTimer.textContent = 'Удаление...';
+          return;
+        }
+        
+        const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        
+        deletionTimer.textContent = `${days}д ${hours}ч ${minutes}м`;
+      }
+      
+      updateTimer();
+      timerInterval = setInterval(updateTimer, 60000); // Обновляем каждую минуту
+    }
+
+    // Функция для пометки аккаунта на удаление
+    function scheduleAccountDeletion(userId) {
+      const users = UserSystem.getUsers();
+      const userIndex = users.findIndex(u => u.id === userId);
+      
+      if (userIndex !== -1) {
+        // Помечаем аккаунт на удаление через 30 дней
+        users[userIndex].scheduledForDeletion = Date.now() + (30 * 24 * 60 * 60 * 1000);
+        // Деактивируем аккаунт
+        users[userIndex].active = false;
+        users[userIndex].status = 'deactivated';
+        UserSystem.saveUsers(users);
+        return true;
+      }
+      return false;
+    }
+
+    // Функция для отмены удаления аккаунта
+    function cancelAccountDeletion(userId) {
+      const users = UserSystem.getUsers();
+      const userIndex = users.findIndex(u => u.id === userId);
+      
+      if (userIndex !== -1) {
+        // Убираем пометку на удаление
+        delete users[userIndex].scheduledForDeletion;
+        // Активируем аккаунт
+        users[userIndex].active = true;
+        users[userIndex].status = 'online';
+        UserSystem.saveUsers(users);
+        
+        // Обновляем текущего пользователя
+        UserSystem.setCurrentUser(users[userIndex]);
+        return true;
+      }
+      return false;
+    }
+
+    // Функция для полного удаления аккаунта
+    function deleteUserAccount(userId) {
+      const users = UserSystem.getUsers();
+      const updatedUsers = users.filter(u => u.id !== userId);
+      UserSystem.saveUsers(updatedUsers);
+      
+      // Также удаляем связанные данные
+      const requests = JSON.parse(localStorage.getItem('meetup_friend_requests') || '[]');
+      const updatedRequests = requests.filter(req => 
+        req.fromUserId !== userId && req.toUserId !== userId
+      );
+      localStorage.setItem('meetup_friend_requests', JSON.stringify(updatedRequests));
+      
+      // Удаляем активность пользователя
+      localStorage.removeItem(`user_activity_${userId}`);
+      localStorage.removeItem(`user_online_${userId}`);
+    }
+
+    // Функция для смены пароля
+    function changePassword() {
+      const currentUser = UserSystem.getCurrentUser();
+      if (!currentUser) return false;
+
+      const currentPassword = currentPasswordInput.value;
+      const newPassword = newPasswordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+
+      // Сбрасываем ошибки
+      resetPasswordErrors();
+
+      let hasErrors = false;
+
+      // Проверка текущего пароля
+      if (UserSystem.hashPassword(currentPassword) !== currentUser.password) {
+        showPasswordError('current-password-error', 'Неверный текущий пароль');
+        currentPasswordInput.classList.add('error');
+        hasErrors = true;
+      }
+
+      // Проверка нового пароля
+      if (!/^.{8,}$/.test(newPassword) || !/[a-zа-я]/i.test(newPassword) || !/\d/.test(newPassword)) {
+        showPasswordError('new-password-error', 'Пароль должен содержать минимум 8 символов, буквы и цифры');
+        newPasswordInput.classList.add('error');
+        hasErrors = true;
+      }
+
+      // Проверка подтверждения пароля
+      if (newPassword !== confirmPassword) {
+        showPasswordError('confirm-password-error', 'Пароли не совпадают');
+        confirmPasswordInput.classList.add('error');
+        hasErrors = true;
+      }
+
+      if (hasErrors) return false;
+
+      // Обновляем пароль
+      const users = UserSystem.getUsers();
+      const userIndex = users.findIndex(u => u.id === currentUser.id);
+      
+      if (userIndex !== -1) {
+        users[userIndex].password = UserSystem.hashPassword(newPassword);
+        UserSystem.saveUsers(users);
+        
+        // Обновляем текущего пользователя
+        UserSystem.setCurrentUser(users[userIndex]);
+        return true;
+      }
+
+      return false;
+    }
+
+    // Функция для показа ошибок пароля
+    function showPasswordError(elementId, message) {
+      const errorElement = document.getElementById(elementId);
+      errorElement.textContent = message;
+      errorElement.classList.add('active');
+    }
+
+    // Функция для сброса ошибок пароля
+    function resetPasswordErrors() {
+      const errorElements = document.querySelectorAll('.form-error');
+      errorElements.forEach(element => {
+        element.classList.remove('active');
+      });
+      
+      const inputElements = document.querySelectorAll('.form-input');
+      inputElements.forEach(element => {
+        element.classList.remove('error');
+      });
+    }
+
+    // Функция для сброса формы пароля
+    function resetPasswordForm() {
+      currentPasswordInput.value = '';
+      newPasswordInput.value = '';
+      confirmPasswordInput.value = '';
+      resetPasswordErrors();
+      passwordForm.classList.remove('active');
+    }
+
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+      const currentUser = UserSystem.getCurrentUser();
+      
+      if (!currentUser) {
+        window.location.href = 'registration.html';
+        return;
+      }
+      
+      // Проверяем статус удаления
+      checkDeletionStatus();
+
+      // Обработчики для смены пароля
+      btnChangePassword.addEventListener('click', function() {
+        passwordForm.classList.toggle('active');
+        if (passwordForm.classList.contains('active')) {
+          currentPasswordInput.focus();
+        }
+      });
+
+      btnCancelPassword.addEventListener('click', resetPasswordForm);
+
+      btnSavePassword.addEventListener('click', function() {
+        if (changePassword()) {
+          alert('Пароль успешно изменен!');
+          resetPasswordForm();
+        }
+      });
+
+      // Обработчики Enter в полях пароля
+      [currentPasswordInput, newPasswordInput, confirmPasswordInput].forEach(input => {
+        input.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            if (changePassword()) {
+              alert('Пароль успешно изменен!');
+              resetPasswordForm();
+            }
+          }
+        });
+      });
+    });
+
+    // Обработчик отмены удаления
+    btnCancelDeletion.onclick = function() {
+      const currentUser = UserSystem.getCurrentUser();
+      if (currentUser && cancelAccountDeletion(currentUser.id)) {
+        deletionInfo.classList.remove('active');
+        btnDelete.style.display = 'flex';
+        clearInterval(timerInterval);
+        showMsg('Удаление аккаунта отменено');
+      }
+    };
+
+    function showMsg(message) {
+      // Простая реализация показа сообщения
+      alert(message);
+    }
+
+    // Модальное окно удаления
+    function openDeleteModal() {
+      modalBackdrop.classList.add('active');
+      modalDialog.classList.add('active');
+      modalDialog.classList.remove('hide');
+      modalOpen = true;
+      modalContent.style.display = '';
+      spinnerBlock.style.display = 'none';
+      errorBlock.style.display = 'none';
+      btnModalDelete.disabled = false;
+      btnModalDelete.tabIndex = 0;
+      btnModalCancel.disabled = false;
+      btnModalCancel.tabIndex = 0;
+      document.body.style.overflow = 'hidden';
+      modalPreviouslyFocused = document.activeElement;
+      setTimeout(() => btnModalDelete.focus(), 50);
+    }
+
+    function closeDeleteModal() {
+      modalDialog.classList.add('hide');
+      setTimeout(() => {
+        modalBackdrop.classList.remove('active');
+        modalDialog.classList.remove('active','hide');
+        document.body.style.overflow = '';
+        modalOpen = false;
+        if (modalPreviouslyFocused && typeof modalPreviouslyFocused.focus === "function") {
+          setTimeout(()=>modalPreviouslyFocused.focus(), 120);
+        }
+      }, 220);
+    }
+
+    // Открытие по кнопке
+    btnDelete.addEventListener('click', (e) => {
+      e.preventDefault();
+      openDeleteModal();
+    });
+
+    // "Отмена" - закрыть модалку
+    btnModalCancel.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeDeleteModal();
+    });
+
+    // Закрытие модалки по клику вне
+    modalBackdrop.addEventListener('mousedown', (e) => {
+      if (modalOpen) closeDeleteModal();
+    });
+    
+    // Escape закрывает модалку
+    document.addEventListener('keydown', function(e){
+      if (modalOpen && (e.key === "Escape" || e.key === "Esc")) {
+        closeDeleteModal();
+      }
+    });
+
+    // Модальная форма отправки (удаление аккаунта)
+    modalContent.addEventListener('submit', (e) => {
+      e.preventDefault();
+      btnModalDelete.disabled = true;
+      btnModalCancel.disabled = true;
+      btnModalDelete.tabIndex = -1;
+      btnModalCancel.tabIndex = -1;
+      modalContent.style.display = 'none';
+      errorBlock.style.display = 'none';
+      spinnerBlock.style.display = '';
+      
+      const currentUser = UserSystem.getCurrentUser();
+      if (currentUser && scheduleAccountDeletion(currentUser.id)) {
+        // Успешно помечен на удаление
+        setTimeout(() => {
+          spinnerBlock.style.display = 'none';
+          closeDeleteModal();
+          // Сначала выходим из системы
+          UserSystem.logout();
+          // Показываем сообщение о успешном удалении
+          setTimeout(() => {
+            const message = document.createElement('div');
+            message.innerHTML = `
+              <div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; z-index:9999;">
+                <div style="background:var(--modal-bg); padding:30px; border-radius:12px; text-align:center; max-width:400px;">
+                  <div style="color:var(--red); font-size:20px; margin-bottom:15px;">
+                    <span class="material-icons" style="font-size:40px;">warning</span>
+                  </div>
+                  <div style="color:#fff; font-size:18px; margin-bottom:10px;">Аккаунт деактивирован</div>
+                  <div style="color:var(--grey); margin-bottom:20px;">
+                    Ваш аккаунт помечен на удаление. Полное удаление произойдет через 30 дней.<br><br>
+                    В течение этого времени вы можете отменить удаление, войдя в систему.
+                  </div>
+                  <button onclick="window.location.href='registration.html'" style="background:var(--btn-delete-bg); color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-size:14px;">
+                    Перейти к регистрации
+                  </button>
+                </div>
+              </div>
+            `;
+            document.body.appendChild(message);
+          }, 100);
+        }, 1500);
+      } else {
+        showDeleteError('Ошибка при удалении аккаунта');
+      }
+    });
+
+    // Попытка повторения удаления после ошибки
+    btnRetryDelete.addEventListener('click', () => {
+      errorBlock.style.display = 'none';
+      spinnerBlock.style.display = '';
+      const currentUser = UserSystem.getCurrentUser();
+      if (currentUser && scheduleAccountDeletion(currentUser.id)) {
+        setTimeout(() => {
+          spinnerBlock.style.display = 'none';
+          closeDeleteModal();
+          UserSystem.logout();
+          setTimeout(() => {
+            window.location.href = 'registration.html?deletion_scheduled=true';
+          }, 300);
+        }, 1500);
+      } else {
+        showDeleteError('Ошибка при удалении аккаунта');
+      }
+    });
+
+    function showDeleteError(message) {
+      spinnerBlock.style.display = 'none';
+      errorBlock.style.display = '';
+      errorText.textContent = message;
+      btnModalDelete.disabled = false;
+      btnModalCancel.disabled = false;
+      btnModalDelete.tabIndex = 0;
+      btnModalCancel.tabIndex = 0;
+      modalContent.style.display = '';
+    }
+
+    function clearDeleteError() {
+      if (errorTimeout) {
+        clearTimeout(errorTimeout);
+        errorTimeout = null;
+      }
+      errorBlock.style.display = 'none';
+    }
+
+    // Фокусировка/доступность
+    modalDialog.addEventListener('animationend', function(ev){
+      if (modalOpen && modalDialog.classList.contains('active')) {
+        btnModalDelete.focus();
+      }
+    });
+
+    // Перехват Esc/tab фокусов на модалке
+    modalDialog.addEventListener('keydown', function(e){
+      if (!modalOpen) return;
+      if (e.key === "Tab") {
+        const focusable = modalDialog.querySelectorAll('button,[tabindex="0"]');
+        const arr = Array.prototype.slice.call(focusable);
+        if (!arr.length) return;
+        const first = arr[0], last = arr[arr.length-1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    });
+
+    // Сброс всего состояния при закрытии
+    modalBackdrop.addEventListener('transitionend', function() {
+      if (!modalBackdrop.classList.contains('active')) clearDeleteError();
+    });
+  </script>
+</body>
+</html>

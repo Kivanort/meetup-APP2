@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Добавить друга — MeetUP</title>
+  <link href="https://fonts.googleapis.com/css?family=Inter:400,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- User System -->
+  <script src="userSystem.js"></script>
+  <link rel="icon" href="meetup-logo.png" type="image/x-icon"> 
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100vw;
+      font-family: 'Inter', 'Montserrat', Arial, sans-serif;
+      background: transparent;
+    }
+    body {
+      min-height: 100vh;
+      min-width: 100vw;
+      background: rgba(0,0,0,0.8);
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+    }
+    .addfriend-modal-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 1000;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* For animation out */
+      transition: opacity 0.33s;
+    }
+    .addfriend-modal {
+      background: rgba(30,30,30,0.9);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      padding: 24px 20px;
+      width: 100%;
+      max-width: 500px;
+      margin: 0 8px;
+      animation: modal-in 0.4s ease-out;
+      transform: translateY(0);
+      opacity: 1;
+      position: relative;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+    @keyframes modal-in {
+      from { opacity: 0; transform: translateY(-20px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+    .addfriend-modal__close {
+      position: absolute;
+      top: 15px; right: 18px;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 28px;
+      cursor: pointer;
+      z-index: 10;
+      transition: color 0.14s;
+    }
+    .addfriend-modal__close:focus, .addfriend-modal__close:hover {
+      color: #fff;
+    }
+    .addfriend-modal__tabs {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      margin-bottom: 18px;
+      margin-top: 4px;
+    }
+    .addfriend-tab {
+      font-size: 16px;
+      font-weight: 600;
+      color: #888;
+      opacity: 0.7;
+      background: none;
+      border: none;
+      outline: none;
+      padding: 0 0 6px 0;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: color 0.18s, opacity 0.18s, border-bottom-color 0.18s;
+    }
+    .addfriend-tab.active {
+      color: #00FFFF;
+      border-bottom: 2px solid #00FFFF;
+      opacity: 1;
+    }
+    .addfriend-modal__header {
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+      text-align: center;
+      margin-bottom: 24px;
+      margin-top: 4px;
+      letter-spacing: 0.01em;
+      line-height: 1.22;
+    }
+    .addfriend-modal__search-row {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      margin-bottom: 10px;
+      gap: 0;
+    }
+    .search-input-wrap {
+      position: relative;
+      flex: 1 1 0;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+    }
+    .search-input__icon-left {
+      position: absolute;
+      left: 16px;
+      z-index: 2;
+      color: #888;
+      font-size: 22px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    .addfriend-search-input {
+      width: 100%;
+      height: 48px;
+      padding-left: 44px;
+      padding-right: 12px;
+      border: 1.5px solid #333333;
+      border-radius: 8px 0 0 8px;
+      background: rgba(255,255,255,0.03);
+      color: #fff;
+      font-size: 16px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.17s, box-shadow 0.23s;
+      box-shadow: none;
+      letter-spacing: 0.01em;
+    }
+    .addfriend-search-input:focus {
+      border-color: #00FFFF;
+      box-shadow: 0 0 6px #00FFFF;
+      background: rgba(255,255,255,0.04);
+      z-index: 2;
+    }
+    .addfriend-modal__search-btn {
+      height: 48px;
+      min-width: 52px;
+      background: linear-gradient(92deg, #00FFFF 0%, #9400D3 100%);
+      color: #fff;
+      font-size: 0;
+      border: none;
+      border-radius: 0 8px 8px 0;
+      font-weight: 600;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0 18px;
+      cursor: pointer;
+      transition: box-shadow 0.15s, filter 0.14s;
+      box-shadow: none;
+      outline: none;
+      margin-left: -1.5px;
+      position: relative;
+    }
+    .addfriend-modal__search-btn .material-icons {
+      font-size: 22px;
+      color: #fff;
+      margin-right: 0;
+    }
+    .addfriend-modal__search-btn span.text {
+      font-size: 14px;
+      font-weight: 600;
+      margin-left: 4px;
+      color: #fff;
+      letter-spacing: 0.01em;
+    }
+    .addfriend-modal__search-btn:focus,
+    .addfriend-modal__search-btn:hover {
+      box-shadow: 0 0 10px #00FFFF40;
+      filter: brightness(1.08);
+    }
+    .addfriend-modal__loader {
+      margin: 16px 0 4px 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      gap: 13px;
+      justify-content: flex-start;
+      opacity: 1;
+      animation: fadein 0.26s;
+      color: #888;
+    }
+    .af-spinner {
+      width: 20px;
+      height: 20px;
+      border: 2.6px solid #00FFFF33;
+      border-top: 2.6px solid #00FFFF;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-right: 2px;
+      flex-shrink: 0;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg);}
+    }
+    @keyframes fadein {
+      from { opacity: 0;}
+      to { opacity: 1;}
+    }
+    .addfriend-modal__error,
+    .addfriend-modal__msg {
+      margin: 13px 0 0 0;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 14px;
+      color: #FF0000;
+      opacity: 0;
+      background: none;
+      animation: errorpop 0.26s forwards;
+      min-height: 18px;
+    }
+    .addfriend-modal__msg {
+      color: #888;
+      font-size: 12px;
+    }
+    @keyframes errorpop {
+      0% { opacity: 0; transform: translateY(-5px);}
+      40% { opacity: 0.78; transform: translateY(4px);}
+      100% { opacity: 1; transform: translateY(0);}
+    }
+    .addfriend-modal__results {
+      margin-top: 16px;
+      margin-bottom: 4px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 24px;
+      animation: fadein 0.3s;
+    }
+    .af-result-card {
+      background: rgba(255,255,255,0.01);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 17px;
+      transition: background 0.19s;
+      padding: 10px 16px 10px 10px;
+      box-shadow: 0 2px 10px #0002;
+      position: relative;
+    }
+    .af-result-card.selected,
+    .af-result-card:focus-within {
+      background: rgba(255,255,255,0.05);
+      transform: scale(1.05);
+      z-index: 2;
+      transition: background 0.19s, transform 0.2s;
+    }
+    .af-result-avatar {
+      width: 48px;
+      height: 48px;
+      min-width: 48px;
+      min-height: 48px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2px solid #333;
+      background: #20243a;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .af-result-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+      flex: 1 1 0;
+    }
+    .af-result-nick {
+      font-size: 16px;
+      color: #fff;
+      font-weight: 600;
+      word-break: break-all;
+      letter-spacing: 0.01em;
+      margin-bottom: 2px;
+    }
+    .af-result-status {
+      font-size: 12px;
+      font-weight: 400;
+      color: #00FFFF;
+      opacity: 0.85;
+      transition: color 0.18s;
+    }
+    .af-result-status.offline {
+      color: #666666;
+      opacity: 1;
+    }
+    .af-result-actions {
+      margin-left: 12px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .af-result-btn-add {
+      background: linear-gradient(90deg, #00FFFF 0%, #9400D3 100%);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 7px 13px 7px 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      outline: none;
+      cursor: pointer;
+      transition: filter 0.14s, box-shadow 0.16s, background 0.18s;
+      box-shadow: none;
+      min-width: 0;
+      animation: fadein 0.24s;
+    }
+    .af-result-btn-add .material-icons {
+      font-size: 16px;
+      margin-right: 3px;
+      color: #fff;
+    }
+    .af-result-btn-add:focus,
+    .af-result-btn-add:hover
+    {
+      filter: brightness(1.10);
+      box-shadow: 0 2px 6px rgba(0,255,255,0.30);
+      outline: none;
+    }
+    .af-result-btn-added {
+      background: #343844;
+      color: #aaa;
+      border: none;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 6px;
+      padding: 7.5px 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+      cursor: default;
+      transition: background 0.12s;
+      animation: fadein 0.21s;
+    }
+    .af-result-btn-added .material-icons {
+      font-size: 16px;
+      margin-right: 2px;
+      color: #0fa;
+    }
+    .af-result-btn-pending {
+      background: #555;
+      color: #ccc;
+      border: none;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 6px;
+      padding: 7.5px 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+      cursor: default;
+    }
+    .addfriend-modal__recent {
+      margin: 10px 0 0 0;
+    }
+    .af-recent-header {
+      color: #888;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 5px;
+      margin-left: 2px;
+      letter-spacing: 0.01em;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .af-recent-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 13px;
+    }
+    .af-recent-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: #b0b0b0;
+      background: rgba(255,255,255,0.03);
+      border-radius: 7px;
+      padding: 4px 11px 4px 7px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.14s, color 0.14s;
+      margin-bottom: 2px;
+    }
+    .af-recent-item .material-icons {
+      font-size: 14px;
+      color: #888;
+      margin-right: 1px;
+    }
+    .af-recent-item:focus,
+    .af-recent-item:hover {
+      background: rgba(0,255,255,0.08);
+      color: #00FFFF;
+      outline: none;
+    }
+    .addfriend-modal__hint {
+      margin-top: 16px;
+      color: #888;
+      font-size: 12px;
+      text-align: center;
+      opacity: 0.93;
+      letter-spacing: 0.009em;
+    }
+    /* --- Входящие запросы вкладка --- */
+    .addfriend-modal__incoming-list {
+      margin-top: 10px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      min-height: 38px;
+      margin-bottom: 2px;
+      animation: fadein 0.3s;
+    }
+    .af-incoming-card {
+      background: rgba(255,255,255,0.01);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 10px 14px 10px 10px;
+      position: relative;
+    }
+    .af-incoming-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+      flex: 1 1 0;
+    }
+    .af-incoming-nick {
+      font-size: 15px;
+      color: #fff;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      margin-bottom: 2px;
+      word-break: break-all;
+    }
+    .af-incoming-status {
+      font-size: 12px;
+      color: #00FFFF;
+      opacity: 0.85;
+    }
+    .af-incoming-actions {
+      display: flex;
+      flex-direction: row;
+      gap: 9px;
+      margin-left: 10px;
+    }
+    .af-incoming-btn-accept {
+      background: linear-gradient(92deg, #34eb89 0%, #08e7bd 100%);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 13px;
+      cursor: pointer;
+      transition: filter 0.13s, box-shadow 0.18s;
+      display: flex;
+      align-items: center;
+      gap: 2.5px;
+      box-shadow: none;
+      outline: none;
+    }
+    .af-incoming-btn-accept .material-icons {
+      font-size: 16px;
+      color: #fff;
+      margin-right: 1px;
+    }
+    .af-incoming-btn-accept:focus,
+    .af-incoming-btn-accept:hover {
+      filter: brightness(1.08);
+      box-shadow: 0 0 8px #58ffe855;
+      outline: none;
+    }
+    .af-incoming-btn-reject {
+      background: #d82222;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 13px;
+      cursor: pointer;
+      transition: filter 0.13s, box-shadow 0.18s;
+      display: flex;
+      align-items: center;
+      gap: 2.5px;
+      box-shadow: none;
+      outline: none;
+    }
+    .af-incoming-btn-reject .material-icons {
+      font-size: 16px;
+      color: #fff;
+      margin-right: 2px;
+    }
+    .af-incoming-btn-reject:focus,
+    .af-incoming-btn-reject:hover {
+      filter: brightness(1.13);
+      box-shadow: 0 0 8px #ff585855;
+      outline: none;
+    }
+    /* --- Мобильная адаптивность --- */
+    @media (max-width: 768px) {
+      .addfriend-modal {
+        width: calc(100vw - 16px);
+        max-width: 100vw;
+        border-radius: 0 0 18px 18px;
+        padding: 21px 8px 16px 8px;
+        min-height: 95vh;
+        margin: 0;
+      }
+      .addfriend-modal__header { font-size: 18px; margin-bottom: 18px;}
+      .addfriend-modal__search-row {
+        flex-direction: row;
+        margin-bottom: 8px;
+      }
+      .addfriend-tab { font-size: 15px; }
+      .af-result-card, .af-incoming-card {
+        padding: 9px 6px 9px 5px;
+        gap: 10px;
+        border-radius: 9px;
+      }
+      .af-result-avatar { width: 46px; height: 46px; min-width: 46px; min-height: 46px;}
+      .af-result-btn-add, .af-result-btn-added, .af-result-btn-pending,
+      .af-incoming-btn-accept, .af-incoming-btn-reject {
+        font-size: 12px;
+        padding: 7.5px 0;
+        min-width: 0;
+        flex: 1 1 48%;
+        justify-content: center;
+      }
+      .af-incoming-actions { flex-direction: column; gap: 7px;margin-left:5px;}
+    }
+    @media (max-width: 520px) {
+      .addfriend-modal { border-radius: 0 0 12px 12px; }
+      .af-result-btn-add, .af-result-btn-added, .af-result-btn-pending, .af-incoming-btn-accept, .af-incoming-btn-reject { font-size: 12px; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="addfriend-modal-bg" tabindex="-1" id="af-modal-bg">
+    <div class="addfriend-modal" id="addfriend-modal">
+      <button class="addfriend-modal__close" aria-label="Закрыть" id="af-close-btn" tabindex="0">
+        <span class="material-icons">close</span>
+      </button>
+      <div class="addfriend-modal__tabs">
+        <button class="addfriend-tab active" id="tab-search" tabindex="0">Поиск</button>
+        <button class="addfriend-tab" id="tab-incoming" tabindex="0">Запросы</button>
+        <button class="addfriend-tab" id="tab-friends" tabindex="0">Друзья</button>
+      </div>
+      <div class="addfriend-modal__header" id="af-modal-title">Добавить друга</div>
+      <form class="addfriend-modal__search-row" id="af-search-form" autocomplete="off">
+        <div class="search-input-wrap">
+          <span class="search-input__icon-left material-icons">search</span>
+          <input
+            class="addfriend-search-input"
+            id="af-search-input"
+            name="nickname"
+            type="text"
+            maxlength="32"
+            autocomplete="off"
+            placeholder="Введите никнейм друга"
+            required
+            tabindex="0"
+          >
+        </div>
+        <button class="addfriend-modal__search-btn" id="af-search-btn" type="submit" aria-label="Поиск друга" tabindex="0">
+          <span class="material-icons">search</span>
+          <span class="text">Поиск</span>
+        </button>
+      </form>
+      <div class="addfriend-modal__loader" id="af-loader" style="display:none;">
+        <span class="af-spinner"></span>
+        <span>Ищем...</span>
+      </div>
+      <div class="addfriend-modal__error" id="af-error" style="display:none;">
+        <span class="material-icons" style="font-size:18px;color:#FF0000;vertical-align:-3px;">error_outline</span>
+        <span id="af-error-text"></span>
+      </div>
+      <div class="addfriend-modal__msg" id="af-msg" style="display:none;">
+        <span class="material-icons" style="font-size:15px;color:#888;vertical-align:-3px;">info</span>
+        <span id="af-msg-text"></span>
+      </div>
+      <!-- Результаты поиска -->
+      <div class="addfriend-modal__results" id="af-results" style="display:none;"></div>
+      <!-- Недавние поиски -->
+      <div class="addfriend-modal__recent" id="af-recent" style="display:none;">
+        <div class="af-recent-header">
+          <span class="material-icons" style="font-size:15px;color:#888;vertical-align:-2px;">history</span>
+          Недавние поиски
+        </div>
+        <div class="af-recent-list" id="af-recent-list"></div>
+      </div>
+      <!-- Входящие запросы -->
+      <div class="addfriend-modal__incoming-list" id="af-incoming-list" style="display:none;"></div>
+      <!-- Список друзей -->
+      <div class="addfriend-modal__results" id="af-friends-list" style="display:none;"></div>
+      <div class="addfriend-modal__hint">Можно искать только по никнейму</div>
+    </div>
+  </div>
+  <script>
+    // UX: Модальное окно - Esc/фокусы
+    const bg = document.getElementById('af-modal-bg');
+    const closeBtn = document.getElementById('af-close-btn');
+    function closeModal() {
+      window.location.href = "map.html";
+    }
+    closeBtn.onclick = closeModal;
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // Tabs switching
+    const tabSearch = document.getElementById('tab-search');
+    const tabIncoming = document.getElementById('tab-incoming');
+    const tabFriends = document.getElementById('tab-friends');
+    const results = document.getElementById('af-results');
+    const searchForm = document.getElementById('af-search-form');
+    const searchInput = document.getElementById('af-search-input');
+    const searchBtn = document.getElementById('af-search-btn');
+    const loader = document.getElementById('af-loader');
+    const errorDiv = document.getElementById('af-error');
+    const errorText = document.getElementById('af-error-text');
+    const msgDiv = document.getElementById('af-msg');
+    const msgText = document.getElementById('af-msg-text');
+    const recentDiv = document.getElementById('af-recent');
+    const recentList = document.getElementById('af-recent-list');
+    const incomingList = document.getElementById('af-incoming-list');
+    const friendsList = document.getElementById('af-friends-list');
+    const modalTitle = document.getElementById('af-modal-title');
+
+    let currentTab = 'search';
+    function showTab(tab) {
+      if(tab === 'search') {
+        tabSearch.classList.add('active');
+        tabIncoming.classList.remove('active');
+        tabFriends.classList.remove('active');
+        searchForm.style.display = '';
+        results.style.display = '';
+        recentDiv.style.display = '';
+        incomingList.style.display = 'none';
+        friendsList.style.display = 'none';
+        modalTitle.textContent = 'Добавить друга';
+      } else if(tab === 'incoming') {
+        tabIncoming.classList.add('active');
+        tabSearch.classList.remove('active');
+        tabFriends.classList.remove('active');
+        searchForm.style.display = 'none';
+        results.style.display = 'none';
+        recentDiv.style.display = 'none';
+        incomingList.style.display = '';
+        friendsList.style.display = 'none';
+        modalTitle.textContent = 'Входящие запросы';
+        loadIncoming();
+      } else if(tab === 'friends') {
+        tabFriends.classList.add('active');
+        tabSearch.classList.remove('active');
+        tabIncoming.classList.remove('active');
+        searchForm.style.display = 'none';
+        results.style.display = 'none';
+        recentDiv.style.display = 'none';
+        incomingList.style.display = 'none';
+        friendsList.style.display = '';
+        modalTitle.textContent = 'Мои друзья';
+        loadFriends();
+      }
+      clearError();
+      clearMsg();
+    }
+    tabSearch.onclick = () => { showTab('search'); };
+    tabIncoming.onclick = () => { showTab('incoming'); };
+    tabFriends.onclick = () => { showTab('friends'); };
+
+    // Focus input on open (search tab)
+    window.onload = function() {
+      const currentUser = UserSystem.getCurrentUser();
+      if (!currentUser) {
+        window.location.href = 'registration.html';
+        return;
+      }
+      
+      setTimeout(()=>{ if(currentTab==='search') searchInput.focus(); }, 160);
+      loadRecent();
+    };
+
+    // ===================== Реализация поиска =====================
+    function clearResults() { results.innerHTML = ''; results.style.display = 'none'; }
+    function clearError()  { errorDiv.style.display = 'none'; errorText.textContent = ''; errorDiv.style.opacity=0;}
+    function clearMsg()    { msgDiv.style.display='none'; msgText.textContent=''; }
+
+    // Storage for recent search
+    function storeRecent(nickname) {
+      if(!nickname || nickname.length<2) return;
+      let rec = JSON.parse(localStorage.getItem('af_recent')||'[]');
+      rec = rec.filter(v=>v!==nickname);
+      rec.unshift(nickname);
+      if(rec.length>6) rec.length=6;
+      localStorage.setItem('af_recent', JSON.stringify(rec));
+    }
+    function loadRecent() {
+      let rec = [];
+      try { rec = JSON.parse(localStorage.getItem('af_recent')||'[]'); } catch{}
+      if(rec.length) {
+        recentDiv.style.display = '';
+        recentList.innerHTML = rec.map(nick =>
+          `<div class="af-recent-item" tabindex="0">
+            <span class="material-icons">history</span>
+            <span>${nick.replace(/</g,'&lt;')}</span>
+          </div>`).join('');
+        for(const node of recentList.children){
+          node.onclick = ()=>{searchInput.value=node.children[1].textContent; searchInput.focus(); triggerSearch();}
+          node.onkeydown = e => { if(e.key==='Enter') node.click(); }
+        }
+      } else {
+        recentDiv.style.display = 'none';
+      }
+    }
+
+    function showError(msg) {
+      errorDiv.style.display = '';
+      errorText.textContent = msg;
+      errorDiv.style.opacity=0;
+      errorDiv.classList.remove('fadeout');
+      setTimeout(()=>errorDiv.style.opacity=1, 10);
+      setTimeout(()=>{
+          errorDiv.style.opacity=0;
+          setTimeout(()=>{clearError();}, 400);
+        }, 4700
+      );
+    }
+    function showMsg(msg) {
+      msgDiv.style.display = '';
+      msgText.textContent = msg;
+      msgDiv.style.opacity=0;
+      setTimeout(()=>msgDiv.style.opacity=1, 10);
+      setTimeout(()=>{
+          msgDiv.style.opacity=0;
+          setTimeout(()=>{clearMsg();}, 350);
+        }, 4100
+      );
+    }
+
+    function showLoader(show) {
+      loader.style.display = show ? '' : 'none';
+    }
+
+    // Проверка статуса дружбы
+    function getFriendshipStatus(currentUserId, targetUserId) {
+      const requests = JSON.parse(localStorage.getItem('meetup_friend_requests') || '[]');
+      
+      // Проверяем исходящий запрос
+      const outgoingRequest = requests.find(req => 
+        req.fromUserId === currentUserId && req.toUserId === targetUserId
+      );
+      
+      if (outgoingRequest) {
+        return outgoingRequest.status === 'accepted' ? 'friend' : 'pending';
+      }
+      
+      // Проверяем входящий запрос
+      const incomingRequest = requests.find(req => 
+        req.fromUserId === targetUserId && req.toUserId === currentUserId
+      );
+      
+      if (incomingRequest) {
+        return incomingRequest.status === 'accepted' ? 'friend' : 'incoming';
+      }
+      
+      return 'none';
+    }
+
+    function showResults(users) {
+      if(!users || !users.length) { clearResults(); return; }
+      
+      const currentUser = UserSystem.getCurrentUser();
+      
+      results.innerHTML = users.map(user => {
+        let avatar = user.avatar && user.avatar.length > 6
+          ? `<img src="${user.avatar.replace(/"/g,'&quot;')}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="${user.nickname}">`
+          : `<svg width="48" height="48"><circle cx="24" cy="24" r="24" fill="#222C48"/><ellipse cx="24" cy="20" rx="12" ry="13" fill="#fff"/><ellipse cx="24" cy="39" rx="18" ry="10" fill="#fff"/></svg>`;
+        
+        let online = user.status === 'online';
+        const friendshipStatus = getFriendshipStatus(currentUser.id, user.id);
+        
+        let actionButton = '';
+        switch(friendshipStatus) {
+          case 'friend':
+            actionButton = `<button class="af-result-btn-added" tabindex="-1" disabled>
+              <span class="material-icons">check_circle</span>Друг
+            </button>`;
+            break;
+          case 'pending':
+            actionButton = `<button class="af-result-btn-pending" tabindex="-1" disabled>
+              <span class="material-icons">schedule</span>Ожидание
+            </button>`;
+            break;
+          case 'incoming':
+            actionButton = `<button class="af-result-btn-add" type="button" data-user-id="${user.id}" data-action="respond">
+              <span class="material-icons">person_add</span>Ответить
+            </button>`;
+            break;
+          default:
+            actionButton = `<button class="af-result-btn-add" type="button" data-user-id="${user.id}">
+              <span class="material-icons">person_add</span>Добавить
+            </button>`;
+        }
+        
+        return `<div class="af-result-card" tabindex="0">
+          <div class="af-result-avatar">${avatar}</div>
+          <div class="af-result-info">
+            <div class="af-result-nick">${user.nickname.replace(/</g,'&lt;')}</div>
+            <div class="af-result-status${online?'':' offline'}">${online?'В сети':'Не в сети'}</div>
+          </div>
+          <div class="af-result-actions">
+            ${actionButton}
+          </div>
+        </div>`;
+      }).join('');
+      
+      results.style.display = '';
+      
+      // Card hover/animation
+      for(const card of results.children){
+        card.onfocus = ()=>{card.classList.add('selected');}
+        card.onblur  = ()=>{card.classList.remove('selected');}
+        card.onmouseenter = ()=>{card.classList.add('selected');}
+        card.onmouseleave = ()=>{card.classList.remove('selected');}
+        
+        // Add request logic
+        let btn = card.querySelector('button.af-result-btn-add');
+        if (btn) {
+          btn.onclick = ()=>{
+            const targetUserId = btn.getAttribute('data-user-id');
+            const action = btn.getAttribute('data-action');
+            
+            if (action === 'respond') {
+              // Принять входящий запрос
+              acceptFriendRequest(targetUserId, currentUser.id);
+              btn.outerHTML = `<button class="af-result-btn-added" tabindex="-1" disabled>
+                <span class="material-icons">check_circle</span>Друг
+              </button>`;
+              showMsg('Запрос принят!');
+            } else {
+              // Отправить новый запрос
+              if (UserSystem.addFriendRequest(currentUser.id, targetUserId)) {
+                btn.outerHTML = `<button class="af-result-btn-pending" tabindex="-1" disabled>
+                  <span class="material-icons">schedule</span>Ожидание
+                </button>`;
+                showMsg('Запрос отправлен!');
+              } else {
+                showError('Запрос уже отправлен ранее');
+              }
+            }
+          };
+        }
+      }
+    }
+
+    let searchTimeout = null;
+    // Поиск по Enter и нажатие кнопки
+    function triggerSearch(e) {
+      if(e) e.preventDefault();
+      clearResults();
+      clearError();
+      clearMsg();
+      let value = searchInput.value.trim();
+      if(value.length < 2) {
+        showMsg('Введите хотя бы 2 символа');
+        return;
+      }
+      showLoader(true);
+      
+      // Используем реальный поиск из UserSystem
+      setTimeout(() => {
+        showLoader(false);
+        
+        const foundUsers = UserSystem.searchUsers(value);
+        
+        if(!foundUsers || !foundUsers.length) {
+          showError('Пользователь не найден');
+          return;
+        }
+        
+        showResults(foundUsers);
+        storeRecent(value);
+        loadRecent();
+      }, 800);
+    }
+    searchForm.onsubmit = triggerSearch;
+    searchInput.onkeydown = function(e){
+      if(e.key==='Enter') { triggerSearch(e); }
+    };
+
+    // ============================= Входящие =============================
+    function acceptFriendRequest(fromUserId, toUserId) {
+      const requests = JSON.parse(localStorage.getItem('meetup_friend_requests') || '[]');
+      const requestIndex = requests.findIndex(req => 
+        req.fromUserId === fromUserId && req.toUserId === toUserId && req.status === 'pending'
+      );
+      
+      if (requestIndex !== -1) {
+        requests[requestIndex].status = 'accepted';
+        requests[requestIndex].acceptedAt = Date.now();
+        localStorage.setItem('meetup_friend_requests', JSON.stringify(requests));
+        return true;
+      }
+      return false;
+    }
+
+    function rejectFriendRequest(fromUserId, toUserId) {
+      const requests = JSON.parse(localStorage.getItem('meetup_friend_requests') || '[]');
+      const requestIndex = requests.findIndex(req => 
+        req.fromUserId === fromUserId && req.toUserId === toUserId && req.status === 'pending'
+      );
+      
+      if (requestIndex !== -1) {
+        requests.splice(requestIndex, 1);
+        localStorage.setItem('meetup_friend_requests', JSON.stringify(requests));
+        return true;
+      }
+      return false;
+    }
+
+    function loadIncoming() {
+      const currentUser = UserSystem.getCurrentUser();
+      incomingList.innerHTML = '';
+      incomingList.style.display = '';
+      
+      setTimeout(() => {
+        const incomingRequests = UserSystem.getIncomingRequests(currentUser.id);
+        
+        if(!incomingRequests || !incomingRequests.length) {
+          incomingList.innerHTML = `<div class="addfriend-modal__msg" style="display:flex;color:#888;">Нет входящих запросов</div>`;
+          return;
+        }
+        
+        incomingList.innerHTML = incomingRequests.map(req => {
+          const user = req.fromUser;
+          let avatar = user.avatar && user.avatar.length>6
+            ? `<img src="${user.avatar.replace(/"/g,'&quot;')}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="${user.nickname}">`
+            : `<svg width="48" height="48"><circle cx="24" cy="24" r="24" fill="#222C48"/><ellipse cx="24" cy="20" rx="12" ry="13" fill="#fff"/><ellipse cx="24" cy="39" rx="18" ry="10" fill="#fff"/></svg>`;
+          
+          let online = user.status==='online';
+          return `<div class="af-incoming-card" tabindex="0">
+            <div class="af-result-avatar">${avatar}</div>
+            <div class="af-incoming-info">
+              <div class="af-incoming-nick">${user.nickname.replace(/</g,'&lt;')}</div>
+              <div class="af-incoming-status${online?'':' offline'}">${online?'В сети':'Не в сети'}</div>
+            </div>
+            <div class="af-incoming-actions">
+              <button type="button" class="af-incoming-btn-accept" data-user-id="${user.id}">
+                <span class="material-icons">check</span>Принять
+              </button>
+              <button type="button" class="af-incoming-btn-reject" data-user-id="${user.id}">
+                <span class="material-icons">close</span>Отклонить
+              </button>
+            </div>
+          </div>`;
+        }).join('');
+        
+        // Accept/Reject buttons
+        for(const card of incomingList.children){
+          let accept = card.querySelector('.af-incoming-btn-accept');
+          let reject = card.querySelector('.af-incoming-btn-reject');
+          
+          accept.onclick = ()=>{
+            const fromUserId = accept.getAttribute('data-user-id');
+            if (acceptFriendRequest(fromUserId, currentUser.id)) {
+              accept.innerHTML='<span class="material-icons">check</span>Принято';
+              accept.disabled=true;
+              reject.style.display='none';
+              card.style.filter='brightness(0.95)';
+              setTimeout(()=>{card.remove();}, 1700);
+            }
+          };
+          
+          reject.onclick = ()=>{
+            const fromUserId = reject.getAttribute('data-user-id');
+            if (rejectFriendRequest(fromUserId, currentUser.id)) {
+              reject.innerHTML='<span class="material-icons">close</span>Отклонено';
+              reject.style.background='#444';
+              reject.disabled=true;
+              accept.style.display='none';
+              card.style.opacity='0.7';
+              setTimeout(()=>{card.remove();}, 1200);
+            }
+          };
+        }
+      }, 500);
+    }
+
+    // ============================= Список друзей =============================
+    function loadFriends() {
+      const currentUser = UserSystem.getCurrentUser();
+      friendsList.innerHTML = '';
+      friendsList.style.display = '';
+      
+      setTimeout(() => {
+        const requests = JSON.parse(localStorage.getItem('meetup_friend_requests') || '[]');
+        const users = UserSystem.getUsers();
+        
+        // Находим подтвержденных друзей
+        const friendRequests = requests.filter(req => 
+          (req.fromUserId === currentUser.id || req.toUserId === currentUser.id) && 
+          req.status === 'accepted'
+        );
+        
+        const friends = friendRequests.map(req => {
+          const friendId = req.fromUserId === currentUser.id ? req.toUserId : req.fromUserId;
+          return users.find(u => u.id === friendId);
+        }).filter(friend => friend !== undefined);
+        
+        if(!friends || !friends.length) {
+          friendsList.innerHTML = `<div class="addfriend-modal__msg" style="display:flex;color:#888;">У вас пока нет друзей</div>`;
+          return;
+        }
+        
+        friendsList.innerHTML = friends.map(friend => {
+          let avatar = friend.avatar && friend.avatar.length > 6
+            ? `<img src="${friend.avatar.replace(/"/g,'&quot;')}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="${friend.nickname}">`
+            : `<svg width="48" height="48"><circle cx="24" cy="24" r="24" fill="#222C48"/><ellipse cx="24" cy="20" rx="12" ry="13" fill="#fff"/><ellipse cx="24" cy="39" rx="18" ry="10" fill="#fff"/></svg>`;
+          
+          let online = friend.status === 'online';
+          
+          return `<div class="af-result-card" tabindex="0">
+            <div class="af-result-avatar">${avatar}</div>
+            <div class="af-result-info">
+              <div class="af-result-nick">${friend.nickname.replace(/</g,'&lt;')}</div>
+              <div class="af-result-status${online?'':' offline'}">${online?'В сети':'Не в сети'}</div>
+            </div>
+            <div class="af-result-actions">
+              <button class="af-result-btn-added" tabindex="-1" disabled>
+                <span class="material-icons">check_circle</span>Друг
+              </button>
+            </div>
+          </div>`;
+        }).join('');
+        
+        friendsList.style.display = '';
+      }, 500);
+    }
+
+  </script>
+</body>
+</html>
