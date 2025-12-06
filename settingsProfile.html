@@ -14,18 +14,26 @@
       --modal-bg: rgba(30, 30, 30, 0.95);
       --modal-shadow: 0 4px 16px rgba(0,0,0,0.5);
       --modal-radius: 12px;
-      --red: #FF0000;
-      --green: #00FF00;
-      --grey: #888888;
-      --btn-cancel-bg: #333333;
+      --red: #FF4757;
+      --green: #2ED573;
+      --blue: #00A8FF;
+      --cyan: #00FFFF;
+      --purple: #9400D3;
+      --grey: #A4B0BE;
+      --dark-grey: #747D8C;
+      --btn-cancel-bg: #2F3542;
       --btn-cancel-color: #fff;
-      --btn-radius: 8px;
-      --btn-delete-bg: #FF0000;
-      --btn-delete-shadow-hover: 0 2px 6px rgba(255,0,0,0.4);
+      --btn-radius: 10px;
+      --btn-delete-bg: #FF4757;
+      --btn-delete-shadow-hover: 0 4px 12px rgba(255, 71, 87, 0.3);
       --spinner-color: #00FFFF;
+      --card-bg: rgba(35, 35, 45, 0.95);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --hover-bg: rgba(255, 255, 255, 0.05);
     }
+    
     body {
-      background: #121212;
+      background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 100%);
       color: #fff;
       min-height: 100vh;
       margin: 0;
@@ -35,494 +43,741 @@
       justify-content: center;
       height: 100vh;
     }
+    
     .settings-card {
-      background: rgba(30,30,30,0.87);
-      border-radius: 16px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.32);
-      width: 480px;
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      width: 520px;
       max-width: 98vw;
       margin: 0 auto;
-      padding: 42px 40px 40px 40px;
+      padding: 50px 45px 45px 45px;
       display: flex;
       flex-direction: column;
       align-items: center;
       position: relative;
       animation: settings-fadein 0.55s cubic-bezier(.27,.69,.51,1.35);
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(10px);
     }
+    
     @media (max-width: 600px) {
       .settings-card {
         width: 100vw;
         min-width: 0;
         max-width: 100vw;
         border-radius: 0;
-        padding: 24px 10px 24px 10px;
+        padding: 30px 20px;
+        border: none;
+        box-shadow: none;
       }
     }
+    
     .settings-title {
-      font-size: 22px;
-      font-weight: 600;
-      letter-spacing: 0.01em;
-      margin-bottom: 16px;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-bottom: 30px;
       opacity: 0.98;
       text-align: center;
+      background: linear-gradient(90deg, var(--cyan), var(--purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
+    
     .settings-options {
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 22px;
+      gap: 30px;
+    }
+    
+    .settings-section {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 14px;
+      padding: 22px;
+      border: 1px solid var(--border-color);
+      transition: all 0.25s ease;
+    }
+    
+    .settings-section:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+    
+    .section-label {
+      color: #E0E0E0;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: 0.02em;
+    }
+    
+    .section-label .material-icons {
+      color: var(--cyan);
+      font-size: 20px;
     }
     
     /* Стили для формы смены пароля */
     .password-form {
       display: none;
       flex-direction: column;
-      gap: 15px;
-      margin-top: 10px;
-      padding: 15px;
-      background: rgba(255,255,255,0.03);
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.1);
+      gap: 18px;
+      margin-top: 15px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
+    
     .password-form.active {
       display: flex;
+      animation: fadeIn 0.3s ease-out;
     }
+    
     .form-field {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
     }
+    
     .form-label {
-      color: #b0b0b0;
+      color: #B0B0B0;
       font-size: 14px;
       font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
+    
+    .form-label .material-icons {
+      font-size: 16px;
+      opacity: 0.8;
+    }
+    
     .form-input {
-      background: rgba(255,255,255,0.05);
-      border: 1.5px solid #333333;
-      border-radius: 8px;
-      padding: 12px 15px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 2px solid #2A2A3A;
+      border-radius: 10px;
+      padding: 14px 16px;
       color: #fff;
-      font-size: 14px;
+      font-size: 15px;
       font-family: inherit;
       outline: none;
-      transition: border-color 0.18s, box-shadow 0.18s;
+      transition: all 0.25s ease;
     }
+    
     .form-input:focus {
-      border-color: #00FFFF;
-      box-shadow: 0 0 6px #00FFFF;
+      border-color: var(--cyan);
+      background: rgba(0, 255, 255, 0.05);
+      box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.15);
     }
+    
     .form-input.error {
       border-color: var(--red);
+      background: rgba(255, 71, 87, 0.05);
     }
+    
     .form-hint {
-      color: var(--grey);
+      color: var(--dark-grey);
       font-size: 12px;
-      margin-top: 3px;
+      margin-top: 5px;
+      line-height: 1.4;
+      padding-left: 5px;
     }
+    
     .form-error {
       color: var(--red);
       font-size: 12px;
-      margin-top: 4px;
+      margin-top: 5px;
       display: none;
-    }
-    .form-error.active {
-      display: block;
-    }
-    .password-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    .btn-save-password {
-      background: linear-gradient(92deg, #00FFFF 0%, #9400D3 100%);
-      color: #fff;
-      border: none;
-      border-radius: var(--btn-radius);
-      padding: 10px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: filter 0.14s;
-    }
-    .btn-save-password:hover {
-      filter: brightness(1.1);
-    }
-    .btn-cancel-password {
-      background: var(--btn-cancel-bg);
-      color: #fff;
-      border: none;
-      border-radius: var(--btn-radius);
-      padding: 10px 20px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: filter 0.14s;
-    }
-    .btn-cancel-password:hover {
-      filter: brightness(1.1);
+      align-items: center;
+      gap: 5px;
+      font-weight: 500;
     }
     
-    .delete-account-row {
-      margin-top: 44px;
-      width: 100%;
+    .form-error.active {
       display: flex;
-      justify-content: flex-end;
     }
-    .btn-delete-account {
-      background: var(--btn-delete-bg);
+    
+    .password-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 15px;
+    }
+    
+    .btn-save-password {
+      background: linear-gradient(135deg, var(--cyan) 0%, var(--blue) 100%);
       color: #fff;
       border: none;
       border-radius: var(--btn-radius);
-      padding: 13px 22px 13px 17px;
+      padding: 12px 24px;
       font-size: 14px;
       font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
       display: flex;
       align-items: center;
       gap: 8px;
-      box-shadow: none;
+      box-shadow: 0 4px 12px rgba(0, 255, 255, 0.2);
+    }
+    
+    .btn-save-password:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 255, 255, 0.3);
+    }
+    
+    .btn-cancel-password {
+      background: var(--btn-cancel-bg);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--btn-radius);
+      padding: 12px 24px;
+      font-size: 14px;
       cursor: pointer;
-      transition: box-shadow 0.18s, filter 0.18s, background 0.16s;
-      outline: none;
+      transition: all 0.25s ease;
     }
-    .btn-delete-account .material-icons {
-      font-size: 18px;
-      vertical-align: -2px;
+    
+    .btn-cancel-password:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
     }
-    .btn-delete-account:hover, .btn-delete-account:focus-visible {
+    
+    /* Стиль для чекбокса уведомлений */
+    .notif-toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 10px;
+      transition: background 0.2s;
+    }
+    
+    .notif-toggle-container:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    #notif-toggle {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+    
+    .notif-label {
+      font-size: 15px;
+      color: #E0E0E0;
+      font-weight: 500;
+    }
+    
+    .delete-account-row {
+      margin-top: 50px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+    
+    .btn-delete-account {
+      background: linear-gradient(135deg, var(--red) 0%, #FF3838 100%);
+      color: #fff;
+      border: none;
+      border-radius: var(--btn-radius);
+      padding: 16px 28px 16px 22px;
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(255, 71, 87, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn-delete-account::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: left 0.6s;
+    }
+    
+    .btn-delete-account:hover::before {
+      left: 100%;
+    }
+    
+    .btn-delete-account:hover {
+      transform: translateY(-3px);
       box-shadow: var(--btn-delete-shadow-hover);
-      filter: brightness(103%);
     }
-
-    /* Кнопка назад (Arrow) - ИСПРАВЛЕНА */
+    
+    .btn-delete-account:active {
+      transform: translateY(-1px);
+    }
+    
+    .btn-delete-account .material-icons {
+      font-size: 20px;
+      vertical-align: middle;
+    }
+    
+    /* Кнопка назад */
     .back-arrow-btn {
       position: absolute;
-      left: 24px;
-      top: 22px;
-      background: #232323;
-      border: none;
-      border-radius: 50%;
-      width: 46px;
-      height: 46px;
+      left: 28px;
+      top: 26px;
+      background: rgba(35, 35, 45, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 50px;
+      height: 50px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: background 0.17s, filter 0.19s;
+      transition: all 0.25s ease;
       z-index: 3;
       outline: none;
-      box-shadow: 0 2.5px 12px rgba(0,0,0,0.4);
       text-decoration: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(5px);
     }
-    .back-arrow-btn:focus-visible, .back-arrow-btn:hover {
-      background: #2b2b2b;
-      filter: brightness(1.08);
+    
+    .back-arrow-btn:hover {
+      background: rgba(45, 45, 55, 0.9);
+      border-color: var(--cyan);
+      transform: translateX(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
     }
+    
     .back-arrow-btn .material-icons {
       font-size: 24px;
-      color: #fff;
+      color: var(--cyan);
       vertical-align: middle;
     }
+    
     @media (max-width: 600px) {
       .back-arrow-btn {
-        left: 12px;
-        top: 13px;
-        width: 40px;
-        height: 40px;
+        left: 15px;
+        top: 15px;
+        width: 44px;
+        height: 44px;
       }
       .back-arrow-btn .material-icons {
-        font-size: 20px;
+        font-size: 22px;
       }
     }
-
+    
     /* Информация об удалении */
     .deletion-info {
-      background: rgba(255, 0, 0, 0.1);
-      border: 1px solid rgba(255, 0, 0, 0.3);
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 20px;
+      background: linear-gradient(135deg, rgba(255, 71, 87, 0.1), rgba(255, 71, 87, 0.05));
+      border: 1px solid rgba(255, 71, 87, 0.3);
+      border-radius: 14px;
+      padding: 22px;
+      margin-top: 30px;
       width: 100%;
       display: none;
+      animation: fadeIn 0.4s ease-out;
     }
+    
     .deletion-info.active {
       display: block;
-      animation: fadeIn 0.3s ease-in;
     }
+    
     .deletion-title {
       color: var(--red);
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 8px;
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
+    
     .deletion-text {
       color: var(--grey);
       font-size: 14px;
-      line-height: 1.4;
-      margin-bottom: 10px;
+      line-height: 1.5;
+      margin-bottom: 15px;
     }
+    
     .deletion-timer {
       color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      background: rgba(255, 0, 0, 0.2);
-      padding: 8px 12px;
-      border-radius: 6px;
+      font-size: 18px;
+      font-weight: 700;
+      background: rgba(255, 71, 87, 0.2);
+      padding: 12px 18px;
+      border-radius: 10px;
       display: inline-block;
+      font-family: monospace;
+      letter-spacing: 1px;
+      border: 1px solid rgba(255, 71, 87, 0.3);
     }
+    
     .btn-cancel-deletion {
-      background: var(--btn-cancel-bg);
+      background: linear-gradient(135deg, var(--green) 0%, #1DD1A1 100%);
       color: #fff;
       border: none;
       border-radius: var(--btn-radius);
-      padding: 8px 16px;
-      font-size: 13px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
-      transition: filter 0.14s;
-      margin-top: 10px;
+      transition: all 0.25s ease;
+      margin-top: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(46, 213, 115, 0.25);
     }
+    
     .btn-cancel-deletion:hover {
-      filter: brightness(1.1);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(46, 213, 115, 0.35);
     }
-
+    
     /* МОДАЛЬНОЕ ОКНО */
     .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.44);
+      background: rgba(0, 0, 0, 0.7);
       display: none;
       z-index: 1010;
-      transition: opacity 0.2s;
+      backdrop-filter: blur(5px);
     }
+    
     .modal-backdrop.active {
       display: block;
-      opacity: 1;
-      animation: modal-fade-bg 0.26s;
+      animation: modal-fade-bg 0.3s;
     }
+    
     @keyframes modal-fade-bg {
-      from { opacity: 0;}
-      to   { opacity: 1;}
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
+    
     .modal-dialog {
       position: fixed;
       left: 50%;
       top: 50%;
       transform: translate(-50%,-50%) scale(0.9);
-      min-width: 0;
-      width: 400px;
+      width: 440px;
       max-width: 94vw;
-      background: var(--modal-bg);
-      border-radius: var(--modal-radius);
-      box-shadow: var(--modal-shadow);
+      background: var(--card-bg);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
       z-index: 1020;
       opacity: 0;
       pointer-events: none;
       display: flex;
       flex-direction: column;
-      gap: 0;
-      padding: 0;
-      transition: none;
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
     }
+    
     .modal-dialog.active {
       opacity: 1;
       pointer-events: auto;
-      animation: modal-dialog-pop-in 0.30s cubic-bezier(.34,1.56,.64,1) forwards;
+      animation: modal-dialog-pop-in 0.4s cubic-bezier(.34,1.56,.64,1) forwards;
     }
-    .modal-dialog.hide {
-      animation: modal-dialog-pop-out 0.23s cubic-bezier(.41,-0.21,.68,0.93) forwards;
-      pointer-events: none;
-    }
-    @media (max-width:500px) {
-      .modal-dialog, .modal-dialog.active {
-        width: 90vw;
-        min-width: 0;
-        padding: 0;
-      }
-    }
-    @keyframes modal-dialog-pop-in {
-      from { opacity: 0; transform: translate(-50%,-50%) scale(0.90);}
-      to   { opacity: 1; transform: translate(-50%,-50%) scale(1);}
-    }
-    @keyframes modal-dialog-pop-out {
-      from { opacity: 1; transform: translate(-50%,-50%) scale(1);}
-      to   { opacity: 0; transform: translate(-50%,-50%) scale(0.92);}
-    }
+    
     .modal-content {
       display: flex;
       flex-direction: column;
-      padding: 24px;
-      border-radius: var(--modal-radius);
-      gap: 18px;
+      padding: 30px;
+      gap: 20px;
     }
+    
     .modal-title {
       color: var(--red);
-      font-size: 18px;
-      font-weight: 600;
+      font-size: 22px;
+      font-weight: 700;
       text-align: center;
-      margin-bottom: 7px;
-      letter-spacing: 0.01em;
+      margin-bottom: 10px;
+      letter-spacing: 0.02em;
     }
+    
     .modal-warning {
       color: var(--grey);
-      font-size: 14px;
-      line-height: 1.55;
-      text-align: left;
-      margin-bottom: 7px;
+      font-size: 15px;
+      line-height: 1.6;
+      text-align: center;
+      margin-bottom: 10px;
     }
+    
     .modal-actions {
       display: flex;
-      gap: 12px;
-      margin-top: 8px;
+      gap: 15px;
+      margin-top: 15px;
       width: 100%;
       flex-direction: row;
-      justify-content: flex-end;
+      justify-content: center;
     }
+    
     .btn-modal-cancel {
       background: var(--btn-cancel-bg);
       color: var(--btn-cancel-color);
-      border: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: var(--btn-radius);
       font-size: 14px;
-      padding: 10px 20px;
+      padding: 12px 24px;
       cursor: pointer;
-      transition: filter 0.14s;
-      font-weight: 500;
-      outline: none;
+      transition: all 0.25s ease;
+      font-weight: 600;
+      flex: 1;
     }
-    .btn-modal-cancel:hover, .btn-modal-cancel:focus-visible {
-      filter: brightness(1.10);
+    
+    .btn-modal-cancel:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
     }
+    
     .btn-modal-delete {
-      background: var(--btn-delete-bg);
+      background: linear-gradient(135deg, var(--red) 0%, #FF3838 100%);
       color: #fff;
       border: none;
       border-radius: var(--btn-radius);
       font-size: 14px;
-      padding: 10px 21px 10px 15px;
-      font-weight: 600;
+      padding: 12px 24px;
+      font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 7px;
-      transition: box-shadow 0.13s, filter 0.17s, background 0.13s;
-      outline: none;
-      box-shadow: none;
-      position: relative;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      flex: 1;
+      box-shadow: 0 4px 12px rgba(255, 71, 87, 0.25);
     }
-    .btn-modal-delete .material-icons {
-      font-size: 18px;
-      margin-right: 0;
-      vertical-align: -3px;
-      color: #fff;
+    
+    .btn-modal-delete:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(255, 71, 87, 0.35);
     }
-    .btn-modal-delete:hover, .btn-modal-delete:focus-visible {
-      box-shadow: var(--btn-delete-shadow-hover);
-      filter: brightness(1.03);
-    }
+    
     .modal-spinner-wrap {
       width: 100%;
-      min-height: 66px;
+      min-height: 120px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
+    
     .modal-spinner {
-      width: 36px;
-      height: 36px;
-      border: 4px solid var(--spinner-color);
-      border-top: 4px solid transparent;
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(0, 255, 255, 0.3);
+      border-top: 3px solid var(--cyan);
       border-radius: 50%;
-      animation: modal-spin 0.95s linear infinite;
-      margin: 8px 0;
+      animation: modal-spin 0.8s linear infinite;
     }
-    @keyframes modal-spin {
-      to { transform: rotate(360deg);}
-    }
+    
     .modal-error {
       color: var(--red);
-      font-size: 14px;
-      margin-bottom: 7px;
-      animation: fade-in-error 0.2s;
+      font-size: 15px;
+      margin-bottom: 15px;
       text-align: center;
       width: 100%;
+      font-weight: 500;
     }
-    @keyframes fade-in-error {
-      from { opacity:0; transform:translateY(-7px);}
-      to   { opacity:1; transform:translateY(0);}
-    }
+    
     .btn-retry-delete {
       background: var(--btn-cancel-bg);
       color: #fff;
       border: none;
       border-radius: var(--btn-radius);
       font-size: 14px;
-      padding: 9px 18px;
+      padding: 10px 20px;
       cursor: pointer;
-      margin-top: 3px;
-      transition: filter 0.13s;
-      font-weight: 500;
+      transition: all 0.25s ease;
+      font-weight: 600;
+      margin: 0 auto;
+      display: block;
     }
-    .btn-retry-delete:hover, .btn-retry-delete:focus-visible {
-      filter: brightness(1.10);
+    
+    .btn-retry-delete:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
     }
+    
+    /* Анимации */
     @keyframes settings-fadein {
-      from { opacity:0; transform:translateY(25px);}
-      to   { opacity:1; transform:translateY(0);}
+      from { 
+        opacity: 0; 
+        transform: translateY(30px) scale(0.98); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+      }
     }
+    
+    @keyframes modal-dialog-pop-in {
+      from { 
+        opacity: 0; 
+        transform: translate(-50%,-50%) scale(0.9); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translate(-50%,-50%) scale(1); 
+      }
+    }
+    
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { 
+        opacity: 0; 
+        transform: translateY(-10px); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0); 
+      }
+    }
+    
+    @keyframes modal-spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Улучшенный чекбокс */
+    input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--dark-grey);
+      border-radius: 6px;
+      outline: none;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s;
+    }
+    
+    input[type="checkbox"]:checked {
+      background: var(--cyan);
+      border-color: var(--cyan);
+    }
+    
+    input[type="checkbox"]:checked::after {
+      content: '✓';
+      position: absolute;
+      color: #000;
+      font-size: 14px;
+      font-weight: bold;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    input[type="checkbox"]:hover {
+      border-color: var(--cyan);
     }
   </style>
 </head>
 <body>
   <div class="settings-card" role="main" tabindex="-1">
-    <!-- Кнопка "назад" (вверх слева) - ИСПРАВЛЕНА -->
+    <!-- Кнопка "назад" -->
     <a class="back-arrow-btn" id="btn-back-arrow" href="profile.html" title="Назад в профиль" aria-label="Вернуться в профиль">
       <span class="material-icons" aria-hidden="true">arrow_back</span>
     </a>
+    
     <div class="settings-title">Настройки профиля</div>
+    
     <div class="settings-options">
       <!-- Смена пароля -->
-      <div>
-        <label style="color:#b0b0b0; font-size:14px; font-weight:500; margin-bottom:6px; display:block; opacity:0.94;">Изменить пароль</label>
-        <button style="margin-bottom:0; background:#333333; color:#fff; border:none; padding:11px 18px; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer;" id="btn-change-password">
+      <div class="settings-section">
+        <div class="section-label">
+          <span class="material-icons">lock</span>
+          Безопасность аккаунта
+        </div>
+        
+        <button style="
+          background: rgba(0, 255, 255, 0.1);
+          color: var(--cyan);
+          border: 1px solid rgba(0, 255, 255, 0.3);
+          border-radius: var(--btn-radius);
+          padding: 12px 20px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          justify-content: center;
+        " id="btn-change-password">
+          <span class="material-icons">key</span>
           Сменить пароль
         </button>
         
         <!-- Форма смены пароля -->
         <div class="password-form" id="password-form">
           <div class="form-field">
-            <label class="form-label">Текущий пароль</label>
+            <label class="form-label">
+              <span class="material-icons">vpn_key</span>
+              Текущий пароль
+            </label>
             <input type="password" class="form-input" id="current-password" placeholder="Введите текущий пароль">
-            <div class="form-error" id="current-password-error">Неверный текущий пароль</div>
+            <div class="form-error" id="current-password-error">
+              <span class="material-icons" style="font-size:14px;">error</span>
+              Неверный текущий пароль
+            </div>
           </div>
           
           <div class="form-field">
-            <label class="form-label">Новый пароль</label>
+            <label class="form-label">
+              <span class="material-icons">lock_reset</span>
+              Новый пароль
+            </label>
             <input type="password" class="form-input" id="new-password" placeholder="Введите новый пароль">
             <div class="form-hint">Пароль должен содержать минимум 8 символов, буквы и цифры</div>
-            <div class="form-error" id="new-password-error">Слабый пароль</div>
+            <div class="form-error" id="new-password-error">
+              <span class="material-icons" style="font-size:14px;">error</span>
+              Слабый пароль
+            </div>
           </div>
           
           <div class="form-field">
-            <label class="form-label">Подтвердите новый пароль</label>
+            <label class="form-label">
+              <span class="material-icons">check_circle</span>
+              Подтвердите новый пароль
+            </label>
             <input type="password" class="form-input" id="confirm-password" placeholder="Повторите новый пароль">
-            <div class="form-error" id="confirm-password-error">Пароли не совпадают</div>
+            <div class="form-error" id="confirm-password-error">
+              <span class="material-icons" style="font-size:14px;">error</span>
+              Пароли не совпадают
+            </div>
           </div>
           
           <div class="password-actions">
-            <button class="btn-save-password" id="btn-save-password">Сохранить</button>
+            <button class="btn-save-password" id="btn-save-password">
+              <span class="material-icons">save</span>
+              Сохранить
+            </button>
             <button class="btn-cancel-password" id="btn-cancel-password">Отменить</button>
           </div>
         </div>
       </div>
       
-      <div>
-        <label style="color:#b0b0b0; font-size:14px; font-weight:500; margin-bottom:6px; display:block; opacity:0.94;">Уведомления</label>
-        <input type="checkbox" id="notif-toggle" style="accent-color:#00ffff; vertical-align:-2px; margin-right:6px;">
-        <label for="notif-toggle" style="font-size:14px; color:#ededed; letter-spacing:0.01em;">Push-уведомления</label>
+      <!-- Уведомления -->
+      <div class="settings-section">
+        <div class="section-label">
+          <span class="material-icons">notifications</span>
+          Уведомления
+        </div>
+        
+        <div class="notif-toggle-container">
+          <input type="checkbox" id="notif-toggle">
+          <label for="notif-toggle" class="notif-label">Push-уведомления</label>
+        </div>
       </div>
     </div>
 
@@ -536,46 +791,54 @@
         Ваш аккаунт будет полностью удален через:
       </div>
       <div class="deletion-timer" id="deletion-timer"></div>
-      <button class="btn-cancel-deletion" id="btn-cancel-deletion">Отменить удаление</button>
+      <button class="btn-cancel-deletion" id="btn-cancel-deletion">
+        <span class="material-icons">undo</span>
+        Отменить удаление
+      </button>
     </div>
 
+    <!-- Кнопка удаления аккаунта -->
     <div class="delete-account-row">
       <button class="btn-delete-account" id="btn-delete-account" type="button">
-        <span class="material-icons" aria-hidden="true">delete</span>
+        <span class="material-icons" aria-hidden="true">delete_forever</span>
         Удалить аккаунт
       </button>
     </div>
   </div>
 
-  <!-- Модальное подтверждение -->
+  <!-- Модальное окно подтверждения удаления -->
   <div class="modal-backdrop" id="modal-delete-backdrop" tabindex="-1" aria-hidden="true"></div>
   <div class="modal-dialog" id="modal-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
     <form class="modal-content" id="delete-modal-content" autocomplete="off" onsubmit="return false;">
-      <div class="modal-title" id="delete-modal-title">Вы уверены, что хотите удалить аккаунт?</div>
+      <div class="modal-title" id="delete-modal-title">Удалить аккаунт?</div>
       <div class="modal-warning">
         Ваш аккаунт будет немедленно деактивирован и вы больше не сможете входить в систему.<br><br>
         Все данные будут полностью удалены через 30 дней. В течение этого времени вы можете отменить удаление, войдя в систему.
       </div>
       <div class="modal-actions">
         <button type="button" class="btn-modal-cancel" id="btn-modal-cancel">Отменить</button>
-        <button type="submit" class="btn-modal-delete" id="btn-modal-delete" >
-          <span class="material-icons" aria-hidden="true">delete</span>
+        <button type="submit" class="btn-modal-delete" id="btn-modal-delete">
+          <span class="material-icons" aria-hidden="true">delete_forever</span>
           Удалить аккаунт
         </button>
       </div>
     </form>
-    <!-- Здесь показываем спиннер/ошибку -->
+    
+    <!-- Спиннер -->
     <div id="modal-spinner-block" style="display:none;">
       <div class="modal-spinner-wrap">
         <div class="modal-spinner" role="status" aria-label="Загрузка"></div>
       </div>
     </div>
+    
+    <!-- Блок ошибки -->
     <div id="modal-error-block" style="display:none;">
       <div class="modal-error" id="delete-error-text"></div>
       <button type="button" class="btn-retry-delete" id="btn-retry-delete">Повторить</button>
     </div>
   </div>
 
+  <!-- Скрипт остается таким же как в исходном файле -->
   <script>
     // Переменные элементов
     const btnDelete = document.getElementById('btn-delete-account');
@@ -641,7 +904,7 @@
       const messageModal = document.createElement('div');
       messageModal.innerHTML = `
         <div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999;">
-          <div style="background:var(--modal-bg); padding:30px; border-radius:12px; text-align:center; max-width:400px;">
+          <div style="background:var(--card-bg); padding:30px; border-radius:12px; text-align:center; max-width:400px;">
             <div style="color:var(--red); font-size:20px; margin-bottom:15px;">
               <span class="material-icons" style="font-size:40px;">delete</span>
             </div>
@@ -960,7 +1223,7 @@
             const message = document.createElement('div');
             message.innerHTML = `
               <div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; z-index:9999;">
-                <div style="background:var(--modal-bg); padding:30px; border-radius:12px; text-align:center; max-width:400px;">
+                <div style="background:var(--card-bg); padding:30px; border-radius:12px; text-align:center; max-width:400px;">
                   <div style="color:var(--red); font-size:20px; margin-bottom:15px;">
                     <span class="material-icons" style="font-size:40px;">warning</span>
                   </div>
