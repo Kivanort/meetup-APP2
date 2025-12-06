@@ -195,7 +195,13 @@
       margin: auto;
     }
 
-    /* Кнопка удалить фото - УЛУЧШЕНА */
+    /* Контейнер для аватара с hover эффектом */
+    .profile-avatar-wrap {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    
+    /* Кнопка удалить фото - УЛУЧШЕНА (появляется при наведении и при фокусе) */
     .btn-remove-avatar {
       position: absolute;
       right: -5px;
@@ -213,22 +219,31 @@
       transition: all 0.2s ease;
       z-index: 10;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      opacity: 0;
+      transform: scale(0.8);
     }
+    .profile-avatar-wrap:hover .btn-remove-avatar,
+    .profile-avatar-wrap:focus-within .btn-remove-avatar,
+    .btn-remove-avatar:focus,
     .btn-remove-avatar:hover {
-      background: rgba(220, 53, 69, 1);
-      transform: scale(1.1);
+      display: flex;
+      opacity: 1;
+      transform: scale(1);
     }
     .btn-remove-avatar .material-icons {
       font-size: 16px;
     }
 
-    /* Контейнер для аватара с hover эффектом */
-    .profile-avatar-wrap {
-      position: relative;
-      margin-bottom: 20px;
-    }
-    .profile-avatar-wrap:hover .btn-remove-avatar {
+    /* Показываем кнопку удаления только если есть фото */
+    .profile-avatar-wrap.has-avatar .btn-remove-avatar {
       display: flex;
+      opacity: 1;
+      transform: scale(1);
+    }
+    
+    /* Эффект при наведении на аватар */
+    .profile-avatar-wrap:hover .profile-avatar {
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
     }
 
     /* Ник и статус */
@@ -477,7 +492,7 @@
       gap: 5px;
       padding-left: 2px;
     }
-
+    
     /* Адаптивность */
     /* @media (max-width: 768px) { ... } переехал выше */
   </style>
@@ -488,7 +503,7 @@
     <span class="material-icons">arrow_back</span>
   </a>
   <div class="profile-card">
-    <div class="profile-avatar-wrap">
+    <div class="profile-avatar-wrap" id="profile-avatar-wrap">
       <div class="profile-avatar" id="profile-avatar">
         <!-- Изображение или базовый силуэт (SVG) -->
         <img id="avatar-img" src="" alt="Аватар" style="display:none;">
@@ -500,7 +515,7 @@
         </svg>
       </div>
       <!-- Кнопка удалить фото - УЛУЧШЕНА -->
-      <button class="btn-remove-avatar" id="btn-remove-avatar" title="Удалить фото">
+      <button class="btn-remove-avatar" id="btn-remove-avatar" title="Удалить фото" tabindex="0">
         <span class="material-icons" style="font-size:16px;">close</span>
       </button>
       <!-- input file (скрытый) -->
@@ -657,20 +672,20 @@
     }
 
     // Функция для удаления аватара
-        // Функция для удаления аватара
-        function removeAvatar() {
+    function removeAvatar() {
       const avatarImg = document.getElementById('avatar-img');
       const avatarPlaceholder = document.querySelector('.avatar-placeholder-svg');
       const avatar = document.getElementById('profile-avatar');
       const btnRemove = document.getElementById('btn-remove-avatar');
       const avatarUpload = document.getElementById('avatar-upload');
+      const avatarWrap = document.getElementById('profile-avatar-wrap');
       
       // Сбрасываем загруженное изображение
       avatarImg.src = '';
       avatarImg.style.display = "none";
       avatarPlaceholder.style.display = "block";
       avatar.classList.remove("has-photo");
-      btnRemove.style.display = "none";
+      avatarWrap.classList.remove("has-avatar");
       avatarUpload.value = '';
 
       // Удаляем аватар из профиля в базе данных
@@ -684,6 +699,45 @@
         UserSystem.setCurrentUser(users[userIndex]);
         console.log('Аватар удален');
       }
+      
+      // Показываем сообщение об успешном удалении
+      showTempMessage('Аватар удален');
+    }
+
+    // Функция для показа временных сообщений
+    function showTempMessage(message, duration = 3000) {
+      // Удаляем существующее сообщение
+      const existingMessage = document.querySelector('.temp-message');
+      if (existingMessage) {
+        existingMessage.remove();
+      }
+
+      const messageEl = document.createElement('div');
+      messageEl.className = 'temp-message';
+      messageEl.textContent = message;
+      messageEl.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 12px;
+        font-size: 14px;
+        z-index: 1000;
+        backdrop-filter: blur(10px);
+        text-align: center;
+        max-width: 80%;
+      `;
+      
+      document.body.appendChild(messageEl);
+      
+      setTimeout(() => {
+        if (messageEl.parentNode) {
+          messageEl.remove();
+        }
+      }, duration);
     }
 
     // Расчет реальной статистики
@@ -843,17 +897,19 @@
       
       // Аватар
       const avatarImg = document.getElementById('avatar-img');
-      const avatarPlaceholder = document.getElementById('avatar-placeholder');
+      const avatarPlaceholder = document.querySelector('.avatar-placeholder-svg');
       const btnRemove = document.getElementById('btn-remove-avatar');
+      const avatarWrap = document.getElementById('profile-avatar-wrap');
+      const avatar = document.getElementById('profile-avatar');
       
       if (currentUser.avatar && currentUser.avatar.length > 0) {
         avatarImg.src = currentUser.avatar;
         avatarImg.style.display = "block";
         avatarPlaceholder.style.display = "none";
-        document.getElementById('profile-avatar').classList.add('has-photo');
-        btnRemove.style.display = "flex"; // Показываем кнопку удаления
+        avatar.classList.add('has-photo');
+        avatarWrap.classList.add('has-avatar'); // Добавляем класс для показа кнопки удаления
       } else {
-        btnRemove.style.display = "none"; // Скрываем кнопку удаления если нет фото
+        avatarWrap.classList.remove('has-avatar'); // Убираем класс для скрытия кнопки удаления
       }
 
       // Статус
@@ -968,9 +1024,13 @@
 
       // Аватар логика
       const avatarUpload = document.getElementById('avatar-upload');
-      const avatar = document.getElementById('profile-avatar');
+      const avatarContainer = document.getElementById('profile-avatar-wrap');
 
-      avatar.onclick = () => avatarUpload.click();
+      avatarContainer.onclick = (e) => {
+        if (e.target !== btnRemove) {
+          avatarUpload.click();
+        }
+      };
       
       avatarUpload.onchange = async function(){
         let file = avatarUpload.files && avatarUpload.files[0];
@@ -986,7 +1046,7 @@
           avatarImg.style.display = "block";
           avatarPlaceholder.style.display = "none";
           avatar.classList.add("has-photo");
-          btnRemove.style.display = "flex"; // Показываем кнопку удаления
+          avatarWrap.classList.add("has-avatar"); // Добавляем класс для показа кнопки удаления
 
           // Сохраняем аватар в профиль
           const users = UserSystem.getUsers();
@@ -997,7 +1057,10 @@
             users[userIndex].avatar = url;
             UserSystem.saveUsers(users);
             UserSystem.setCurrentUser(users[userIndex]);
+            console.log('Аватар сохранен');
           }
+          
+          showTempMessage('Аватар сохранен');
         } catch (error) {
           alert('Ошибка при загрузке изображения: ' + error.message);
         }
@@ -1008,6 +1071,17 @@
         e.stopPropagation();
         if (confirm('Удалить фото профиля?')) {
           removeAvatar();
+        }
+      };
+      
+      // Обработчик нажатия клавиши Enter на кнопке удаления
+      btnRemove.onkeydown = function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          if (confirm('Удалить фото профиля?')) {
+            removeAvatar();
+          }
         }
       };
     });
