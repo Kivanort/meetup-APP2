@@ -1001,15 +1001,37 @@
         const newUser = {
           id: UserSystem.generateUserId(),
           nickname: nickname,
-          email: email,
+          email: email.toLowerCase().trim(),
           password: UserSystem.hashPassword(password),
           avatar: avatarData,
           status: 'online',
+          invisible: false,
           registeredAt: new Date().toISOString(),
           lastSeen: new Date().toISOString(),
-          friends: [],
+          lastActive: Date.now(),
+          position: [55.751244, 37.618423],
           about: '',
-          position: [55.751244, 37.618423]
+          stats: {
+            friendsCount: 0,
+            totalDistance: 0,
+            onlineHours: 0,
+            totalFriends: 0,
+            meetingCount: 0
+          },
+          settings: {
+            notifications: true,
+            showOnMap: true,
+            autoUpdate: true,
+            privacy: 'public',
+            theme: 'dark'
+          },
+          metadata: {
+            version: 2,
+            created: Date.now(),
+            modified: Date.now()
+          },
+          isVerified: false,
+          isActive: true
         };
         
         users.push(newUser);
@@ -1054,15 +1076,15 @@
       document.getElementById('form-spinner').style.display = 'block';
       
       try {
-        // Создаем запрос на сброс
-        const resetCode = UserSystem.createPasswordResetRequest(email);
+        // Генерируем случайный код (для демо)
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
         
-        if (!resetCode) {
-          throw new Error('Не удалось создать запрос на сброс пароля');
-        }
+        // Сохраняем код для проверки
+        localStorage.setItem('reset_code_' + email, resetCode);
+        localStorage.setItem('reset_email', email);
         
         // Имитируем отправку email
-        await UserSystem.simulateEmailSend(email, resetCode);
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
         // Сохраняем email для следующих шагов
         resetEmail = email;
@@ -1100,17 +1122,17 @@
       document.getElementById('form-spinner').style.display = 'block';
       
       try {
-        const resetCode = UserSystem.createPasswordResetRequest(resetEmail);
+        // Генерируем новый код
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        localStorage.setItem('reset_code_' + resetEmail, resetCode);
         
-        if (resetCode) {
-          await UserSystem.simulateEmailSend(resetEmail, resetCode);
-          
-          // Показываем код в консоли для демонстрации
-          console.log('🔐 Демо-режим: Новый код для сброса пароля:', resetCode);
-          console.log('📧 Email:', resetEmail);
-          
-          startTimer();
-        }
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Показываем код в консоли для демонстрации
+        console.log('🔐 Демо-режим: Новый код для сброса пароля:', resetCode);
+        console.log('📧 Email:', resetEmail);
+        
+        startTimer();
       } catch (error) {
         console.error('Error resending code:', error);
       } finally {
@@ -1133,7 +1155,8 @@
       }
       
       // Проверяем код
-      if (UserSystem.verifyResetCode(resetEmail, code)) {
+      const savedCode = localStorage.getItem('reset_code_' + resetEmail);
+      if (savedCode === code) {
         showView('new-password');
       } else {
         error.style.display = 'flex';
@@ -1166,24 +1189,45 @@
       
       if (hasErrors) return;
       
+      // Проверяем код
+      const savedCode = localStorage.getItem('reset_code_' + resetEmail);
+      if (savedCode !== code) {
+        document.getElementById('code-error').style.display = 'flex';
+        return;
+      }
+      
       // Сбрасываем пароль
       document.getElementById('form-spinner').style.display = 'block';
       
-      if (UserSystem.resetPassword(resetEmail, code, newPassword)) {
-        document.getElementById('form-spinner').style.display = 'none';
-        document.getElementById('password-reset-success').style.display = 'flex';
+      try {
+        const users = UserSystem.getUsers();
+        const userIndex = users.findIndex(u => u.email === resetEmail.toLowerCase());
         
-        // Очищаем поля
-        codeInputs.forEach(input => input.value = '');
-        document.getElementById('new-password').value = '';
-        document.getElementById('new-password-confirm').value = '';
-        
-        // Возвращаем к форме входа через 2 секунды
-        setTimeout(() => {
-          showView('login');
-          resetEmail = '';
-        }, 2000);
-      } else {
+        if (userIndex !== -1) {
+          users[userIndex].password = UserSystem.hashPassword(newPassword);
+          UserSystem.saveUsers(users);
+          
+          // Очищаем временные данные
+          localStorage.removeItem('reset_code_' + resetEmail);
+          localStorage.removeItem('reset_email');
+          
+          document.getElementById('form-spinner').style.display = 'none';
+          document.getElementById('password-reset-success').style.display = 'flex';
+          
+          // Очищаем поля
+          codeInputs.forEach(input => input.value = '');
+          document.getElementById('new-password').value = '';
+          document.getElementById('new-password-confirm').value = '';
+          
+          // Возвращаем к форме входа через 2 секунды
+          setTimeout(() => {
+            showView('login');
+            resetEmail = '';
+          }, 2000);
+        } else {
+          throw new Error('Пользователь не найден');
+        }
+      } catch (error) {
         document.getElementById('form-spinner').style.display = 'none';
         document.getElementById('code-error').style.display = 'flex';
       }
@@ -1192,6 +1236,61 @@
     // Инициализация
     document.getElementById('timer').style.display = 'block';
     document.getElementById('resend-btn').disabled = true;
+
+    // Регистрация Service Worker для PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(registration => {
+            console.log('✅ Service Worker зарегистрирован:', registration.scope);
+            
+            // Запрашиваем разрешение на уведомления
+            if ('Notification' in window && Notification.permission === 'default') {
+              Notification.requestPermission();
+            }
+          })
+          .catch(error => {
+            console.log('❌ Ошибка регистрации Service Worker:', error);
+          });
+      });
+    }
+
+    // Установка PWA
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      
+      // Показываем кнопку установки
+      const installBtn = document.createElement('button');
+      installBtn.innerHTML = '📱 Установить приложение';
+      installBtn.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #00FFFF 0%, #9400D3 100%);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 12px;
+        cursor: pointer;
+        z-index: 10000;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      `;
+      
+      installBtn.onclick = () => {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(choiceResult => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('✅ Пользователь установил PWA');
+          }
+          deferredPrompt = null;
+          installBtn.remove();
+        });
+      };
+      
+      document.body.appendChild(installBtn);
+    });
   </script>
 </body>
 </html>
