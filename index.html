@@ -127,6 +127,27 @@
       letter-spacing: -0.5px;
     }
     
+    /* Реферальная информация */
+    .referral-badge {
+      background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(148, 0, 211, 0.1));
+      border: 1px solid var(--accent-cyan);
+      border-radius: var(--radius-medium);
+      padding: 10px 16px;
+      margin: 16px 0;
+      font-size: 14px;
+      text-align: center;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      animation: fadeIn 0.5s ease;
+    }
+    
+    .referral-badge .material-icons {
+      color: var(--accent-cyan);
+      font-size: 18px;
+    }
+    
     /* Кнопки */
     .btn {
       width: 100%;
@@ -312,6 +333,12 @@
       background: rgba(0, 200, 83, 0.1);
       color: var(--border-success);
       border-left: 3px solid var(--border-success);
+    }
+    
+    .message.info {
+      background: rgba(0, 255, 255, 0.1);
+      color: var(--accent-cyan);
+      border-left: 3px solid var(--accent-cyan);
     }
     
     /* Ссылки в формах */
@@ -542,6 +569,17 @@
       100% { transform: scale(40, 40); opacity: 0; }
     }
     
+    /* Анимация shake для ошибок */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    
+    .shake {
+      animation: shake 0.5s ease-in-out;
+    }
+    
     /* Адаптивность */
     @media (max-width: 480px) {
       body {
@@ -614,6 +652,11 @@
         padding: 10px 20px;
         font-size: 13px;
       }
+      
+      .referral-badge {
+        font-size: 13px;
+        padding: 8px 12px;
+      }
     }
     
     @media (max-width: 320px) {
@@ -649,6 +692,12 @@
           </svg>
         </div>
         <h1 class="main-title">Карта друзей</h1>
+      </div>
+      
+      <!-- Реферальная информация -->
+      <div class="referral-badge" id="referral-info" style="display: none;">
+        <span class="material-icons">person_add</span>
+        <span id="referral-text">Регистрация по приглашению</span>
       </div>
       
       <button class="btn btn-primary" id="btn-login-view">
@@ -714,6 +763,13 @@
     <!-- Форма регистрации -->
     <div class="form-view" id="register-view">
       <h2 class="form-title">Регистрация</h2>
+      
+      <!-- Реферальная информация в форме регистрации -->
+      <div class="referral-badge" id="referral-info-register" style="display: none;">
+        <span class="material-icons">person_add</span>
+        <span id="referral-text-register">Регистрация по приглашению</span>
+      </div>
+      
       <form id="register-form">
         <div class="form-group">
           <div class="input-wrapper">
@@ -923,12 +979,15 @@
       let resetTimer = null;
       let timeLeft = 300; // 5 минут в секундах
       let deferredPrompt = null;
+      let currentRefCode = null; // Текущий реферальный код из URL
       
       // DOM элементы
       const elements = {
         views: document.querySelectorAll('.form-view'),
         spinner: document.getElementById('form-spinner'),
         installBtn: document.getElementById('install-btn'),
+        referralInfo: document.getElementById('referral-info'),
+        referralInfoRegister: document.getElementById('referral-info-register'),
         codeInputs: [
           document.getElementById('code-1'),
           document.getElementById('code-2'),
@@ -938,6 +997,141 @@
           document.getElementById('code-6')
         ]
       };
+      
+      // Проверка реферального кода при загрузке
+      function checkReferralCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const refCode = urlParams.get('ref');
+        
+        if (refCode && refCode.trim() !== '') {
+          currentRefCode = refCode.trim();
+          
+          // Проверяем валидность реферального кода
+          if (UserSystem.validateReferralCode(currentRefCode)) {
+            // Показываем информацию о реферальной регистрации
+            showReferralInfo(currentRefCode);
+            console.log('✅ Реферальный код обнаружен:', currentRefCode);
+          } else {
+            console.log('❌ Невалидный реферальный код:', currentRefCode);
+            currentRefCode = null;
+          }
+        }
+      }
+      
+      // Показать информацию о реферальной регистрации
+      function showReferralInfo(refCode) {
+        // Пытаемся получить информацию о реферере
+        const referrer = UserSystem.getUserByReferralCode(refCode);
+        
+        if (referrer) {
+          const displayName = referrer.nickname || referrer.email.split('@')[0];
+          const text = `Регистрация по приглашению от ${displayName}`;
+          
+          // Показываем на главном экране
+          if (elements.referralInfo) {
+            document.getElementById('referral-text').textContent = text;
+            elements.referralInfo.style.display = 'flex';
+          }
+          
+          // Показываем в форме регистрации
+          if (elements.referralInfoRegister) {
+            document.getElementById('referral-text-register').textContent = text;
+            elements.referralInfoRegister.style.display = 'flex';
+          }
+        } else {
+          // Если не нашли реферера, показываем общую информацию
+          const text = 'Регистрация по реферальной ссылке';
+          
+          if (elements.referralInfo) {
+            document.getElementById('referral-text').textContent = text;
+            elements.referralInfo.style.display = 'flex';
+          }
+          
+          if (elements.referralInfoRegister) {
+            document.getElementById('referral-text-register').textContent = text;
+            elements.referralInfoRegister.style.display = 'flex';
+          }
+        }
+      }
+      
+      // Обработка реферальной регистрации
+      function processReferralRegistration(userId) {
+        if (!currentRefCode || !userId) return null;
+        
+        try {
+          // Используем реферальный код
+          const result = UserSystem.useReferralLink(currentRefCode, userId);
+          
+          if (result.success) {
+            console.log('✅ Реферальная регистрация успешна:', result);
+            
+            // Показываем уведомление пользователю
+            showReferralSuccessNotification(result);
+            
+            // Очищаем реферальный код из URL без перезагрузки
+            const url = new URL(window.location);
+            url.searchParams.delete('ref');
+            window.history.replaceState({}, '', url);
+            
+            return result;
+          } else {
+            console.log('⚠️ Реферальная регистрация не удалась:', result.message);
+            return result;
+          }
+        } catch (error) {
+          console.error('❌ Ошибка при обработке реферальной регистрации:', error);
+          return {
+            success: false,
+            message: 'Ошибка при обработке реферальной ссылки'
+          };
+        }
+      }
+      
+      // Показать уведомление об успешной реферальной регистрации
+      function showReferralSuccessNotification(result) {
+        // Можно добавить временное уведомление на странице
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #00FFFF 0%, #9400D3 100%);
+          color: white;
+          padding: 16px 24px;
+          border-radius: var(--radius-medium);
+          box-shadow: var(--shadow-card);
+          z-index: 10000;
+          animation: fadeIn 0.3s ease;
+          max-width: 300px;
+          font-size: 14px;
+        `;
+        
+        let message = '🎉 Вы зарегистрировались по реферальной ссылке!';
+        
+        if (result.bonus && result.bonus > 0) {
+          message += `\nПолучено бонусов: ${result.bonus}`;
+        }
+        
+        if (result.referrerName) {
+          message += `\nПригласивший: ${result.referrerName}`;
+        }
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // Удаляем уведомление через 5 секунд
+        setTimeout(() => {
+          notification.style.opacity = '0';
+          notification.style.transform = 'translateY(-10px)';
+          notification.style.transition = 'all 0.3s ease';
+          
+          setTimeout(() => {
+            if (notification.parentNode) {
+              notification.parentNode.removeChild(notification);
+            }
+          }, 300);
+        }, 5000);
+      }
       
       // Управление отображением форм
       function showView(viewId) {
@@ -1278,7 +1472,7 @@
         });
       }
       
-      // Форма регистрации
+      // Форма регистрации (С ОБРАБОТКОЙ РЕФЕРАЛЬНОГО КОДА)
       function setupRegisterForm() {
         const registerForm = document.getElementById('register-form');
         if (!registerForm) return;
@@ -1369,18 +1563,37 @@
               password: password,
               avatar: avatarData,
               position: [55.751244, 37.618423],
-              registeredAt: new Date().toISOString()
+              registeredAt: new Date().toISOString(),
+              // Добавляем реферальный код текущего пользователя, если он есть
+              referralCode: currentRefCode ? null : UserSystem.generateReferralCode()
             };
             
             const createdUser = UserSystem.createUser(newUser);
             
             if (createdUser) {
+              // ⭐ ВАЖНО: Обработка реферального кода после успешной регистрации
+              if (currentRefCode) {
+                const referralResult = processReferralRegistration(createdUser.id);
+                
+                if (referralResult && !referralResult.success) {
+                  console.log('⚠️ Реферальная регистрация не удалась, но пользователь создан');
+                  // Пользователь все равно регистрируется, даже если реферальная система не сработала
+                }
+              }
+              
               UserSystem.setCurrentUser(createdUser);
               
               // Сохраняем метаданные
               localStorage.setItem('user_registered', 'true');
               localStorage.setItem('registration_date', new Date().toISOString());
               
+              // Если был реферальный код, сохраняем информацию о нем
+              if (currentRefCode) {
+                localStorage.setItem('referral_used', currentRefCode);
+                localStorage.setItem('referral_date', new Date().toISOString());
+              }
+              
+              // Показываем успешную регистрацию
               setTimeout(() => {
                 window.location.href = 'map.html';
               }, 1000);
@@ -1687,9 +1900,18 @@
         });
       }
       
+      // Поделиться реферальной ссылкой
+      function setupReferralSharing() {
+        // Можно добавить кнопку "Поделиться ссылкой" для зарегистрированных пользователей
+        // Эта функция будет вызвана после успешного входа
+      }
+      
       // Инициализация приложения
       function init() {
         console.log('🚀 Инициализация приложения Карта друзей');
+        
+        // Проверяем реферальный код при загрузке
+        checkReferralCode();
         
         // Настройка всех модулей
         setupNavigation();
@@ -1705,6 +1927,7 @@
         setupPWA();
         setupAutoFocus();
         setupOfflineDetection();
+        setupReferralSharing();
         
         // Инициализация таймера
         document.getElementById('timer').style.display = 'block';
@@ -1722,6 +1945,12 @@
           }
         }
         
+        // Логирование реферальной информации
+        if (currentRefCode) {
+          console.log('🔗 Активный реферальный код:', currentRefCode);
+          console.log('📊 Для тестирования: откройте ссылку index.html?ref=' + currentRefCode);
+        }
+        
         console.log('✅ Приложение инициализировано');
       }
       
@@ -1737,7 +1966,9 @@
         showView,
         hideAllMessages,
         startTimer,
-        updateTimerDisplay
+        updateTimerDisplay,
+        checkReferralCode,
+        processReferralRegistration
       };
     })();
   </script>
