@@ -6,6 +6,9 @@
   <title>Карта друзей — MeetUP</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script src="userSystem.js"></script>
+  <script src="chatSystem.js"></script>
+  <script src="pedometer.js"></script>
+  <script src="notifications.js"></script>
   <link rel="icon" href="meetup-logo.png" type="image/x-icon">  
   <style>
     :root {
@@ -17,14 +20,7 @@
       --text-light: #fff;
       --text-muted: #9FAFD4;
     }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-    
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body {
       height: 100%;
       width: 100%;
@@ -33,207 +29,369 @@
       color: var(--text-light);
       overflow: hidden;
     }
-    
     #app-root {
       height: 100vh;
       height: -webkit-fill-available;
       display: flex;
       flex-direction: column;
     }
+    .app-header { background: var(--container); box-shadow: 0 2px 20px rgba(0,0,0,0.3); position: relative; z-index: 10; flex-shrink: 0;}
+    .header-content { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px;}
+    .logo-title { display: flex; align-items: center; gap: 12px;}
+    .app-logo { font-size: 24px; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .app-subtitle { color: var(--text-muted); font-size: 14px; }
+    .header-actions { display: flex; gap: 10px; }
+    .profile-btn { width: 50px; height: 50px; border: none; border-radius: 50%; background: var(--primary-gradient); color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.3);}
+    .profile-btn:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(0,255,255,0.6);}
+    .profile-btn:active { transform: scale(0.95); box-shadow: 0 0 30px rgba(0,255,255,0.8);}
+    .map-container { flex: 1; position: relative; overflow: hidden; }
+    #map { width: 100%; height: 100%; background: #131827; }
+    .map-placeholder { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #131827; color: var(--text-muted); gap: 15px; position: absolute; top: 0; left: 0; z-index: 20;}
+    .map-placeholder.hidden { display: none;}
+    .floating-buttons { position: absolute; bottom: 20px; left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 15px; padding: 0 20px; z-index: 5; }
+    .fab-primary { padding: 16px 20px; background: var(--primary-gradient); border: none; border-radius: 16px; color: white; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 20px rgba(44,180,255,0.4); transition: all 0.2s ease; min-height: 54px; white-space: nowrap;}
+    .fab-primary:hover { transform: scale(1.05); box-shadow: 0 6px 25px rgba(44,180,255,0.6);}
+    .fab-primary:active { transform: scale(0.95);}
+    .fab-secondary { width: 54px; height: 54px; border: none; border-radius: 50%; background: var(--container); color: var(--primary); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.2s ease;}
+    .fab-secondary:hover { transform: scale(1.05); background: var(--primary); color: white;}
+    .fab-secondary:active { transform: scale(0.95);}
+    .temp-message { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 15px 20px; border-radius: 12px; font-size: 14px; z-index: 1000; backdrop-filter: blur(10px); text-align: center; max-width: 80%;}
+    .map-controls { position: absolute; top: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
+    .map-filter-btn { width: 54px; height: 54px; border-radius: 50%; background: var(--container); border: 2px solid var(--primary); color: var(--primary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3);}
+    .map-filter-btn:hover { background: var(--primary); color: white; transform: scale(1.1);}
+    .map-filter-btn.active { background: var(--primary); color: white;}
+    .filter-panel { position: absolute; top: 70px; right: 20px; background: var(--container); border-radius: 12px; padding: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 99; display: none; min-width: 200px;}
+    .filter-panel.active { display: block; animation: slideIn 0.3s ease;}
+    @keyframes slideIn {from {opacity: 0; transform: translateY(-10px);} to {opacity: 1; transform: translateY(0);}}
+    .filter-option { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; color: var(--text-light); font-size: 14px; cursor: pointer;}
+    .filter-option input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary);}
+    .nearby-notification { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #2CB4FF 0%, #B970FE 100%); color: white; padding: 12px 20px; border-radius: 12px; box-shadow: 0 8px 24px rgba(44,180,255,0.3); z-index: 1000; display: flex; align-items: center; gap: 10px; animation: slideUp 0.5s ease; max-width: 90%;}
+    @keyframes slideUp { from { opacity: 0; transform: translateX(-50%) translateY(30px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+    .auto-update-indicator { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(30,30,30,0.9); color: #34eb89; padding: 8px 16px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; gap: 8px; z-index: 100; backdrop-filter: blur(10px);}
+    .notification-badge { position: absolute; top: -5px; right: -5px; background: #FF4444; color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
     
-    .app-header {
+    /* Панель отображения */
+    .display-panel {
+      position: absolute;
+      top: 70px;
+      right: 20px;
       background: var(--container);
-      box-shadow: 0 2px 20px rgba(0,0,0,0.3);
-      position: relative;
-      z-index: 10;
-      flex-shrink: 0;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      z-index: 99;
+      display: none;
+      min-width: 220px;
+    }
+    .display-panel.active {
+      display: block;
+      animation: slideIn 0.3s ease;
     }
     
-    .header-content {
-      display: flex;
+    /* Окно чатов */
+    .chat-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
       align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(5px);
+    }
+    .chat-overlay.active {
+      display: flex;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .chat-container {
+      width: 90%;
+      max-width: 400px;
+      height: 80%;
+      background: var(--container);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-header {
+      background: linear-gradient(135deg, #2CB4FF 0%, #B970FE 100%);
+      padding: 20px;
+      display: flex;
       justify-content: space-between;
-      padding: 15px 20px;
-    }
-    
-    .logo-title {
-      display: flex;
       align-items: center;
-      gap: 12px;
     }
-    
-    .app-logo {
-      font-size: 24px;
-      font-weight: 800;
-      background: var(--primary-gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    .chat-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: white;
     }
-    
-    .app-subtitle {
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-    
-    .header-actions {
-      display: flex;
-      gap: 10px;
-    }
-    
-    .profile-btn {
-      width: 50px;
-      height: 50px;
+    .chat-close-btn {
+      background: rgba(255,255,255,0.2);
       border: none;
       border-radius: 50%;
-      background: var(--primary-gradient);
+      width: 40px;
+      height: 40px;
       color: white;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: all 0.3s ease;
-      position: relative;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
-    
-    .profile-btn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+    .chat-close-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: rotate(90deg);
     }
-    
-    .profile-btn:active {
-      transform: scale(0.95);
-      box-shadow: 0 0 30px rgba(0, 255, 255, 0.8);
-    }
-    
-    .map-container {
+    .chat-list {
       flex: 1;
-      position: relative;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .chat-item {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 1px solid transparent;
+    }
+    .chat-item:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+    .chat-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #2a2a3a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .chat-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .chat-friend-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 5px;
+    }
+    .chat-last-message {
+      font-size: 14px;
+      color: var(--text-muted);
+      white-space: nowrap;
       overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-time {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+    .chat-unread {
+      background: var(--primary);
+      color: white;
+      font-size: 12px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .chat-empty {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 40px 20px;
+      font-size: 14px;
     }
     
-    #map {
+    /* Окно шагомера */
+    .pedometer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
-      background: #131827;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(5px);
     }
-    
-    .map-placeholder {
-      width: 100%;
-      height: 100%;
+    .pedometer-overlay.active {
+      display: flex;
+      animation: fadeIn 0.3s ease;
+    }
+    .pedometer-container {
+      width: 90%;
+      max-width: 500px;
+      background: var(--container);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+    }
+    .pedometer-header {
+      background: linear-gradient(135deg, #34eb89 0%, #08e7bd 100%);
+      padding: 25px;
+      text-align: center;
+    }
+    .pedometer-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 5px;
+    }
+    .pedometer-subtitle {
+      font-size: 14px;
+      color: rgba(255,255,255,0.8);
+    }
+    .pedometer-content {
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+    }
+    .pedometer-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .pedometer-stat {
+      background: rgba(255,255,255,0.05);
+      border-radius: 15px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      background: #131827;
-      color: var(--text-muted);
-      gap: 15px;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 20;
+      gap: 10px;
     }
-    
-    .map-placeholder.hidden {
-      display: none;
+    .stat-value {
+      font-size: 36px;
+      font-weight: 700;
+      color: #34eb89;
     }
-    
-    .floating-buttons {
-      position: absolute;
-      bottom: 20px;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 15px;
-      padding: 0 20px;
-      z-index: 5;
-    }
-    
-    .fab-primary {
-      padding: 16px 20px;
-      background: var(--primary-gradient);
-      border: none;
-      border-radius: 16px;
-      color: white;
-      font-size: 15px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      box-shadow: 0 4px 20px rgba(44, 180, 255, 0.4);
-      transition: all 0.2s ease;
-      min-height: 54px;
-      white-space: nowrap;
-    }
-    
-    .fab-primary:hover {
-      transform: scale(1.05);
-      box-shadow: 0 6px 25px rgba(44, 180, 255, 0.6);
-    }
-    
-    .fab-primary:active {
-      transform: scale(0.95);
-    }
-    
-    .fab-secondary {
-      width: 54px;
-      height: 54px;
-      border: none;
-      border-radius: 50%;
-      background: var(--container);
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      transition: all 0.2s ease;
-    }
-    
-    .fab-secondary:hover {
-      transform: scale(1.05);
-      background: var(--primary);
-      color: white;
-    }
-    
-    .fab-secondary:active {
-      transform: scale(0.95);
-    }
-    
-    .temp-message {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.8);
-      color: white;
-      padding: 15px 20px;
-      border-radius: 12px;
+    .stat-label {
       font-size: 14px;
-      z-index: 1000;
-      backdrop-filter: blur(10px);
+      color: var(--text-muted);
+    }
+    .stat-subvalue {
+      font-size: 16px;
+      color: #2CB4FF;
+      margin-top: 5px;
+    }
+    .pedometer-goal {
+      background: rgba(255,255,255,0.05);
+      border-radius: 15px;
+      padding: 20px;
+    }
+    .goal-title {
+      font-size: 16px;
+      color: white;
+      margin-bottom: 15px;
       text-align: center;
-      max-width: 80%;
+    }
+    .goal-progress-bar {
+      height: 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .goal-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #34eb89, #08e7bd);
+      border-radius: 5px;
+      transition: width 0.5s ease;
+    }
+    .goal-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .pedometer-actions {
+      display: flex;
+      gap: 15px;
+      margin-top: 10px;
+    }
+    .pedometer-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-start {
+      background: linear-gradient(135deg, #34eb89 0%, #08e7bd 100%);
+      color: white;
+    }
+    .btn-simulate {
+      background: linear-gradient(135deg, #2CB4FF 0%, #B970FE 100%);
+      color: white;
+    }
+    .btn-close {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+    .pedometer-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .pedometer-not-supported {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+    .pedometer-not-supported .material-icons {
+      font-size: 60px;
+      color: #FF4444;
+      margin-bottom: 20px;
     }
     
-    /* Дополнительные стили для улучшенной карты */
-    .map-controls {
+    /* Кнопка фильтров справа вверху */
+    .map-controls-top {
       position: absolute;
       top: 20px;
-      right: 20px;
+      left: 20px;
       z-index: 100;
       display: flex;
       flex-direction: column;
       gap: 10px;
     }
     
-    .map-filter-btn {
-      width: 44px;
-      height: 44px;
+    /* Фильтр и обновление теперь сверху слева */
+    .map-filter-btn-left {
+      width: 54px;
+      height: 54px;
       border-radius: 50%;
       background: var(--container);
       border: 2px solid var(--primary);
@@ -245,227 +403,49 @@
       transition: all 0.3s ease;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
-    
-    .map-filter-btn:hover {
+    .map-filter-btn-left:hover {
       background: var(--primary);
       color: white;
       transform: scale(1.1);
     }
     
-    .map-filter-btn.active {
-      background: var(--primary);
-      color: white;
-    }
-    
-    .filter-panel {
-      position: absolute;
-      top: 70px;
-      right: 20px;
-      background: var(--container);
-      border-radius: 12px;
-      padding: 15px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-      z-index: 99;
-      display: none;
-      min-width: 200px;
-    }
-    
-    .filter-panel.active {
-      display: block;
-      animation: slideIn 0.3s ease;
-    }
-    
-    @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
-    .filter-option {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
-      color: var(--text-light);
-      font-size: 14px;
-      cursor: pointer;
-    }
-    
-    .filter-option input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      accent-color: var(--primary);
-    }
-    
-    .nearby-notification {
-      position: fixed;
-      bottom: 100px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: linear-gradient(135deg, #2CB4FF 0%, #B970FE 100%);
-      color: white;
-      padding: 12px 20px;
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(44, 180, 255, 0.3);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      animation: slideUp 0.5s ease;
-      max-width: 90%;
-    }
-    
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateX(-50%) translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-      }
-    }
-    
-    .auto-update-indicator {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(30, 30, 30, 0.9);
-      color: #34eb89;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      z-index: 100;
-      backdrop-filter: blur(10px);
-    }
-    
-    .notification-badge {
-      position: absolute;
-      top: -5px;
-      right: -5px;
-      background: #FF4444;
-      color: white;
-      font-size: 10px;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    /* Стиль для метки призрака на карте */
+    .ghost-marker {
+      filter: grayscale(100%) brightness(150%);
     }
     
     @media (max-width: 768px) {
-      .header-content {
-        padding: 12px 15px;
-      }
-      
-      .app-logo {
-        font-size: 20px;
-      }
-      
-      .app-subtitle {
-        font-size: 13px;
-      }
-      
-      .profile-btn {
-        width: 45px;
-        height: 45px;
-      }
-      
-      .fab-primary {
-        padding: 14px 18px;
-        font-size: 14px;
-        min-height: 50px;
-        border-radius: 14px;
-      }
-      
-      .fab-secondary {
-        width: 50px;
-        height: 50px;
-      }
-      
-      .floating-buttons {
-        bottom: 15px;
-        padding: 0 15px;
-        gap: 12px;
-      }
-      
-      .map-controls {
-        top: 15px;
-        right: 15px;
-      }
-      
-      .map-filter-btn {
-        width: 40px;
-        height: 40px;
-      }
-      
-      .filter-panel {
-        top: 60px;
-        right: 15px;
-        min-width: 180px;
-      }
+      .header-content {padding: 12px 15px;}
+      .app-logo {font-size: 20px;}
+      .app-subtitle {font-size: 13px;}
+      .profile-btn {width: 45px; height: 45px;}
+      .fab-primary {padding: 14px 18px; font-size: 14px; min-height: 50px; border-radius: 14px;}
+      .fab-secondary {width: 50px; height: 50px;}
+      .floating-buttons {bottom: 15px; padding: 0 15px; gap: 12px;}
+      .map-controls {top: 15px; right: 15px;}
+      .map-filter-btn {width: 50px; height: 50px;}
+      .map-controls-top {top: 15px; left: 15px;}
+      .map-filter-btn-left {width: 50px; height: 50px;}
+      .filter-panel {top: 60px; right: 15px; min-width: 180px;}
+      .display-panel {top: 60px; right: 15px; min-width: 180px;}
     }
-    
     @media (max-width: 480px) {
-      .header-content {
-        padding: 10px 12px;
-      }
-      
-      .logo-title {
-        gap: 8px;
-      }
-      
-      .app-logo {
-        font-size: 18px;
-      }
-      
-      .app-subtitle {
-        display: none;
-      }
-      
-      .profile-btn {
-        width: 42px;
-        height: 42px;
-      }
-      
-      .profile-btn .material-icons {
-        font-size: 20px;
-      }
-      
-      .fab-primary span:last-child {
-        display: none;
-      }
-      
-      .fab-primary {
-        padding: 12px 15px;
-        min-height: 48px;
-        border-radius: 12px;
-      }
-      
-      .fab-secondary {
-        width: 48px;
-        height: 48px;
-      }
-      
-      .floating-buttons {
-        bottom: 12px;
-        padding: 0 12px;
-      }
-      
-      .map-controls {
-        top: 10px;
-        right: 10px;
-      }
+      .header-content {padding: 10px 12px;}
+      .logo-title {gap: 8px;}
+      .app-logo {font-size: 18px;}
+      .app-subtitle {display: none;}
+      .profile-btn {width: 42px; height: 42px;}
+      .profile-btn .material-icons {font-size: 20px;}
+      .fab-primary span:last-child {display: none;}
+      .fab-primary {padding: 12px 15px; min-height: 48px; border-radius: 12px;}
+      .fab-secondary {width: 48px; height: 48px;}
+      .floating-buttons {bottom: 12px; padding: 0 12px;}
+      .map-controls {top: 10px; right: 10px;}
+      .map-filter-btn {width: 45px; height: 45px;}
+      .map-controls-top {top: 10px; left: 10px;}
+      .map-filter-btn-left {width: 45px; height: 45px;}
+      .pedometer-content {padding: 20px;}
+      .stat-value {font-size: 28px;}
     }
   </style>
 </head>
@@ -485,54 +465,62 @@
         </div>
       </div>
     </header>
-    
     <div class="map-container">
       <div id="map"></div>
-      
       <div class="map-placeholder" id="map-placeholder">
         <span class="material-icons" style="font-size: 64px; opacity: 0.5;">map</span>
         <div>Загрузка карты...</div>
       </div>
       
+      <!-- Контролы карты справа (инкогнито, шагомер, чаты, отображение) -->
       <div class="map-controls">
-        <button class="map-filter-btn" id="btn-filter" title="Фильтры">
-          <span class="material-icons">filter_list</span>
+        <button class="map-filter-btn" id="btn-chat" title="Чаты с друзьями">
+          <span class="material-icons">chat</span>
+          <div class="notification-badge" id="chat-notification-badge" style="display: none;">0</div>
         </button>
-        <button class="map-filter-btn" id="btn-refresh" title="Обновить карту">
-          <span class="material-icons">refresh</span>
+        
+        <button class="map-filter-btn" id="btn-pedometer" title="Шагомер">
+          <span class="material-icons">directions_walk</span>
         </button>
+        
         <button class="map-filter-btn" id="btn-incognito" title="Режим инкогнито">
-          <span class="material-icons">visibility_off</span>
+          <span class="material-icons" id="incognito-icon">visibility_off</span>
         </button>
-        <button class="map-filter-btn" id="btn-notifications" title="Уведомления">
-          <span class="material-icons">notifications</span>
-          <div class="notification-badge" id="notifications-count" style="display: none;">0</div>
+        
+        <button class="map-filter-btn" id="btn-display-mode" title="Отображение пользователей">
+          <span class="material-icons">people</span>
         </button>
       </div>
       
+      <!-- Контролы карты слева (фильтры и обновление) -->
+      <div class="map-controls-top">
+        <button class="map-filter-btn-left" id="btn-filter" title="Фильтры карты">
+          <span class="material-icons">filter_list</span>
+        </button>
+        <button class="map-filter-btn-left" id="btn-refresh" title="Обновить карту">
+          <span class="material-icons">refresh</span>
+        </button>
+      </div>
+      
+      <!-- Панель фильтров -->
       <div class="filter-panel" id="filter-panel">
         <h4 style="margin: 0 0 15px 0; color: var(--text-light);">Фильтры карты</h4>
-        
         <label class="filter-option">
           <input type="checkbox" id="filter-friends" checked>
           <span>Друзья</span>
         </label>
-        
         <label class="filter-option">
           <input type="checkbox" id="filter-online" checked>
           <span>Только онлайн</span>
         </label>
-        
         <label class="filter-option">
           <input type="checkbox" id="filter-nearby" checked>
           <span>Рядом со мной</span>
         </label>
-        
         <label class="filter-option">
           <input type="checkbox" id="filter-new" checked>
           <span>Новые пользователи</span>
         </label>
-        
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">
             Радиус поиска: <span id="radius-value">5</span> км
@@ -541,6 +529,40 @@
         </div>
       </div>
       
+      <!-- Панель отображения -->
+      <div class="display-panel" id="display-panel">
+        <h4 style="margin: 0 0 15px 0; color: var(--text-light);">Отображение пользователей</h4>
+        <label class="filter-option">
+          <input type="checkbox" id="display-all" checked>
+          <span>Все пользователи</span>
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" id="display-friends" checked>
+          <span>Только друзья</span>
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" id="display-online" checked>
+          <span>Только онлайн</span>
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" id="display-new" checked>
+          <span>Новые пользователи</span>
+        </label>
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">
+            Маркеры друзей: <span id="friend-marker-style">синий</span>
+          </label>
+          <select id="friend-marker-select" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--container); color: white; border: 1px solid var(--primary);">
+            <option value="blue">Синий</option>
+            <option value="green">Зеленый</option>
+            <option value="red">Красный</option>
+            <option value="purple">Фиолетовый</option>
+            <option value="gold">Золотой</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Основные плавающие кнопки в центре снизу -->
       <div class="floating-buttons">
         <button class="fab-secondary" id="btn-locate" title="Мое местоположение">
           <span class="material-icons">navigation</span>
@@ -552,68 +574,74 @@
       </div>
     </div>
   </div>
-
+  
+  <!-- Индикатор автообновления -->
   <div class="auto-update-indicator" id="auto-update-indicator" style="display: none;">
     <span class="material-icons" style="font-size: 16px;">autorenew</span>
     <span>Автообновление: <span id="update-timer">30</span>с</span>
   </div>
-
+  
+  <!-- Окно чатов -->
+  <div class="chat-overlay" id="chat-overlay">
+    <div class="chat-container">
+      <div class="chat-header">
+        <div class="chat-title">Чаты с друзьями</div>
+        <button class="chat-close-btn" id="chat-close-btn">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="chat-list" id="chat-list">
+        <div class="chat-empty">Загрузка чатов...</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Окно шагомера -->
+  <div class="pedometer-overlay" id="pedometer-overlay">
+    <div class="pedometer-container">
+      <div class="pedometer-header">
+        <div class="pedometer-title">Шагомер</div>
+        <div class="pedometer-subtitle">Отслеживайте вашу активность</div>
+      </div>
+      <div class="pedometer-content" id="pedometer-content">
+        <!-- Контент шагомера будет загружен динамически -->
+      </div>
+      <div class="pedometer-actions" style="padding: 0 30px 30px 30px;">
+        <button class="pedometer-btn btn-close" id="pedometer-close-btn">
+          <span class="material-icons">close</span>
+          Закрыть
+        </button>
+      </div>
+    </div>
+  </div>
+  
   <script>
-    // Простая функция для показа временных сообщений
     function showTempMessage(message, duration = 3000) {
-      // Удаляем существующее сообщение
       const existingMessage = document.querySelector('.temp-message');
-      if (existingMessage) {
-        existingMessage.remove();
-      }
-
+      if (existingMessage) existingMessage.remove();
       const messageEl = document.createElement('div');
       messageEl.className = 'temp-message';
       messageEl.textContent = message;
-      
       document.body.appendChild(messageEl);
-      
-      setTimeout(() => {
-        if (messageEl.parentNode) {
-          messageEl.remove();
-        }
-      }, duration);
+      setTimeout(() => { if (messageEl.parentNode) messageEl.remove(); }, duration);
     }
-
-    // Флаг загрузки API карт
+    
     let isMapsApiLoading = false;
     let mapsApiLoadCallbacks = [];
     
-    // Загрузка API Яндекс Карт
     function loadYandexMapsAPI() {
       return new Promise((resolve, reject) => {
-        // Если API уже загружен
-        if (typeof ymaps !== 'undefined') {
-          resolve(ymaps);
-          return;
-        }
-        
-        // Если уже в процессе загрузки
-        if (isMapsApiLoading) {
-          mapsApiLoadCallbacks.push({ resolve, reject });
-          return;
-        }
-        
+        if (typeof ymaps !== 'undefined') { resolve(ymaps); return; }
+        if (isMapsApiLoading) { mapsApiLoadCallbacks.push({ resolve, reject }); return; }
         isMapsApiLoading = true;
-        
-        // Создаем скрипт для загрузки API
         const script = document.createElement('script');
-        // ЗАМЕНИТЕ 'ваш_ключ_апи_здесь' на ваш настоящий ключ API
         script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=ваш_ключ_апи_здесь';
         script.async = true;
-        
         script.onload = () => {
-          // Ждем пока ymaps будет полностью готов
           if (typeof ymaps !== 'undefined' && ymaps.ready) {
             ymaps.ready(() => {
               isMapsApiLoading = false;
               resolve(ymaps);
-              // Вызываем все ожидающие коллбэки
               mapsApiLoadCallbacks.forEach(cb => cb.resolve(ymaps));
               mapsApiLoadCallbacks = [];
             });
@@ -621,7 +649,6 @@
             reject(new Error('Yandex Maps API загружен, но не готов'));
           }
         };
-        
         script.onerror = () => {
           isMapsApiLoading = false;
           const error = new Error('Не удалось загрузить Яндекс Карты');
@@ -629,12 +656,10 @@
           mapsApiLoadCallbacks.forEach(cb => cb.reject(error));
           mapsApiLoadCallbacks = [];
         };
-        
         document.head.appendChild(script);
       });
     }
-
-    // Основные переменные
+    
     let map = null;
     let currentUser = null;
     let friendsClusterer = null;
@@ -642,91 +667,67 @@
     let autoUpdateInterval = null;
     let updateTimer = 30;
     let isIncognitoMode = false;
-    let filterSettings = {
+    let filterSettings = { friends: true, online: true, nearby: true, new: true, radius: 5 };
+    let displaySettings = {
+      all: true,
       friends: true,
       online: true,
-      nearby: true,
       new: true,
-      radius: 5
+      friendMarker: 'blue'
     };
-
-    // Основная функция инициализации карты
+    
+    // Переменная для метки текущего пользователя
+    let currentUserPlacemark = null;
+    
     function initializeMap() {
       const mapElement = document.getElementById('map');
       const placeholder = document.getElementById('map-placeholder');
       
-      // Загружаем API Яндекс Карт
       loadYandexMapsAPI()
         .then(ymaps => {
           console.log('✅ Яндекс Карты успешно загружены');
-          
           currentUser = UserSystem.getCurrentUser();
+          
           if (!currentUser) {
             showTempMessage('Пользователь не авторизован');
             window.location.href = 'index.html';
             return;
           }
-
-          const defaultPosition = currentUser.position || [55.751244, 37.618423];
           
-          // Оптимальные настройки зума
-          const MIN_ZOOM = 2;   // Минимальный зум для всего мира
-          const MAX_ZOOM = 19;  // Максимальный детальный зум
-          const DEFAULT_ZOOM = 12; // Зум по умолчанию для города
-
+          // Проверяем состояние инкогнито из профиля
+          isIncognitoMode = currentUser.invisible || false;
+          updateIncognitoButton();
+          
+          const defaultPosition = currentUser.position || [55.751244, 37.618423];
+          const MIN_ZOOM = 2;
+          const MAX_ZOOM = 19;
+          const DEFAULT_ZOOM = 12;
+          
           try {
-            // Получаем координаты всех пользователей для вычисления bounds
             const allUsers = UserSystem.getUsers();
-            const positions = allUsers
-              .filter(user => user.position && Array.isArray(user.position))
-              .map(user => user.position);
-            
+            const positions = allUsers.filter(user => user.position && Array.isArray(user.position)).map(user => user.position);
             let initialCenter = defaultPosition;
             let initialZoom = DEFAULT_ZOOM;
             
-            // Если есть другие пользователи, вычисляем центр
             if (positions.length > 1) {
-              // Создаем коллекцию точек
-              const collection = new ymaps.GeoObjectCollection(null, {}, {
-                preset: 'islands#blueCircleDotIcon'
-              });
-              
-              positions.forEach(pos => {
-                collection.add(new ymaps.Placemark(pos));
-              });
-              
-              // Получаем bounds коллекции
+              const collection = new ymaps.GeoObjectCollection(null, {}, { preset: 'islands#blueCircleDotIcon' });
+              positions.forEach(pos => { collection.add(new ymaps.Placemark(pos)); });
               const bounds = ymaps.util.bounds.fromPoints(positions);
-              
-              // Вычисляем оптимальный зум для bounds
-              const mapSize = [
-                mapElement.offsetWidth,
-                mapElement.offsetHeight
-              ];
-              
-              // Вычисляем центр всех точек
+              const mapSize = [ mapElement.offsetWidth, mapElement.offsetHeight ];
               const center = ymaps.geoQuery(positions).getCenter();
-              if (center) {
-                initialCenter = center;
-              }
-              
-              // Вычисляем зум для отображения всех точек
+              if (center) initialCenter = center;
               const zoom = ymaps.util.bounds.getZoom(bounds, mapSize);
-              
-              // Корректируем зум (не меньше MIN_ZOOM, не больше MAX_ZOOM)
               initialZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom - 0.5));
             }
             
-            // Создаем карту с правильными ограничениями
+            // Ограничения для области карты
+            const limitBounds = [[85, -179], [-85, 179]];
+            
             map = new ymaps.Map('map', {
               center: initialCenter,
               zoom: initialZoom,
               controls: [],
-              // Критически важные опции для предотвращения "серых областей"
-              restrictMapArea: [
-                [85, -179],  // Северо-западная граница
-                [-85, 179]   // Юго-восточная граница
-              ],
+              restrictMapArea: limitBounds,
               suppressMapOpenBlock: true,
               suppressObsoleteBrowserNotifier: true
             }, {
@@ -735,27 +736,35 @@
               yandexMapDisablePoiInteractivity: true
             });
             
-            // Скрываем placeholder после загрузки карты
             placeholder.classList.add('hidden');
             
-            // Добавляем ограничения для предотвращения выхода за границы
-            map.events.add('boundschange', function(e) {
-              const zoom = map.getZoom();
-              if (zoom < MIN_ZOOM) {
-                map.setZoom(MIN_ZOOM, { duration: 300 });
+            // -- Главная логика: невозможно выйти за границы (жесткая блокировка) --
+            map.options.set({
+              restrictMapArea: limitBounds,
+              yandexMapDisablePoiInteractivity: true,
+              yandexMapDisablePanOnEdge: true,
+              suppressMapOpenBlock: true,
+              suppressMapDragOutside: true
+            });
+            
+            // при любом boundschange немедленно возвращаемся внутрь (ультра жесткий вариант)
+            map.events.add('actiontick', function (e) {
+              let bounds = map.getBounds();
+              if (
+                bounds[0][0] > limitBounds[0][0] || bounds[1][0] < limitBounds[1][0] ||
+                bounds[0][1] < limitBounds[0][1] || bounds[1][1] > limitBounds[1][1]
+              ) {
+                map.setBounds(limitBounds, { checkZoomRange: true, duration: 0 });
               }
-              
-              // Проверяем границы
-              const bounds = e.get('newBounds');
-              const maxBounds = [
-                [85, -179],
-                [-85, 179]
-              ];
-              
-              // Если вышли за границы, корректируем
-              if (bounds[0][0] > maxBounds[0][0] || bounds[1][0] < maxBounds[1][0] ||
-                  bounds[0][1] < maxBounds[0][1] || bounds[1][1] > maxBounds[1][1]) {
-                map.setBounds(maxBounds, { checkZoomRange: true });
+            });
+            
+            map.events.add('boundschange', function (e) {
+              const bounds = map.getBounds();
+              if (
+                bounds[0][0] > limitBounds[0][0] || bounds[1][0] < limitBounds[1][0] ||
+                bounds[0][1] < limitBounds[0][1] || bounds[1][1] > limitBounds[1][1]
+              ) {
+                map.setBounds(limitBounds, { checkZoomRange: true, duration: 0 });
               }
             });
             
@@ -763,22 +772,14 @@
             map.controls.add('zoomControl', {
               size: 'small',
               float: 'none',
-              position: {
-                right: 10,
-                top: 100
-              }
+              position: { right: 10, top: 100 }
             });
             
-            // Добавляем геолокацию
             map.controls.add('geolocationControl', {
               float: 'none',
-              position: {
-                right: 10,
-                top: 150
-              }
+              position: { right: 10, top: 150 }
             });
             
-            // Создаем кластеризатор для друзей
             friendsClusterer = new ymaps.Clusterer({
               preset: 'islands#invertedVioletClusterIcons',
               clusterDisableClickZoom: true,
@@ -786,7 +787,6 @@
               geoObjectHideIconOnBalloonOpen: false
             });
             
-            // Создаем кластеризатор для других пользователей
             usersClusterer = new ymaps.Clusterer({
               preset: 'islands#invertedBlueClusterIcons',
               clusterDisableClickZoom: true,
@@ -794,31 +794,23 @@
               geoObjectHideIconOnBalloonOpen: false
             });
             
-            // Обновляем карту
             updateMap();
             
-            // Если есть друзья, центрируем карту
             const friends = UserSystem.getUserFriends(currentUser.id);
             if (friends.length > 0) {
               setTimeout(() => {
-                const friendPositions = friends
-                  .filter(f => f.position)
-                  .map(f => f.position);
-                
+                const friendPositions = friends.filter(f => f.position).map(f => f.position);
                 if (friendPositions.length > 0) {
                   const bounds = ymaps.util.bounds.fromPoints(friendPositions);
-                  map.setBounds(bounds, {
-                    checkZoomRange: true,
-                    zoomMargin: 50
-                  });
+                  map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 50 });
                 }
               }, 1000);
             }
             
             console.log('✅ Карта успешно инициализирована');
-            
-            // Запускаем автообновление
             startAutoUpdate();
+            updateChatNotificationCount();
+            setInterval(updateChatNotificationCount, 30000);
             
           } catch (error) {
             console.error('❌ Ошибка при инициализации карты:', error);
@@ -858,91 +850,199 @@
           `;
         });
     }
-
-    // Обновление карты с текущими фильтрами
-    function updateMap() {
-      if (!map || !currentUser) return;
+    
+    // Функция для обновления кнопки инкогнито
+    function updateIncognitoButton() {
+      const btn = document.getElementById('btn-incognito');
+      const icon = document.getElementById('incognito-icon');
       
-      // Очищаем предыдущие метки
+      if (isIncognitoMode) {
+        btn.classList.add('active');
+        btn.title = 'Режим инкогнито включен';
+        icon.textContent = 'visibility_off'; // Оставляем иконку видимости
+      } else {
+        btn.classList.remove('active');
+        btn.title = 'Режим инкогнито';
+        icon.textContent = 'visibility_off';
+      }
+    }
+    
+    // Функция для создания/обновления метки текущего пользователя
+    function updateCurrentUserPlacemark() {
+      if (!map || !currentUser || typeof ymaps === 'undefined') return;
+      
+      // Удаляем старую метку
+      if (currentUserPlacemark) {
+        map.geoObjects.remove(currentUserPlacemark);
+      }
+      
+      // Если пользователь скрыт - не показываем его на карте
+      if (isIncognitoMode || !currentUser.position) {
+        currentUserPlacemark = null;
+        return;
+      }
+      
+      // Создаем новую метку
+      const iconColor = isIncognitoMode ? '#FF4444' : '#2CB4FF'; // Красная при инкогнито
+      const preset = isIncognitoMode ? 'islands#redCircleDotIcon' : 'islands#blueCircleDotIcon';
+      const statusText = isIncognitoMode ? 'Скрыт' : 'Ваше местоположение';
+      
+      currentUserPlacemark = new ymaps.Placemark(
+        currentUser.position,
+        {
+          balloonContent: `
+            <div style="padding: 10px; min-width: 200px;">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: ${isIncognitoMode ? 'linear-gradient(135deg, #FF4444 0%, #992222 100%)' : 'linear-gradient(135deg, #2CB4FF 0%, #B970FE 100%)'}; display: flex; align-items: center; justify-content: center;">
+                  <span class="material-icons" style="color: white;">person</span>
+                </div>
+                <div>
+                  <strong style="color: white;">${currentUser.nickname || 'Вы'}</strong><br>
+                  <span style="color: ${isIncognitoMode ? '#FF4444' : '#2CB4FF'}; font-size: 12px;">
+                    ${statusText}
+                  </span>
+                </div>
+              </div>
+              ${currentUser.about ? `<p style="color: #aaa; font-size: 13px; margin: 10px 0;">${currentUser.about}</p>` : ''}
+            </div>
+          `,
+          iconCaption: isIncognitoMode ? '👻 Скрыт' : 'Вы'
+        },
+        { 
+          preset: preset, 
+          iconColor: iconColor,
+          iconCaptionMaxWidth: '150px'
+        }
+      );
+      
+      map.geoObjects.add(currentUserPlacemark);
+    }
+    
+    function updateMap() {
+      if (!map || !currentUser || typeof ymaps === 'undefined') return;
+      
+      // Обновляем метку текущего пользователя
+      updateCurrentUserPlacemark();
+      
+      // Очищаем кластеризаторы
       friendsClusterer.removeAll();
       usersClusterer.removeAll();
-      map.geoObjects.removeAll();
+      
+      // Удаляем все метки кроме текущего пользователя
+      map.geoObjects.each(function(geoObject) {
+        if (geoObject !== currentUserPlacemark) {
+          map.geoObjects.remove(geoObject);
+        }
+      });
       
       const allUsers = UserSystem.getUsers();
       const friends = UserSystem.getUserFriends(currentUser.id);
       const friendIds = friends.map(f => f.id);
       
-      // Добавляем текущего пользователя
-      if (currentUser.position && !isIncognitoMode) {
-        const currentUserPlacemark = new ymaps.Placemark(
-          currentUser.position,
-          {
-            balloonContent: `
-              <div style="padding: 10px;">
-                <strong>${currentUser.nickname || 'Вы'}</strong><br>
-                <span style="color: #666;">Ваше местоположение</span>
-                ${currentUser.about ? `<br><p style="margin-top: 5px; color: #888;">${currentUser.about}</p>` : ''}
-              </div>
-            `
-          },
-          {
-            preset: 'islands#blueCircleDotIcon',
-            iconColor: '#2CB4FF',
-            draggable: false
-          }
-        );
-        
-        map.geoObjects.add(currentUserPlacemark);
-      }
-      
-      // Фильтруем и добавляем других пользователей
-      allUsers.forEach(user => {
-        if (user.id === currentUser.id || !user.position) return;
-        
-        // Применяем фильтры
-        if (user.invisible && !isIncognitoMode) return;
+      // Фильтрация пользователей
+      const filteredUsers = allUsers.filter(user => {
+        if (user.id === currentUser.id || !user.position) return false;
+        if (user.invisible && !isIncognitoMode) return false;
         
         const isFriend = friendIds.includes(user.id);
-        if (!filterSettings.friends && isFriend) return;
         
-        if (filterSettings.online && user.status !== 'online') return;
+        // Применяем настройки отображения
+        if (!displaySettings.all && !isFriend) return false;
+        if (!displaySettings.friends && isFriend) return false;
+        if (displaySettings.online && user.status !== 'online') return false;
         
+        // Фильтр по расстоянию
         if (filterSettings.nearby && currentUser.position) {
           const distance = calculateDistance(currentUser.position, user.position);
-          if (distance > filterSettings.radius) return;
+          if (distance > filterSettings.radius) return false;
         }
         
-        // Определяем стиль метки
-        let iconColor, preset;
+        return true;
+      });
+      
+      // Добавление меток на карту с разными стилями для друзей
+      filteredUsers.forEach(user => {
+        const isFriend = friendIds.includes(user.id);
         
+        // Цвет метки в зависимости от настроек
+        let iconColor, preset, iconCaption;
         if (isFriend) {
-          iconColor = user.status === 'online' ? '#34eb89' : '#697999';
-          preset = 'islands#greenCircleDotIcon';
+          // Используем выбранный цвет для друзей
+          switch(displaySettings.friendMarker) {
+            case 'green':
+              iconColor = user.status === 'online' ? '#34eb89' : '#2a7a2a';
+              preset = 'islands#greenCircleDotIcon';
+              iconCaption = '✓ Друг';
+              break;
+            case 'red':
+              iconColor = user.status === 'online' ? '#ff4444' : '#992222';
+              preset = 'islands#redCircleDotIcon';
+              iconCaption = '✓ Друг';
+              break;
+            case 'purple':
+              iconColor = user.status === 'online' ? '#B970FE' : '#663399';
+              preset = 'islands#violetCircleDotIcon';
+              iconCaption = '✓ Друг';
+              break;
+            case 'gold':
+              iconColor = user.status === 'online' ? '#FFD700' : '#B8860B';
+              preset = 'islands#yellowCircleDotIcon';
+              iconCaption = '✓ Друг';
+              break;
+            default: // blue
+              iconColor = user.status === 'online' ? '#2CB4FF' : '#1a5a7a';
+              preset = 'islands#blueCircleDotIcon';
+              iconCaption = '✓ Друг';
+          }
         } else {
-          iconColor = user.status === 'online' ? '#2CB4FF' : '#697999';
-          preset = 'islands#circleDotIcon';
+          // Обычные пользователи - серый цвет
+          iconColor = user.status === 'online' ? '#A4B0BE' : '#666666';
+          preset = 'islands#grayCircleDotIcon';
+          iconCaption = user.nickname || 'Пользователь';
         }
         
-        // Создаем метку
         const placemark = new ymaps.Placemark(
           user.position,
           {
             balloonContent: `
-              <div style="padding: 10px;">
-                <strong>${user.nickname || 'Пользователь'}</strong><br>
-                <span style="color: #666;">${isFriend ? 'Друг' : 'Пользователь'} • ${user.status === 'online' ? 'В сети' : 'Не в сети'}</span>
-                ${user.about ? `<br><p style="margin-top: 5px; color: #888;">${user.about}</p>` : ''}
-                ${!isFriend ? `<br><button onclick="addFriend('${user.id}')" style="margin-top: 10px; padding: 5px 10px; background: #2CB4FF; color: white; border: none; border-radius: 4px; cursor: pointer;">Добавить в друзья</button>` : ''}
+              <div style="padding: 10px; min-width: 200px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                  <div style="width: 40px; height: 40px; border-radius: 50%; background: #2a2a3a; display: flex; align-items: center; justify-content: center;">
+                    <span class="material-icons" style="color: ${isFriend ? iconColor : '#888'};">person</span>
+                  </div>
+                  <div>
+                    <strong style="color: white;">${user.nickname || 'Пользователь'}</strong><br>
+                    <span style="color: ${isFriend ? iconColor : '#888'}; font-size: 12px;">
+                      ${isFriend ? '✓ Друг' : 'Пользователь'} • ${user.status === 'online' ? 'В сети' : 'Не в сети'}
+                    </span>
+                  </div>
+                </div>
+                ${user.about ? `<p style="color: #aaa; font-size: 13px; margin: 10px 0;">${user.about}</p>` : ''}
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                  ${!isFriend ? 
+                    `<button onclick="addFriend('${user.id}')" style="flex: 1; padding: 8px; background: #2CB4FF; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                      Добавить в друзья
+                    </button>` : 
+                    `<button onclick="openChat('${user.id}')" style="flex: 1; padding: 8px; background: #34eb89; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                      Написать
+                    </button>`
+                  }
+                  <button onclick="showUserProfile('${user.id}')" style="flex: 1; padding: 8px; background: #555; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                    Профиль
+                  </button>
+                </div>
               </div>
-            `
+            `,
+            iconCaption: iconCaption
           },
-          {
-            preset: preset,
-            iconColor: iconColor
+          { 
+            preset: preset, 
+            iconColor: iconColor,
+            iconCaptionMaxWidth: '150px',
+            iconCaptionOffset: [0, 5]
           }
         );
         
-        // Добавляем в соответствующий кластеризатор
         if (isFriend) {
           friendsClusterer.add(placemark);
         } else {
@@ -950,33 +1050,25 @@
         }
       });
       
-      // Добавляем кластеризаторы на карту
       map.geoObjects.add(friendsClusterer);
       map.geoObjects.add(usersClusterer);
     }
-
-    // Расчет расстояния между координатами
+    
     function calculateDistance(pos1, pos2) {
       const [lat1, lon1] = pos1;
       const [lat2, lon2] = pos2;
-      
-      const R = 6371; // Радиус Земли в км
+      const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
-      
-      const a = 
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
         Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
         Math.sin(dLon/2) * Math.sin(dLon/2);
-      
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return R * c; // Расстояние в км
+      return R * c;
     }
-
-    // Добавление друга с карты
+    
     function addFriend(userId) {
       if (!currentUser) return;
-      
       if (UserSystem.sendFriendRequest(currentUser.id, userId)) {
         showTempMessage('Запрос в друзья отправлен!');
         updateMap();
@@ -984,19 +1076,15 @@
         showTempMessage('Не удалось отправить запрос');
       }
     }
-
-    // Автообновление позиции
+    
     function startAutoUpdate() {
       const autoUpdate = localStorage.getItem('meetup_auto_update') !== 'false';
-      
       if (autoUpdate) {
         document.getElementById('auto-update-indicator').style.display = 'flex';
         updateTimer = 30;
-        
         autoUpdateInterval = setInterval(() => {
           updateTimer--;
           document.getElementById('update-timer').textContent = updateTimer;
-          
           if (updateTimer <= 0) {
             updateLocation();
             updateTimer = 30;
@@ -1004,23 +1092,15 @@
         }, 1000);
       }
     }
-
-    // Обновление местоположения
+    
     function updateLocation() {
       if (!currentUser || !navigator.geolocation) return;
-      
       navigator.geolocation.getCurrentPosition(
         position => {
           const coords = [position.coords.latitude, position.coords.longitude];
           UserSystem.updateUserPosition(currentUser.id, coords);
-          
-          // Обновляем текущего пользователя
           currentUser = UserSystem.getCurrentUser();
-          
-          // Проверяем друзей поблизости
           checkNearbyFriends();
-          
-          // Обновляем карту
           updateMap();
         },
         error => {
@@ -1029,27 +1109,21 @@
         { enableHighAccuracy: false, timeout: 5000 }
       );
     }
-
-    // Проверка друзей поблизости
+    
     function checkNearbyFriends() {
       if (!currentUser || !currentUser.position) return;
-      
       const friends = UserSystem.getUserFriends(currentUser.id);
       const radius = filterSettings.radius;
-      
       const nearbyFriends = friends.filter(friend => {
         if (!friend.position || friend.invisible) return false;
-        
         const distance = calculateDistance(currentUser.position, friend.position);
         return distance <= radius;
       });
-      
       if (nearbyFriends.length > 0) {
         showNearbyNotification(nearbyFriends);
       }
     }
-
-    // Показать уведомление о друзьях поблизости
+    
     function showNearbyNotification(friends) {
       const notification = document.createElement('div');
       notification.className = 'nearby-notification';
@@ -1063,62 +1137,32 @@
           <span class="material-icons">close</span>
         </button>
       `;
-      
       document.body.appendChild(notification);
-      
       setTimeout(() => {
-        if (notification.parentNode) {
-          notification.remove();
-        }
+        if (notification.parentNode) notification.remove();
       }, 5000);
     }
-
-    // Функция для русской множественной формы
+    
     function getRussianPlural(number, forms) {
       const cases = [2, 0, 1, 1, 1, 2];
       return forms[(number % 100 > 4 && number % 100 < 20) ? 2 : cases[Math.min(number % 10, 5)]];
     }
-
-    // Обновление счетчика уведомлений
-    function updateNotificationCount() {
-      if (!currentUser) return;
-      
-      const notifications = UserSystem.notifications.getAll(currentUser.id);
-      const unreadCount = notifications.filter(n => !n.read).length;
-      
-      const badge = document.getElementById('notifications-count');
-      if (unreadCount > 0) {
-        badge.textContent = unreadCount;
-        badge.style.display = 'flex';
-      } else {
-        badge.style.display = 'none';
-      }
-    }
-
-    // Функция для визуального выделения местоположения пользователя
+    
     function highlightUserLocation() {
       if (!currentUser || !currentUser.position || !map || typeof ymaps === 'undefined') return;
-      
-      // Удаляем предыдущую подсветку, если есть
       if (window.locationHighlight) {
         map.geoObjects.remove(window.locationHighlight);
       }
-      
-      // Создаем круг для визуального выделения
       window.locationHighlight = new ymaps.Circle([
         currentUser.position,
-        100 // Радиус круга в метрах
+        100
       ], {}, {
-        fillColor: '#2CB4FF33', // Полупрозрачный синий
-        strokeColor: '#2CB4FF',
+        fillColor: isIncognitoMode ? '#FF444433' : '#2CB4FF33',
+        strokeColor: isIncognitoMode ? '#FF4444' : '#2CB4FF',
         strokeWidth: 2,
         strokeOpacity: 0.8
       });
-      
-      // Добавляем на карту
       map.geoObjects.add(window.locationHighlight);
-      
-      // Автоматически убираем подсветку через 5 секунд
       setTimeout(() => {
         if (window.locationHighlight && map) {
           map.geoObjects.remove(window.locationHighlight);
@@ -1126,97 +1170,371 @@
         }
       }, 5000);
     }
-
-    // Инициализация обработчиков событий
+    
+    function toggleIncognitoMode() {
+      isIncognitoMode = !isIncognitoMode;
+      
+      // Обновляем кнопку
+      updateIncognitoButton();
+      
+      // Обновляем состояние в профиле пользователя
+      const users = UserSystem.getUsers();
+      const userIndex = users.findIndex(u => u.id === currentUser.id);
+      if (userIndex !== -1) {
+        users[userIndex].invisible = isIncognitoMode;
+        UserSystem.saveUsers(users);
+        UserSystem.setCurrentUser(users[userIndex]);
+        currentUser = users[userIndex];
+      }
+      
+      // Показываем уведомление
+      if (isIncognitoMode) {
+        showTempMessage('Режим инкогнито включен. Ваше местоположение скрыто на карте.');
+      } else {
+        showTempMessage('Режим инкогнито выключен. Ваше местоположение видно на карте.');
+      }
+      
+      // Обновляем карту
+      updateMap();
+    }
+    
+    function openChat(userId) {
+      const user = UserSystem.getUserById(userId);
+      if (!user) return;
+      
+      showTempMessage('Открывается чат с ' + user.nickname);
+      // В будущем здесь будет открытие отдельной страницы чата
+      // window.location.href = `chat.html?userId=${userId}`;
+    }
+    
+    function showUserProfile(userId) {
+      sessionStorage.setItem('viewingUserId', userId);
+      window.open('userProfile.html', '_blank');
+    }
+    
+    function openChatsWindow() {
+      const overlay = document.getElementById('chat-overlay');
+      overlay.classList.add('active');
+      loadChats();
+    }
+    
+    function closeChatsWindow() {
+      const overlay = document.getElementById('chat-overlay');
+      overlay.classList.remove('active');
+    }
+    
+    function loadChats() {
+      const chatList = document.getElementById('chat-list');
+      if (!currentUser) return;
+      
+      const chats = ChatSystem.getUserChats(currentUser.id);
+      const friends = UserSystem.getUserFriends(currentUser.id);
+      
+      if (chats.length === 0 && friends.length === 0) {
+        chatList.innerHTML = `
+          <div class="chat-empty">
+            <span class="material-icons" style="font-size: 60px; opacity: 0.5; margin-bottom: 20px;">chat</span>
+            <div>У вас пока нет чатов</div>
+            <div style="font-size: 12px; margin-top: 10px; color: #666;">Добавьте друзей, чтобы начать общение</div>
+          </div>
+        `;
+        return;
+      }
+      
+      // Создаем HTML для чатов
+      let chatHTML = '';
+      
+      if (chats.length > 0) {
+        chats.forEach(chat => {
+          const otherParticipantId = chat.participants.find(id => id !== currentUser.id);
+          const friend = friends.find(f => f.id === otherParticipantId) || UserSystem.getUserById(otherParticipantId);
+          if (!friend) return;
+          
+          const lastMessage = ChatSystem.getLastMessage(chat);
+          const unreadCount = chat.unreadCount || 0;
+          const timeAgo = ChatSystem.formatTime(lastMessage.timestamp);
+          
+          chatHTML += `
+            <div class="chat-item" data-chat-id="${chat.id}" data-user-id="${friend.id}">
+              <div class="chat-avatar">
+                <span class="material-icons">person</span>
+              </div>
+              <div class="chat-info">
+                <div class="chat-friend-name">${friend.nickname || 'Пользователь'}</div>
+                <div class="chat-last-message">${lastMessage.text || 'Нет сообщений'}</div>
+                <div class="chat-time">${timeAgo}</div>
+              </div>
+              ${unreadCount > 0 ? `<div class="chat-unread">${unreadCount}</div>` : ''}
+            </div>
+          `;
+        });
+      } else {
+        // Показываем друзей для начала чата
+        friends.forEach(friend => {
+          chatHTML += `
+            <div class="chat-item" data-user-id="${friend.id}">
+              <div class="chat-avatar">
+                <span class="material-icons">person</span>
+              </div>
+              <div class="chat-info">
+                <div class="chat-friend-name">${friend.nickname || 'Пользователь'}</div>
+                <div class="chat-last-message">Нажмите, чтобы начать чат</div>
+                <div class="chat-time">${friend.status === 'online' ? 'В сети' : 'Не в сети'}</div>
+              </div>
+            </div>
+          `;
+        });
+      }
+      
+      chatList.innerHTML = chatHTML;
+      
+      // Добавляем обработчики кликов
+      document.querySelectorAll('.chat-item').forEach(item => {
+        item.addEventListener('click', function() {
+          const userId = this.getAttribute('data-user-id');
+          const chatId = this.getAttribute('data-chat-id');
+          
+          if (chatId) {
+            // Открываем существующий чат
+            window.location.href = `chat.html?chatId=${chatId}&userId=${userId}`;
+          } else {
+            // Создаем новый чат и открываем его
+            const chat = ChatSystem.createChat(currentUser.id, userId);
+            window.location.href = `chat.html?chatId=${chat.id}&userId=${userId}`;
+          }
+        });
+      });
+    }
+    
+    function updateChatNotificationCount() {
+      if (!currentUser) return;
+      const unreadCount = ChatSystem.getUnreadCount(currentUser.id);
+      const badge = document.getElementById('chat-notification-badge');
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    
+    function openPedometerWindow() {
+      const overlay = document.getElementById('pedometer-overlay');
+      const content = document.getElementById('pedometer-content');
+      
+      // Проверяем поддержку шагомера
+      if (!Pedometer.isSupported()) {
+        content.innerHTML = `
+          <div class="pedometer-not-supported">
+            <span class="material-icons">directions_walk_off</span>
+            <div>Шагомер не поддерживается вашим устройством</div>
+            <div style="font-size: 12px; margin-top: 10px; color: #666;">
+              Для работы шагомера требуется устройство с акселерометром
+            </div>
+          </div>
+        `;
+        overlay.classList.add('active');
+        return;
+      }
+      
+      // Инициализируем шагомер
+      Pedometer.initialize();
+      const stats = Pedometer.getStats();
+      
+      content.innerHTML = `
+        <div class="pedometer-stats">
+          <div class="pedometer-stat">
+            <div class="stat-value">${stats.today}</div>
+            <div class="stat-label">ШАГОВ СЕГОДНЯ</div>
+            <div class="stat-subvalue">${stats.distanceToday.toFixed(2)} км</div>
+          </div>
+          
+          <div class="pedometer-stat">
+            <div class="stat-value">${stats.week}</div>
+            <div class="stat-label">ШАГОВ ЗА НЕДЕЛЮ</div>
+            <div class="stat-subvalue">${(stats.week * 0.00076).toFixed(2)} км</div>
+          </div>
+          
+          <div class="pedometer-stat">
+            <div class="stat-value">${stats.month}</div>
+            <div class="stat-label">ШАГОВ ЗА МЕСЯЦ</div>
+            <div class="stat-subvalue">${(stats.month * 0.00076).toFixed(2)} км</div>
+          </div>
+          
+          <div class="pedometer-goal">
+            <div class="goal-title">ЦЕЛЬ НА ДЕНЬ: ${stats.goal} шагов</div>
+            <div class="goal-progress-bar">
+              <div class="goal-progress-fill" style="width: ${stats.goalProgress}%"></div>
+            </div>
+            <div class="goal-info">
+              <span>0</span>
+              <span>${Math.round(stats.goalProgress)}%</span>
+              <span>${stats.goal}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="pedometer-actions">
+          <button class="pedometer-btn btn-start" id="pedometer-start-btn">
+            <span class="material-icons">play_arrow</span>
+            Запустить шагомер
+          </button>
+          <button class="pedometer-btn btn-simulate" id="pedometer-simulate-btn">
+            <span class="material-icons">shuffle</span>
+            Тест (50 шагов)
+          </button>
+        </div>
+      `;
+      
+      overlay.classList.add('active');
+      
+      // Обработчики кнопок шагомера
+      document.getElementById('pedometer-start-btn')?.addEventListener('click', function() {
+        showTempMessage('Шагомер запущен. Носите устройство с собой для отслеживания шагов.');
+      });
+      
+      document.getElementById('pedometer-simulate-btn')?.addEventListener('click', function() {
+        const steps = Pedometer.simulateSteps();
+        showTempMessage(`Добавлено ${steps} тестовых шагов`);
+        updatePedometerStats();
+      });
+      
+      // Обработчик закрытия шагомера
+      document.getElementById('pedometer-close-btn').addEventListener('click', function() {
+        closePedometerWindow();
+      });
+      
+      // Обновляем статистику каждые 5 секунд
+      window.addEventListener('pedometerUpdate', updatePedometerStats);
+    }
+    
+    function updatePedometerStats() {
+      const stats = Pedometer.getStats();
+      const content = document.getElementById('pedometer-content');
+      
+      if (content) {
+        const statValues = content.querySelectorAll('.stat-value');
+        const statSubvalues = content.querySelectorAll('.stat-subvalue');
+        const progressFill = content.querySelector('.goal-progress-fill');
+        const goalPercent = content.querySelector('.goal-info span:nth-child(2)');
+        
+        if (statValues[0]) statValues[0].textContent = stats.today;
+        if (statValues[1]) statValues[1].textContent = stats.week;
+        if (statValues[2]) statValues[2].textContent = stats.month;
+        
+        if (statSubvalues[0]) statSubvalues[0].textContent = stats.distanceToday.toFixed(2) + ' км';
+        if (statSubvalues[1]) statSubvalues[1].textContent = (stats.week * 0.00076).toFixed(2) + ' км';
+        if (statSubvalues[2]) statSubvalues[2].textContent = (stats.month * 0.00076).toFixed(2) + ' км';
+        
+        if (progressFill) progressFill.style.width = stats.goalProgress + '%';
+        if (goalPercent) goalPercent.textContent = Math.round(stats.goalProgress) + '%';
+      }
+    }
+    
+    function closePedometerWindow() {
+      const overlay = document.getElementById('pedometer-overlay');
+      overlay.classList.remove('active');
+      window.removeEventListener('pedometerUpdate', updatePedometerStats);
+    }
+    
+    function saveDisplaySettings() {
+      localStorage.setItem('meetup_display_settings', JSON.stringify(displaySettings));
+    }
+    
+    function loadDisplaySettings() {
+      const saved = localStorage.getItem('meetup_display_settings');
+      if (saved) {
+        displaySettings = { ...displaySettings, ...JSON.parse(saved) };
+        
+        // Применяем настройки к элементам
+        document.getElementById('display-all').checked = displaySettings.all;
+        document.getElementById('display-friends').checked = displaySettings.friends;
+        document.getElementById('display-online').checked = displaySettings.online;
+        document.getElementById('display-new').checked = displaySettings.new;
+        
+        const markerSelect = document.getElementById('friend-marker-select');
+        if (markerSelect) {
+          markerSelect.value = displaySettings.friendMarker;
+          document.getElementById('friend-marker-style').textContent = 
+            markerSelect.options[markerSelect.selectedIndex].text;
+        }
+      }
+    }
+    
     function initializeEventHandlers() {
-      // Кнопка профиля
       document.getElementById('btn-profile').addEventListener('click', function() {
         window.location.href = 'profile.html';
       });
-
-      // Кнопка добавления друга
+      
       document.getElementById('btn-add-friend').addEventListener('click', function() {
         window.location.href = 'addfriend.html';
       });
-
-      // Кнопка геолокации - центрирование на пользователе
+      
       document.getElementById('btn-locate').addEventListener('click', function() {
-        // Проверяем доступность геолокации
-        if (!navigator.geolocation) {
-          return;
-        }
-        
-        // Получаем актуальное местоположение
+        if (!navigator.geolocation) { return; }
         navigator.geolocation.getCurrentPosition(
           (position) => {
-            // Обновляем позицию пользователя
             const coords = [position.coords.latitude, position.coords.longitude];
-            
-            // Если пользователь авторизован, обновляем его позицию в системе
             if (currentUser) {
               UserSystem.updateUserPosition(currentUser.id, coords);
-              currentUser = UserSystem.getCurrentUser(); // Обновляем объект пользователя
+              currentUser = UserSystem.getCurrentUser();
             }
-            
-            // Центрируем карту с новыми координатами
             if (map) {
-              // Целевой зум для отображения пользователя (уровень улицы)
               const TARGET_ZOOM = 15;
-              
               map.setCenter(coords, TARGET_ZOOM, {
                 duration: 1000,
                 timingFunction: 'ease-in-out'
               });
-              
               highlightUserLocation();
             }
           },
           (error) => {
-            // Если не удалось получить геолокацию, используем сохраненную позицию
             if (currentUser && currentUser.position && map) {
-              // Целевой зум для отображения пользователя
               const TARGET_ZOOM = 15;
-              
               map.setCenter(currentUser.position, TARGET_ZOOM, {
                 duration: 1000,
                 timingFunction: 'ease-in-out'
               });
-              
               highlightUserLocation();
             }
           },
-          { 
-            enableHighAccuracy: true, 
-            timeout: 10000, 
-            maximumAge: 60000 
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 60000
           }
         );
       });
-
-      // Кнопка фильтров
+      
+      // Фильтры (теперь слева сверху)
       document.getElementById('btn-filter').addEventListener('click', function() {
         const panel = document.getElementById('filter-panel');
         panel.classList.toggle('active');
       });
-
-      // Кнопка обновления
+      
+      // Обновление карты (теперь слева сверху)
       document.getElementById('btn-refresh').addEventListener('click', function() {
         updateMap();
+        showTempMessage('Карта обновлена');
       });
-
-      // Кнопка инкогнито
-      document.getElementById('btn-incognito').addEventListener('click', function() {
-        isIncognitoMode = !isIncognitoMode;
-        this.classList.toggle('active', isIncognitoMode);
-        updateMap();
+      
+      // Чаты
+      document.getElementById('btn-chat').addEventListener('click', openChatsWindow);
+      document.getElementById('chat-close-btn').addEventListener('click', closeChatsWindow);
+      
+      // Шагомер
+      document.getElementById('btn-pedometer').addEventListener('click', openPedometerWindow);
+      
+      // Инкогнито (исправлено)
+      document.getElementById('btn-incognito').addEventListener('click', toggleIncognitoMode);
+      
+      // Отображение
+      document.getElementById('btn-display-mode').addEventListener('click', function() {
+        const panel = document.getElementById('display-panel');
+        panel.classList.toggle('active');
       });
-
-      // Кнопка уведомлений
-      document.getElementById('btn-notifications').addEventListener('click', function() {
-        window.location.href = 'notifications.html';
-      });
-
-      // Обработчики фильтров
+      
+      // Фильтры
       document.getElementById('filter-friends').addEventListener('change', function() {
         filterSettings.friends = this.checked;
         updateMap();
@@ -1237,10 +1555,8 @@
         updateMap();
       });
       
-      // Слайдер радиуса
       const radiusSlider = document.getElementById('radius-slider');
       const radiusValue = document.getElementById('radius-value');
-      
       radiusSlider.addEventListener('input', function() {
         radiusValue.textContent = this.value;
         filterSettings.radius = parseInt(this.value);
@@ -1249,49 +1565,80 @@
       radiusSlider.addEventListener('change', function() {
         updateMap();
       });
-
-      // Закрытие панели фильтров при клике вне ее
+      
+      // Настройки отображения
+      document.getElementById('display-all').addEventListener('change', function() {
+        displaySettings.all = this.checked;
+        updateMap();
+        saveDisplaySettings();
+      });
+      
+      document.getElementById('display-friends').addEventListener('change', function() {
+        displaySettings.friends = this.checked;
+        updateMap();
+        saveDisplaySettings();
+      });
+      
+      document.getElementById('display-online').addEventListener('change', function() {
+        displaySettings.online = this.checked;
+        updateMap();
+        saveDisplaySettings();
+      });
+      
+      document.getElementById('display-new').addEventListener('change', function() {
+        displaySettings.new = this.checked;
+        updateMap();
+        saveDisplaySettings();
+      });
+      
+      document.getElementById('friend-marker-select').addEventListener('change', function() {
+        displaySettings.friendMarker = this.value;
+        document.getElementById('friend-marker-style').textContent = this.options[this.selectedIndex].text;
+        updateMap();
+        saveDisplaySettings();
+      });
+      
+      // Закрытие панелей при клике вне
       document.addEventListener('click', function(event) {
-        const panel = document.getElementById('filter-panel');
+        const filterPanel = document.getElementById('filter-panel');
         const filterBtn = document.getElementById('btn-filter');
+        const displayPanel = document.getElementById('display-panel');
+        const displayBtn = document.getElementById('btn-display-mode');
         
-        if (!panel.contains(event.target) && !filterBtn.contains(event.target)) {
-          panel.classList.remove('active');
+        if (!filterPanel.contains(event.target) && !filterBtn.contains(event.target)) {
+          filterPanel.classList.remove('active');
+        }
+        
+        if (!displayPanel.contains(event.target) && !displayBtn.contains(event.target)) {
+          displayPanel.classList.remove('active');
         }
       });
     }
-
-    // Адаптация layout под мобильные устройства
+    
     function adjustLayout() {
       const header = document.querySelector('.app-header');
       const mapContainer = document.querySelector('.map-container');
-      
       if (header && mapContainer) {
         const headerHeight = header.offsetHeight;
         mapContainer.style.height = `calc(100vh - ${headerHeight}px)`;
       }
     }
-
-    // Основная функция инициализации приложения
+    
     function initializeApp() {
       console.log('Инициализация приложения...');
-      
-      // Проверка авторизации
       currentUser = UserSystem.getCurrentUser();
       if (!currentUser) {
         console.log('Пользователь не авторизован, перенаправление...');
         window.location.href = 'index.html';
         return;
       }
-
+      
       console.log('Пользователь авторизован:', currentUser.nickname);
-
+      
       // Загружаем настройки фильтров
       const savedFilters = localStorage.getItem('meetup_map_filters');
       if (savedFilters) {
         filterSettings = { ...filterSettings, ...JSON.parse(savedFilters) };
-        
-        // Применяем настройки к элементам
         document.getElementById('filter-friends').checked = filterSettings.friends;
         document.getElementById('filter-online').checked = filterSettings.online;
         document.getElementById('filter-nearby').checked = filterSettings.nearby;
@@ -1299,47 +1646,43 @@
         document.getElementById('radius-slider').value = filterSettings.radius;
         document.getElementById('radius-value').textContent = filterSettings.radius;
       }
-
-      // Запускаем инициализацию
+      
+      // Загружаем настройки отображения
+      loadDisplaySettings();
+      
+      // Инициализируем кнопку инкогнито
+      updateIncognitoButton();
+      
       adjustLayout();
       initializeEventHandlers();
-      
-      // Загружаем карту
       setTimeout(initializeMap, 500);
-
-      // Обновляем счетчик уведомлений
-      updateNotificationCount();
       
-      // Проверяем уведомления каждые 30 секунд
-      setInterval(updateNotificationCount, 30000);
-
-      // Обработка изменения ориентации
+      updateChatNotificationCount();
+      setInterval(updateChatNotificationCount, 30000);
+      
       window.addEventListener('resize', adjustLayout);
       window.addEventListener('orientationchange', function() {
         setTimeout(adjustLayout, 300);
       });
     }
-
-    // Сохранение настроек фильтров
+    
     function saveFilterSettings() {
       localStorage.setItem('meetup_map_filters', JSON.stringify(filterSettings));
     }
-
-    // Очистка интервалов при закрытии
+    
     window.addEventListener('beforeunload', function() {
       if (autoUpdateInterval) {
         clearInterval(autoUpdateInterval);
       }
       saveFilterSettings();
+      saveDisplaySettings();
     });
-
-    // Запускаем приложение после загрузки DOM
+    
     document.addEventListener('DOMContentLoaded', function() {
       console.log('DOM загружен, запуск приложения...');
       setTimeout(initializeApp, 100);
     });
-
-    // Резервный запуск если DOM уже загружен
+    
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
       setTimeout(initializeApp, 100);
     }
