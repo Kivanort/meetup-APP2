@@ -68,12 +68,21 @@ const UserSystem = {
                 throw new Error('Никнейм уже занят');
             }
 
+            // Хэшируем пароль перед сохранением
+            const hashedPassword = this.hashPassword(userData.password);
+            
+            console.log('🔐 Регистрация:', {
+                email: userData.email,
+                password: userData.password,
+                hash: hashedPassword
+            });
+
             // Создаем полный объект пользователя
             const newUser = {
                 id: this.generateUserId(),
                 email: userData.email.toLowerCase().trim(),
                 nickname: userData.nickname.trim(),
-                password: this.hashPassword(userData.password),
+                password: hashedPassword,
                 avatar: userData.avatar || '',
                 status: userData.status || 'online',
                 invisible: userData.invisible || false,
@@ -211,6 +220,18 @@ const UserSystem = {
         );
     },
 
+    // Найти пользователя по email (специально для логина)
+    findUserByEmail: function(email) {
+        if (!email || typeof email !== 'string') return null;
+        
+        const searchEmail = email.toLowerCase().trim();
+        const users = this.getUsers();
+        
+        return users.find(user => 
+            user.email && user.email.toLowerCase() === searchEmail
+        );
+    },
+
     // Проверить занятость email
     isEmailUsed: function(email, excludeUserId = null) {
         if (!email || typeof email !== 'string') return false;
@@ -272,16 +293,28 @@ const UserSystem = {
         }
     },
 
-    // Вход в систему
+    // Вход в систему (ИСПРАВЛЕННАЯ ВЕРСИЯ)
     login: function(identifier, password) {
         try {
+            // Ищем пользователя по email или никнейму
             const user = this.findUser(identifier);
             
             if (!user) {
                 throw new Error('Пользователь не найден');
             }
 
-            if (user.password !== this.hashPassword(password)) {
+            // Хэшируем введенный пароль для сравнения
+            const hashedPassword = this.hashPassword(password);
+            
+            console.log('🔐 Сравнение паролей:', {
+                identifier: identifier,
+                userEmail: user.email,
+                storedHash: user.password,
+                inputHash: hashedPassword,
+                match: user.password === hashedPassword
+            });
+
+            if (user.password !== hashedPassword) {
                 throw new Error('Неверный пароль');
             }
 
@@ -302,9 +335,10 @@ const UserSystem = {
             // Устанавливаем как текущего
             this.setCurrentUser(updatedUser);
             
+            console.log('✅ Успешный вход:', updatedUser.email);
             return updatedUser;
         } catch (error) {
-            console.error('❌ Ошибка входа:', error);
+            console.error('❌ Ошибка входа:', error.message);
             throw error;
         }
     },
@@ -339,31 +373,22 @@ const UserSystem = {
         return `usr_${timestamp}_${random}`;
     },
 
-    // Хэширование пароля
+    // Хэширование пароля - ПРОСТАЯ И СТАБИЛЬНАЯ РЕАЛИЗАЦИЯ
     hashPassword: function(password) {
         if (!password || typeof password !== 'string') return '';
         
-        // Более безопасный хэш
+        // Простой стабильный алгоритм - строка "пароль+соль"
+        const salt = 'meetup_secure_salt_2024_v2';
+        const saltedPassword = password + salt;
+        
         let hash = 0;
-        for (let i = 0; i < password.length; i++) {
-            const char = password.charCodeAt(i);
+        for (let i = 0; i < saltedPassword.length; i++) {
+            const char = saltedPassword.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32bit integer
+            hash = hash & 0xFFFFFFFF; // 32-битное целое
         }
         
-        // Добавляем соль
-        const salt = 'meetup_system_2024';
-        const saltedHash = hash.toString(16) + salt;
-        
-        // Второй проход хэширования
-        let finalHash = 0;
-        for (let i = 0; i < saltedHash.length; i++) {
-            const char = saltedHash.charCodeAt(i);
-            finalHash = ((finalHash << 5) - finalHash) + char;
-            finalHash = finalHash & finalHash;
-        }
-        
-        return finalHash.toString(16);
+        return hash.toString(16);
     },
 
     // Конвертация файла в base64
