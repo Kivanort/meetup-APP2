@@ -6,6 +6,10 @@
   <title>Профиль — MeetUP</title>
   <!-- Material Icons (Google Fonts) -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <!-- QR Code Library -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <!-- Instascan for QR scanning -->
+  <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
   <!-- User System -->
   <script src="userSystem.js"></script>
   <link rel="icon" href="meetup-logo.png" type="image/x-icon"> 
@@ -103,6 +107,49 @@
       background: #2a2a2a;
     }
 
+    /* Кнопка сканирования QR-кода справа */
+    .scan-qr-btn {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 9999;
+      background: rgba(36,36,36,0.88);
+      border-radius: 50%;
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2.5px 12px rgba(0,0,0,0.4);
+      border: none;
+      cursor: pointer;
+      transition: filter 0.15s, background 0.17s, transform .14s;
+      outline: none;
+    }
+    .scan-qr-btn:active {
+      filter: brightness(0.92);
+      transform: scale(0.96);
+    }
+    .scan-qr-btn .material-icons {
+      font-size: 27px;
+      color: var(--status-online);
+      opacity: 0.92;
+      transition: color 0.17s;
+    }
+    .scan-qr-btn:hover, .scan-qr-btn:focus-visible {
+      background: #2a2a2a;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+    }
+    .scan-qr-btn.active {
+      background: rgba(0, 255, 255, 0.2);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.4); }
+      70% { box-shadow: 0 0 0 15px rgba(0, 255, 255, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0); }
+    }
+
     @media (max-width: 768px) {
       .profile-card {
         width: 100vw;
@@ -145,13 +192,19 @@
         bottom: 10px;
         padding: 1px 7px;
       }
-      .back-arrow {
+      .back-arrow, .scan-qr-btn {
         top: 14px;
-        left: 10px;
         width: 40px;
         height: 40px;
       }
-      .back-arrow .material-icons {
+      .back-arrow {
+        left: 10px;
+      }
+      .scan-qr-btn {
+        right: 10px;
+      }
+      .back-arrow .material-icons,
+      .scan-qr-btn .material-icons {
         font-size: 23px;
       }
     }
@@ -493,15 +546,547 @@
       padding-left: 2px;
     }
     
+    /* Реферальная секция */
+    .referral-section {
+      width: 100%;
+      margin: 20px 0;
+      padding: 16px;
+      background: rgba(0, 255, 255, 0.05);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 255, 0.1);
+    }
+    
+    .referral-title {
+      font-size: 14px;
+      color: #00FFFF;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .referral-link-container {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .referral-input {
+      flex: 1;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(0, 255, 255, 0.3);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+    }
+    
+    .referral-input:focus {
+      outline: none;
+      border-color: #00FFFF;
+      box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+    }
+    
+    .copy-btn {
+      padding: 10px 16px;
+      background: linear-gradient(90deg, #00FFFF, #9400D3);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    
+    .copy-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 255, 255, 0.3);
+    }
+    
+    .copy-btn:active {
+      transform: translateY(0);
+    }
+    
+    .copy-btn.copied {
+      background: #00AA00;
+    }
+    
+    .referral-info {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+    
+    .referral-stats {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .referral-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(0, 255, 255, 0.1);
+      padding: 8px 12px;
+      border-radius: 8px;
+      min-width: 80px;
+    }
+    
+    .referral-stat-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #00FFFF;
+    }
+    
+    .referral-stat-label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 2px;
+    }
+    
+    /* QR код */
+    .qr-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .qr-content {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 300px;
+      width: 90%;
+      text-align: center;
+      animation: slideUp 0.3s;
+    }
+    
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .qr-title {
+      color: #00FFFF;
+      margin-bottom: 16px;
+      font-size: 18px;
+    }
+    
+    #qr-code {
+      margin: 16px auto;
+      padding: 10px;
+      background: white;
+      border-radius: 8px;
+      display: inline-block;
+    }
+    
+    .qr-actions {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    
+    .qr-btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .qr-btn.close {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+    
+    .qr-btn.share {
+      background: linear-gradient(90deg, #00FFFF, #9400D3);
+      color: white;
+    }
+    
+    .qr-btn:hover {
+      transform: translateY(-1px);
+    }
+    
+    /* Модальное окно сканера QR-кода */
+    .scanner-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 10001;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s;
+    }
+    
+    .scanner-content {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      animation: slideUp 0.3s;
+    }
+    
+    .scanner-title {
+      color: #00FFFF;
+      margin-bottom: 16px;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    
+    #scanner-container {
+      width: 100%;
+      height: 300px;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      margin: 16px 0;
+    }
+    
+    #scanner-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .scanner-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 2px solid #00FFFF;
+      box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .scanner-frame {
+      width: 250px;
+      height: 250px;
+      border: 3px solid #00FFFF;
+      border-radius: 12px;
+      position: relative;
+    }
+    
+    .scanner-frame::before,
+    .scanner-frame::after {
+      content: '';
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border: 3px solid #00FFFF;
+    }
+    
+    .scanner-frame::before {
+      top: -3px;
+      left: -3px;
+      border-right: none;
+      border-bottom: none;
+      border-radius: 8px 0 0 0;
+    }
+    
+    .scanner-frame::after {
+      bottom: -3px;
+      right: -3px;
+      border-left: none;
+      border-top: none;
+      border-radius: 0 0 8px 0;
+    }
+    
+    .scanner-frame .corner {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border: 3px solid #00FFFF;
+    }
+    
+    .corner.tr {
+      top: -3px;
+      right: -3px;
+      border-left: none;
+      border-bottom: none;
+      border-radius: 0 8px 0 0;
+    }
+    
+    .corner.bl {
+      bottom: -3px;
+      left: -3px;
+      border-right: none;
+      border-top: none;
+      border-radius: 0 0 0 8px;
+    }
+    
+    .scanner-instructions {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-top: 16px;
+      padding: 0 10px;
+      line-height: 1.4;
+    }
+    
+    .scanner-actions {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    
+    .scanner-btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      min-width: 120px;
+    }
+    
+    .scanner-btn.close {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+    
+    .scanner-btn.torch {
+      background: linear-gradient(90deg, #FF9800, #FF5722);
+      color: white;
+    }
+    
+    .scanner-btn:hover {
+      transform: translateY(-1px);
+    }
+    
+    /* Результат сканирования */
+    .scan-result {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 10002;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s;
+    }
+    
+    .result-content {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 350px;
+      width: 90%;
+      text-align: center;
+      animation: slideUp 0.3s;
+    }
+    
+    .result-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 40px;
+    }
+    
+    .result-icon.success {
+      background: rgba(0, 200, 83, 0.2);
+      color: #00C853;
+    }
+    
+    .result-icon.error {
+      background: rgba(244, 67, 54, 0.2);
+      color: #F44336;
+    }
+    
+    .result-icon.info {
+      background: rgba(33, 150, 243, 0.2);
+      color: #2196F3;
+    }
+    
+    .result-title {
+      color: #00FFFF;
+      margin-bottom: 10px;
+      font-size: 20px;
+    }
+    
+    .result-message {
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 20px;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+    
+    .result-user-info {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .result-user-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 2px solid #00FFFF;
+    }
+    
+    .result-user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .result-user-details {
+      flex: 1;
+      text-align: left;
+    }
+    
+    .result-user-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 4px;
+    }
+    
+    .result-user-status {
+      font-size: 12px;
+      color: #888;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .result-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    
+    .status-online { background: #00C853; }
+    .status-offline { background: #888; }
+    
+    .result-actions {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    
+    .result-btn {
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      min-width: 140px;
+    }
+    
+    .result-btn.close {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+    
+    .result-btn.primary {
+      background: linear-gradient(90deg, #00FFFF, #9400D3);
+      color: white;
+    }
+    
+    .result-btn:hover {
+      transform: translateY(-1px);
+    }
+    
     /* Адаптивность */
-    /* @media (max-width: 768px) { ... } переехал выше */
+    @media (max-width: 768px) {
+      .referral-link-container {
+        flex-direction: column;
+      }
+      
+      .referral-stats {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .referral-stat {
+        min-width: 100%;
+      }
+      
+      .qr-content,
+      .scanner-content,
+      .result-content {
+        padding: 16px;
+        width: 95%;
+      }
+      
+      #scanner-container {
+        height: 250px;
+      }
+      
+      .scanner-frame {
+        width: 200px;
+        height: 200px;
+      }
+      
+      .result-btn {
+        min-width: 120px;
+        padding: 10px 16px;
+      }
+    }
   </style>
 </head>
 <body>
-  <!-- Кнопка-стрелка назад - ИСПРАВЛЕНА -->
+  <!-- Кнопка-стрелка назад -->
   <a href="map.html" class="back-arrow" title="Назад на главную">
     <span class="material-icons">arrow_back</span>
   </a>
+  
+  <!-- Кнопка сканирования QR-кода -->
+  <button class="scan-qr-btn" id="scan-qr-btn" title="Сканировать QR-код">
+    <span class="material-icons">qr_code_scanner</span>
+  </button>
+  
   <div class="profile-card">
     <div class="profile-avatar-wrap" id="profile-avatar-wrap">
       <div class="profile-avatar" id="profile-avatar">
@@ -514,7 +1099,7 @@
           <ellipse cx="40" cy="34" rx="10" ry="10" fill="#fafbfc"/>
         </svg>
       </div>
-      <!-- Кнопка удалить фото - УЛУЧШЕНА -->
+      <!-- Кнопка удалить фото -->
       <button class="btn-remove-avatar" id="btn-remove-avatar" title="Удалить фото" tabindex="0">
         <span class="material-icons" style="font-size:16px;">close</span>
       </button>
@@ -563,6 +1148,42 @@
         <div class="stat-label">Время в онлайне, ч</div>
       </div>
     </div>
+    
+    <!-- Реферальная секция -->
+    <div class="referral-section" id="referral-section">
+      <div class="referral-title">
+        <span class="material-icons">share</span>
+        Пригласить друзей
+      </div>
+      
+      <div class="referral-link-container">
+        <input type="text" class="referral-input" id="referral-link" readonly value="Загрузка ссылки...">
+        <button class="copy-btn" id="copy-btn">Копировать</button>
+        <button class="copy-btn" id="qr-btn" style="background: linear-gradient(90deg, #FF9800, #FF5722);">
+          <span class="material-icons" style="vertical-align: -4px; font-size: 16px;">qr_code</span>
+        </button>
+      </div>
+      
+      <div class="referral-stats">
+        <div class="referral-stat">
+          <div class="referral-stat-value" id="referrals-count">0</div>
+          <div class="referral-stat-label">Приглашено</div>
+        </div>
+        <div class="referral-stat">
+          <div class="referral-stat-value" id="referral-friends">0</div>
+          <div class="referral-stat-label">Добавились</div>
+        </div>
+        <div class="referral-stat">
+          <div class="referral-stat-value" id="referral-bonus">+0%</div>
+          <div class="referral-stat-label">Бонус</div>
+        </div>
+      </div>
+      
+      <div class="referral-info">
+        Отправьте эту ссылку друзьям. При регистрации по ней они автоматически добавятся к вам в друзья.
+      </div>
+    </div>
+    
     <!-- Кнопки действий -->
     <div class="profile-actions-wrap">
       <button class="btn-action btn-invisible" id="btn-invisible">
@@ -590,6 +1211,84 @@
       </button>
     </div>
   </div>
+  
+  <!-- Модальное окно QR кода -->
+  <div class="qr-modal" id="qr-modal">
+    <div class="qr-content">
+      <div class="qr-title">Пригласительный QR-код</div>
+      <div id="qr-code"></div>
+      <div style="margin-top: 16px; font-size: 14px; color: rgba(255,255,255,0.8);">
+        Наведите камеру друга на этот код
+      </div>
+      <div class="qr-actions">
+        <button class="qr-btn close" id="close-qr">Закрыть</button>
+        <button class="qr-btn share" id="share-qr">
+          <span class="material-icons" style="vertical-align: -4px; font-size: 16px;">share</span>
+          Поделиться
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Модальное окно сканера QR-кода -->
+  <div class="scanner-modal" id="scanner-modal">
+    <div class="scanner-content">
+      <div class="scanner-title">
+        <span class="material-icons">qr_code_scanner</span>
+        Сканировать QR-код
+      </div>
+      <div id="scanner-container">
+        <video id="scanner-video" playsinline></video>
+        <div class="scanner-overlay">
+          <div class="scanner-frame">
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+          </div>
+        </div>
+      </div>
+      <div class="scanner-instructions">
+        Наведите камеру на QR-код друга, чтобы отправить запрос на добавление в друзья
+      </div>
+      <div class="scanner-actions">
+        <button class="scanner-btn close" id="close-scanner">Отмена</button>
+        <button class="scanner-btn torch" id="toggle-torch" style="display: none;">
+          <span class="material-icons" style="vertical-align: -4px; font-size: 16px;">flashlight_on</span>
+          Фонарик
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Окно результата сканирования -->
+  <div class="scan-result" id="scan-result">
+    <div class="result-content">
+      <div class="result-icon success" id="result-icon">
+        <span class="material-icons">check_circle</span>
+      </div>
+      <div class="result-title" id="result-title">Успешно!</div>
+      <div class="result-message" id="result-message"></div>
+      <div class="result-user-info" id="result-user-info" style="display: none;">
+        <div class="result-user-avatar">
+          <img id="result-user-avatar" src="" alt="Аватар">
+        </div>
+        <div class="result-user-details">
+          <div class="result-user-name" id="result-user-name"></div>
+          <div class="result-user-status">
+            <span class="result-status-dot" id="result-user-status-dot"></span>
+            <span id="result-user-status-text"></span>
+          </div>
+        </div>
+      </div>
+      <div class="result-actions">
+        <button class="result-btn close" id="close-result">Закрыть</button>
+        <button class="result-btn primary" id="result-primary-btn" style="display: none;">
+          <span class="material-icons" style="vertical-align: -4px; font-size: 16px;">person_add</span>
+          Добавить в друзья
+        </button>
+      </div>
+    </div>
+  </div>
+  
   <script>
     // Функции для работы с профилем
     function updateStatus(status) {
@@ -874,6 +1573,475 @@
       localStorage.setItem(onlineKey, JSON.stringify(onlineData));
     }
 
+    // Функции для работы с реферальными ссылками
+    function initReferralSection() {
+      const currentUser = UserSystem.getCurrentUser();
+      if (!currentUser) return;
+      
+      // Генерируем и показываем реферальную ссылку
+      const referralLink = UserSystem.getReferralLink(currentUser.id);
+      const referralInput = document.getElementById('referral-link');
+      const copyBtn = document.getElementById('copy-btn');
+      const qrBtn = document.getElementById('qr-btn');
+      const qrModal = document.getElementById('qr-modal');
+      const closeQrBtn = document.getElementById('close-qr');
+      const shareQrBtn = document.getElementById('share-qr');
+      
+      if (referralLink) {
+        referralInput.value = referralLink;
+        
+        // Копирование ссылки
+        copyBtn.onclick = async function() {
+          try {
+            await navigator.clipboard.writeText(referralLink);
+            copyBtn.textContent = 'Скопировано!';
+            copyBtn.classList.add('copied');
+            
+            // Показываем временное сообщение
+            showTempMessage('Ссылка скопирована в буфер обмена');
+            
+            setTimeout(() => {
+              copyBtn.textContent = 'Копировать';
+              copyBtn.classList.remove('copied');
+            }, 2000);
+          } catch (err) {
+            // Fallback для старых браузеров
+            referralInput.select();
+            document.execCommand('copy');
+            showTempMessage('Ссылка скопирована');
+          }
+        };
+        
+        // Открытие QR кода
+        qrBtn.onclick = function() {
+          generateQRCode(referralLink);
+          qrModal.style.display = 'flex';
+        };
+        
+        // Закрытие QR модального окна
+        closeQrBtn.onclick = function() {
+          qrModal.style.display = 'none';
+        };
+        
+        // Поделиться QR кодом
+        shareQrBtn.onclick = async function() {
+          try {
+            const qrCanvas = document.querySelector('#qr-code canvas');
+            if (qrCanvas) {
+              qrCanvas.toBlob(async function(blob) {
+                const file = new File([blob], 'invite-qr.png', { type: 'image/png' });
+                
+                if (navigator.share && navigator.canShare({ files: [file] })) {
+                  await navigator.share({
+                    files: [file],
+                    title: 'Присоединяйтесь ко мне в MeetUP!',
+                    text: 'Используйте этот QR код для регистрации и автоматического добавления в друзья.'
+                  });
+                } else {
+                  // Fallback: скачивание
+                  const link = document.createElement('a');
+                  link.download = 'meetup-invite-qr.png';
+                  link.href = qrCanvas.toDataURL();
+                  link.click();
+                  showTempMessage('QR код сохранен');
+                }
+              });
+            }
+          } catch (error) {
+            console.log('Ошибка при совместном использовании:', error);
+          }
+        };
+        
+        // Закрытие по клику вне окна
+        qrModal.onclick = function(e) {
+          if (e.target === qrModal) {
+            qrModal.style.display = 'none';
+          }
+        };
+      }
+      
+      // Загружаем статистику рефералов
+      loadReferralStats();
+    }
+
+    // Генерация QR кода
+    function generateQRCode(text) {
+      const qrContainer = document.getElementById('qr-code');
+      qrContainer.innerHTML = '';
+      
+      // Используем QRCode.js
+      new QRCode(qrContainer, {
+        text: text,
+        width: 200,
+        height: 200,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    // Загрузка реферальной статистики
+    function loadReferralStats() {
+      const currentUser = UserSystem.getCurrentUser();
+      if (!currentUser) return;
+      
+      const users = UserSystem.getUsers();
+      
+      // Считаем приглашенных пользователей
+      const referredUsers = users.filter(u => u.referredBy === currentUser.id);
+      const activeReferred = referredUsers.filter(u => u.isActive);
+      
+      // Обновляем статистику
+      document.getElementById('referrals-count').textContent = referredUsers.length;
+      document.getElementById('referral-friends').textContent = activeReferred.length;
+      
+      // Вычисляем бонус (например, +1% за каждого приглашенного)
+      const bonus = Math.min(referredUsers.length * 1, 20);
+      document.getElementById('referral-bonus').textContent = `+${bonus}%`;
+      
+      // Обновляем основную статистику друзей
+      const friendsCount = document.getElementById('friends-count');
+      const currentFriends = parseInt(friendsCount.textContent) || 0;
+      friendsCount.textContent = currentFriends + activeReferred.length;
+    }
+
+    // Функции для работы со сканером QR-кода
+    function initQRScanner() {
+      const scanBtn = document.getElementById('scan-qr-btn');
+      const scannerModal = document.getElementById('scanner-modal');
+      const closeScannerBtn = document.getElementById('close-scanner');
+      const scannerVideo = document.getElementById('scanner-video');
+      const toggleTorchBtn = document.getElementById('toggle-torch');
+      const scanResultModal = document.getElementById('scan-result');
+      const closeResultBtn = document.getElementById('close-result');
+      const resultPrimaryBtn = document.getElementById('result-primary-btn');
+      
+      let scanner = null;
+      let activeStream = null;
+      let torchEnabled = false;
+      
+      // Проверяем доступность камеры
+      function checkCameraPermission() {
+        return new Promise((resolve) => {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            resolve(false);
+            return;
+          }
+          
+          navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+              // Останавливаем поток сразу после проверки
+              stream.getTracks().forEach(track => track.stop());
+              resolve(true);
+            })
+            .catch(() => {
+              resolve(false);
+            });
+        });
+      }
+      
+      // Запрос доступа к камере
+      async function requestCameraAccess() {
+        try {
+          const hasPermission = await checkCameraPermission();
+          if (!hasPermission) {
+            // Запрашиваем разрешение
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+              video: { facingMode: 'environment' } 
+            });
+            stream.getTracks().forEach(track => track.stop());
+          }
+          return true;
+        } catch (error) {
+          console.error('Ошибка доступа к камере:', error);
+          return false;
+        }
+      }
+      
+      // Начало сканирования
+      scanBtn.onclick = async function() {
+        const hasAccess = await requestCameraAccess();
+        if (!hasAccess) {
+          showTempMessage('Доступ к камере запрещен. Проверьте настройки браузера.');
+          return;
+        }
+        
+        // Активируем кнопку сканирования
+        scanBtn.classList.add('active');
+        
+        // Показываем модальное окно сканера
+        scannerModal.style.display = 'flex';
+        
+        // Инициализируем сканер
+        initScanner();
+      };
+      
+      // Инициализация сканера
+      function initScanner() {
+        if (!Instascan) {
+          showTempMessage('Библиотека сканирования не загружена');
+          scannerModal.style.display = 'none';
+          return;
+        }
+        
+        scanner = new Instascan.Scanner({ 
+          video: scannerVideo,
+          mirror: false,
+          backgroundScan: false,
+          refractoryPeriod: 1000,
+          scanPeriod: 1
+        });
+        
+        // Обработка отсканированного кода
+        scanner.addListener('scan', function(content) {
+          console.log('Отсканирован QR-код:', content);
+          processScannedQRCode(content);
+        });
+        
+        // Запуск сканера
+        Instascan.Camera.getCameras().then(function(cameras) {
+          if (cameras.length > 0) {
+            // Используем заднюю камеру если доступна
+            let selectedCamera = cameras[0];
+            for (let camera of cameras) {
+              if (camera.name.toLowerCase().includes('back') || 
+                  camera.name.toLowerCase().includes('rear')) {
+                selectedCamera = camera;
+                break;
+              }
+            }
+            
+            scanner.start(selectedCamera).then(function() {
+              activeStream = scanner._activeStream;
+              
+              // Проверяем доступность фонарика
+              if (activeStream) {
+                const videoTrack = activeStream.getVideoTracks()[0];
+                if (videoTrack && videoTrack.getCapabilities && 
+                    videoTrack.getCapabilities().torch) {
+                  toggleTorchBtn.style.display = 'block';
+                }
+              }
+            }).catch(function(error) {
+              console.error('Ошибка запуска камеры:', error);
+              showResult('error', 'Ошибка запуска камеры', 'Не удалось запустить камеру. Попробуйте еще раз.');
+            });
+          } else {
+            showResult('error', 'Камера не найдена', 'На устройстве не обнаружена камера.');
+          }
+        }).catch(function(error) {
+          console.error('Ошибка получения камер:', error);
+          showResult('error', 'Ошибка доступа к камере', 'Не удалось получить доступ к камере.');
+        });
+      }
+      
+      // Обработка отсканированного QR-кода
+      function processScannedQRCode(qrContent) {
+        const currentUser = UserSystem.getCurrentUser();
+        if (!currentUser) return;
+        
+        // Останавливаем сканер
+        if (scanner) {
+          scanner.stop();
+        }
+        
+        // Скрываем модальное окно сканера
+        scannerModal.style.display = 'none';
+        
+        // Парсим QR-код
+        try {
+          // Пробуем обработать как URL
+          const url = new URL(qrContent);
+          const params = new URLSearchParams(url.search);
+          const qrCode = params.get('scan') || params.get('ref');
+          
+          if (qrCode) {
+            handleQRCode(qrCode);
+          } else {
+            showResult('error', 'Неверный QR-код', 'QR-код не содержит информацию для добавления в друзья.');
+          }
+        } catch (error) {
+          // Если не URL, пробуем обработать напрямую
+          if (qrContent.startsWith('FRIEND_') || qrContent.startsWith('PROFILE_') || qrContent.startsWith('REF_')) {
+            handleQRCode(qrContent);
+          } else {
+            showResult('error', 'Неверный QR-код', 'QR-код не содержит информацию для добавления в друзья.');
+          }
+        }
+      }
+      
+      // Обработка QR-кода через UserSystem
+      function handleQRCode(qrCode) {
+        const currentUser = UserSystem.getCurrentUser();
+        const result = UserSystem.processScannedQRCode(qrCode, currentUser.id);
+        
+        if (result.success) {
+          if (result.action === 'view_profile') {
+            // Показываем информацию о пользователе
+            const user = UserSystem.findUser(result.userId);
+            if (user) {
+              showUserProfileResult(user);
+            } else {
+              showResult('error', 'Пользователь не найден', 'Не удалось найти пользователя по QR-коду.');
+            }
+          } else {
+            // Показываем успешный результат
+            showResult('success', 'Запрос отправлен', result.message);
+          }
+        } else {
+          showResult('error', 'Ошибка', result.message);
+        }
+      }
+      
+      // Показ информации о пользователе
+      function showUserProfileResult(user) {
+        const resultIcon = document.getElementById('result-icon');
+        const resultTitle = document.getElementById('result-title');
+        const resultMessage = document.getElementById('result-message');
+        const userInfo = document.getElementById('result-user-info');
+        const userAvatar = document.getElementById('result-user-avatar');
+        const userName = document.getElementById('result-user-name');
+        const userStatusDot = document.getElementById('result-user-status-dot');
+        const userStatusText = document.getElementById('result-user-status-text');
+        const primaryBtn = document.getElementById('result-primary-btn');
+        
+        // Настраиваем иконку и заголовок
+        resultIcon.className = 'result-icon info';
+        resultIcon.innerHTML = '<span class="material-icons">person</span>';
+        resultTitle.textContent = 'Найден пользователь';
+        resultMessage.textContent = 'Хотите добавить этого пользователя в друзья?';
+        
+        // Заполняем информацию о пользователе
+        userAvatar.src = user.avatar || '';
+        userName.textContent = user.nickname || 'Пользователь';
+        
+        if (user.status === 'online') {
+          userStatusDot.className = 'result-status-dot status-online';
+          userStatusText.textContent = 'В сети';
+        } else {
+          userStatusDot.className = 'result-status-dot status-offline';
+          userStatusText.textContent = 'Не в сети';
+        }
+        
+        userInfo.style.display = 'flex';
+        
+        // Настраиваем кнопки
+        primaryBtn.style.display = 'block';
+        primaryBtn.onclick = function() {
+          try {
+            const currentUser = UserSystem.getCurrentUser();
+            UserSystem.sendFriendRequest(currentUser.id, user.id);
+            showResult('success', 'Запрос отправлен', 'Запрос в друзья успешно отправлен!');
+          } catch (error) {
+            showResult('error', 'Ошибка', error.message);
+          }
+        };
+        
+        // Показываем результат
+        scanResultModal.style.display = 'flex';
+      }
+      
+      // Показ результата сканирования
+      function showResult(type, title, message) {
+        const resultIcon = document.getElementById('result-icon');
+        const resultTitle = document.getElementById('result-title');
+        const resultMessage = document.getElementById('result-message');
+        const userInfo = document.getElementById('result-user-info');
+        const primaryBtn = document.getElementById('result-primary-btn');
+        
+        // Скрываем элементы пользователя
+        userInfo.style.display = 'none';
+        primaryBtn.style.display = 'none';
+        
+        // Настраиваем стиль в зависимости от типа
+        if (type === 'success') {
+          resultIcon.className = 'result-icon success';
+          resultIcon.innerHTML = '<span class="material-icons">check_circle</span>';
+        } else if (type === 'error') {
+          resultIcon.className = 'result-icon error';
+          resultIcon.innerHTML = '<span class="material-icons">error</span>';
+        } else {
+          resultIcon.className = 'result-icon info';
+          resultIcon.innerHTML = '<span class="material-icons">info</span>';
+        }
+        
+        resultTitle.textContent = title;
+        resultMessage.textContent = message;
+        
+        // Показываем модальное окно
+        scanResultModal.style.display = 'flex';
+        
+        // Деактивируем кнопку сканирования
+        scanBtn.classList.remove('active');
+      }
+      
+      // Закрытие сканера
+      closeScannerBtn.onclick = function() {
+        stopScanner();
+        scannerModal.style.display = 'none';
+        scanBtn.classList.remove('active');
+      };
+      
+      // Закрытие по клику вне окна
+      scannerModal.onclick = function(e) {
+        if (e.target === scannerModal) {
+          stopScanner();
+          scannerModal.style.display = 'none';
+          scanBtn.classList.remove('active');
+        }
+      };
+      
+      // Переключение фонарика
+      toggleTorchBtn.onclick = function() {
+        if (!activeStream) return;
+        
+        const videoTrack = activeStream.getVideoTracks()[0];
+        if (videoTrack && videoTrack.getCapabilities().torch) {
+          torchEnabled = !torchEnabled;
+          videoTrack.applyConstraints({
+            advanced: [{ torch: torchEnabled }]
+          }).then(() => {
+            toggleTorchBtn.innerHTML = torchEnabled ? 
+              '<span class="material-icons" style="vertical-align: -4px; font-size: 16px;">flashlight_off</span>Фонарик' :
+              '<span class="material-icons" style="vertical-align: -4px; font-size: 16px;">flashlight_on</span>Фонарик';
+          });
+        }
+      };
+      
+      // Закрытие результата
+      closeResultBtn.onclick = function() {
+        scanResultModal.style.display = 'none';
+      };
+      
+      closeResultBtn.onclick = function(e) {
+        if (e.target === scanResultModal) {
+          scanResultModal.style.display = 'none';
+        }
+      };
+      
+      // Остановка сканера
+      function stopScanner() {
+        if (scanner) {
+          scanner.stop();
+          scanner = null;
+        }
+        
+        if (activeStream) {
+          activeStream.getTracks().forEach(track => track.stop());
+          activeStream = null;
+        }
+        
+        torchEnabled = false;
+        toggleTorchBtn.style.display = 'none';
+        toggleTorchBtn.innerHTML = '<span class="material-icons" style="vertical-align: -4px; font-size: 16px;">flashlight_on</span>Фонарик';
+      }
+      
+      // Обработка закрытия страницы
+      window.addEventListener('beforeunload', function() {
+        stopScanner();
+      });
+    }
+
     // Основная инициализация профиля
     document.addEventListener('DOMContentLoaded', function() {
       const currentUser = UserSystem.getCurrentUser();
@@ -969,6 +2137,12 @@
       if (currentUser.email) {
         document.getElementById('user-email').textContent = `Email: ${currentUser.email}`;
       }
+
+      // Инициализируем реферальную секцию
+      initReferralSection();
+      
+      // Инициализируем сканер QR-кода
+      initQRScanner();
 
       // Обработчик кнопки "Скрыть местоположение"
       const invisibleBtn = document.getElementById('btn-invisible');
