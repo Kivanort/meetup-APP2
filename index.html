@@ -895,7 +895,7 @@
         `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    // Форма входа
+    // Форма входа - ИСПРАВЛЕННАЯ ВЕРСИЯ
     document.getElementById('login-form').addEventListener('submit', function(e) {
       e.preventDefault();
       
@@ -910,28 +910,23 @@
         return;
       }
       
-      const user = UserSystem.findUser(identity);
-      if (!user || user.password !== UserSystem.hashPassword(password)) {
+      try {
+        // Используем исправленную функцию UserSystem.login()
+        // Она принимает email/никнейм и пароль
+        const user = UserSystem.login(identity, password);
+        
+        if (user) {
+          document.getElementById('form-spinner').style.display = 'block';
+          setTimeout(() => {
+            window.location.href = 'map.html';
+          }, 1000);
+        } else {
+          error.style.display = 'flex';
+        }
+      } catch (loginError) {
+        console.error('Ошибка входа:', loginError.message);
         error.style.display = 'flex';
-        return;
       }
-      
-      // Обновляем данные пользователя
-      user.lastSeen = new Date().toISOString();
-      user.status = 'online';
-      const users = UserSystem.getUsers();
-      const userIndex = users.findIndex(u => u.id === user.id);
-      if (userIndex !== -1) {
-        users[userIndex] = user;
-        UserSystem.saveUsers(users);
-      }
-      
-      UserSystem.setCurrentUser(user);
-      
-      document.getElementById('form-spinner').style.display = 'block';
-      setTimeout(() => {
-        window.location.href = 'map.html';
-      }, 1000);
     });
 
     // Форма регистрации
@@ -997,50 +992,25 @@
           avatarData = await UserSystem.fileToBase64(avatarFile);
         }
         
-        const users = UserSystem.getUsers();
         const newUser = {
-          id: UserSystem.generateUserId(),
-          nickname: nickname,
           email: email.toLowerCase().trim(),
-          password: UserSystem.hashPassword(password),
+          nickname: nickname,
+          password: password, // Пароль передается как есть, UserSystem сам его захеширует
           avatar: avatarData,
-          status: 'online',
-          invisible: false,
-          registeredAt: new Date().toISOString(),
-          lastSeen: new Date().toISOString(),
-          lastActive: Date.now(),
-          position: [55.751244, 37.618423],
-          about: '',
-          stats: {
-            friendsCount: 0,
-            totalDistance: 0,
-            onlineHours: 0,
-            totalFriends: 0,
-            meetingCount: 0
-          },
-          settings: {
-            notifications: true,
-            showOnMap: true,
-            autoUpdate: true,
-            privacy: 'public',
-            theme: 'dark'
-          },
-          metadata: {
-            version: 2,
-            created: Date.now(),
-            modified: Date.now()
-          },
-          isVerified: false,
-          isActive: true
+          position: [55.751244, 37.618423]
         };
         
-        users.push(newUser);
-        UserSystem.saveUsers(users);
-        UserSystem.setCurrentUser(newUser);
+        const createdUser = UserSystem.createUser(newUser);
         
-        setTimeout(() => {
-          window.location.href = 'map.html';
-        }, 1000);
+        if (createdUser) {
+          UserSystem.setCurrentUser(createdUser);
+          
+          setTimeout(() => {
+            window.location.href = 'map.html';
+          }, 1000);
+        } else {
+          throw new Error('Не удалось создать пользователя');
+        }
         
       } catch (error) {
         document.getElementById('form-spinner').style.display = 'none';
