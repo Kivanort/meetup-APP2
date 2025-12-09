@@ -615,40 +615,17 @@
       background: #00AA00;
     }
     
+    .qr-btn .material-icons {
+      vertical-align: -4px;
+      font-size: 16px;
+      margin-right: 5px;
+    }
+    
     .referral-info {
       font-size: 12px;
       color: rgba(255, 255, 255, 0.6);
       margin-top: 8px;
       line-height: 1.4;
-    }
-    
-    .referral-stats {
-      display: flex;
-      gap: 16px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-    }
-    
-    .referral-stat {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: rgba(0, 255, 255, 0.1);
-      padding: 8px 12px;
-      border-radius: 8px;
-      min-width: 80px;
-    }
-    
-    .referral-stat-value {
-      font-size: 16px;
-      font-weight: 600;
-      color: #00FFFF;
-    }
-    
-    .referral-stat-label {
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.7);
-      margin-top: 2px;
     }
     
     /* QR код */
@@ -698,6 +675,11 @@
       background: white;
       border-radius: 8px;
       display: inline-block;
+      min-height: 220px;
+      min-width: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .qr-actions {
@@ -1044,15 +1026,6 @@
         flex-direction: column;
       }
       
-      .referral-stats {
-        flex-direction: column;
-        gap: 8px;
-      }
-      
-      .referral-stat {
-        min-width: 100%;
-      }
-      
       .qr-content,
       .scanner-content,
       .result-content {
@@ -1073,6 +1046,30 @@
         min-width: 120px;
         padding: 10px 16px;
       }
+    }
+    
+    /* Стиль для альтернативного отображения QR-кода */
+    .qr-alternative {
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .qr-alternative-code {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      display: inline-block;
+      margin-bottom: 15px;
+    }
+    
+    .qr-warning {
+      color: #FF9800;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -1159,28 +1156,14 @@
       <div class="referral-link-container">
         <input type="text" class="referral-input" id="referral-link" readonly value="Загрузка ссылки...">
         <button class="copy-btn" id="copy-btn">Копировать</button>
-        <button class="copy-btn" id="qr-btn" style="background: linear-gradient(90deg, #FF9800, #FF5722);">
-          <span class="material-icons" style="vertical-align: -4px; font-size: 16px;">qr_code</span>
+        <button class="copy-btn qr-btn" id="qr-btn" style="background: linear-gradient(90deg, #FF9800, #FF5722);">
+          <span class="material-icons">qr_code</span>
+          Мой QR
         </button>
       </div>
       
-      <div class="referral-stats">
-        <div class="referral-stat">
-          <div class="referral-stat-value" id="referrals-count">0</div>
-          <div class="referral-stat-label">Приглашено</div>
-        </div>
-        <div class="referral-stat">
-          <div class="referral-stat-value" id="referral-friends">0</div>
-          <div class="referral-stat-label">Добавились</div>
-        </div>
-        <div class="referral-stat">
-          <div class="referral-stat-value" id="referral-bonus">+0%</div>
-          <div class="referral-stat-label">Бонус</div>
-        </div>
-      </div>
-      
       <div class="referral-info">
-        Отправьте эту ссылку друзьям. При регистрации по ней они автоматически добавятся к вам в друзья.
+        Отправьте эту ссылку или QR-код друзьям. При регистрации по ссылке или сканировании QR-кода они автоматически добавятся к вам в друзья.
       </div>
     </div>
     
@@ -1215,15 +1198,27 @@
   <!-- Модальное окно QR кода -->
   <div class="qr-modal" id="qr-modal">
     <div class="qr-content">
-      <div class="qr-title">Пригласительный QR-код</div>
-      <div id="qr-code"></div>
+      <div class="qr-title">Мой QR-код для друзей</div>
+      <div id="qr-code">
+        <div class="qr-alternative">
+          <div class="qr-alternative-code">
+            <div style="font-family: monospace; font-size: 14px; color: black; margin-bottom: 10px;">
+              Загрузка QR-кода...
+            </div>
+          </div>
+          <div class="qr-warning">
+            <span class="material-icons" style="font-size: 16px;">hourglass_empty</span>
+            Пожалуйста, подождите
+          </div>
+        </div>
+      </div>
       <div style="margin-top: 16px; font-size: 14px; color: rgba(255,255,255,0.8);">
-        Наведите камеру друга на этот код
+        Покажите этот QR-код другу для добавления в друзья
       </div>
       <div class="qr-actions">
         <button class="qr-btn close" id="close-qr">Закрыть</button>
         <button class="qr-btn share" id="share-qr">
-          <span class="material-icons" style="vertical-align: -4px; font-size: 16px;">share</span>
+          <span class="material-icons">share</span>
           Поделиться
         </button>
       </div>
@@ -1290,6 +1285,15 @@
   </div>
   
   <script>
+    // Функция для проверки загрузки библиотеки QRCode
+    function checkQRCodeLibrary() {
+      if (typeof QRCode === 'undefined') {
+        console.error('QRCode библиотека не загружена');
+        return false;
+      }
+      return true;
+    }
+    
     // Функции для работы с профилем
     function updateStatus(status) {
       let ind = document.getElementById('status-indicator');
@@ -1573,6 +1577,70 @@
       localStorage.setItem(onlineKey, JSON.stringify(onlineData));
     }
 
+    // Генерация QR кода для добавления в друзья
+    function generateFriendQRCode(userId, nickname) {
+      const qrContainer = document.getElementById('qr-code');
+      qrContainer.innerHTML = '';
+      
+      // Создаем специальный формат для QR-кода добавления в друзья
+      const qrData = `meetup://add-friend/${userId}/${encodeURIComponent(nickname || 'Пользователь')}`;
+      
+      // Проверяем загружена ли библиотека QRCode
+      if (typeof QRCode !== 'undefined') {
+        try {
+          // Используем QRCode.js
+          new QRCode(qrContainer, {
+            text: qrData,
+            width: 200,
+            height: 200,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+          });
+          console.log('QR-код успешно создан');
+        } catch (error) {
+          console.error('Ошибка при создании QR-кода:', error);
+          qrContainer.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+              <div style="color: #FF4444; margin-bottom: 10px;">
+                <span class="material-icons">error</span>
+              </div>
+              <div style="color: white;">Не удалось создать QR-код</div>
+              <div style="color: #888; font-size: 12px; margin-top: 10px;">${error.message}</div>
+            </div>
+          `;
+        }
+      } else {
+        // Альтернативный способ если библиотека не загружена
+        console.warn('Библиотека QRCode не загружена, используем альтернативный метод');
+        qrContainer.innerHTML = `
+          <div class="qr-alternative">
+            <div class="qr-alternative-code">
+              <div style="font-family: monospace; font-size: 16px; color: black; margin-bottom: 10px; font-weight: bold;">
+                ${nickname || 'Добавить в друзья'}
+              </div>
+              <div style="font-family: monospace; font-size: 12px; color: #666; word-break: break-all;">
+                ID: ${userId}
+              </div>
+              <div style="margin-top: 10px; font-size: 10px; color: #999;">
+                Отсканируйте этот текст
+              </div>
+            </div>
+            <div class="qr-warning">
+              <span class="material-icons" style="font-size: 16px;">warning</span>
+              Используйте альтернативный метод для добавления в друзья
+            </div>
+          </div>
+        `;
+      }
+      
+      // Обновляем заголовок с именем пользователя
+      const currentUser = UserSystem.getCurrentUser();
+      if (currentUser) {
+        document.querySelector('.qr-title').textContent = `Добавить ${currentUser.nickname} в друзья`;
+      }
+    }
+
     // Функции для работы с реферальными ссылками
     function initReferralSection() {
       const currentUser = UserSystem.getCurrentUser();
@@ -1612,9 +1680,35 @@
           }
         };
         
-        // Открытие QR кода
+        // Открытие QR кода для добавления в друзья
         qrBtn.onclick = function() {
-          generateQRCode(referralLink);
+          // Проверяем загружена ли библиотека QRCode
+          if (typeof QRCode === 'undefined') {
+            showTempMessage('Библиотека QR-кода не загружена. Обновите страницу или проверьте подключение к интернету.', 5000);
+            // Показываем альтернативный контент
+            const qrContainer = document.getElementById('qr-code');
+            qrContainer.innerHTML = `
+              <div class="qr-alternative">
+                <div class="qr-alternative-code">
+                  <div style="font-family: monospace; font-size: 16px; color: black; margin-bottom: 10px; font-weight: bold;">
+                    ${currentUser.nickname || 'Пользователь'}
+                  </div>
+                  <div style="font-family: monospace; font-size: 12px; color: #666; word-break: break-all;">
+                    Ссылка: ${referralLink}
+                  </div>
+                </div>
+                <div class="qr-warning">
+                  <span class="material-icons" style="font-size: 16px;">error</span>
+                  QR-код временно недоступен
+                </div>
+              </div>
+            `;
+            qrModal.style.display = 'flex';
+            return;
+          }
+          
+          // Генерируем персональный QR-код для добавления в друзья
+          generateFriendQRCode(currentUser.id, currentUser.nickname);
           qrModal.style.display = 'flex';
         };
         
@@ -1629,26 +1723,41 @@
             const qrCanvas = document.querySelector('#qr-code canvas');
             if (qrCanvas) {
               qrCanvas.toBlob(async function(blob) {
-                const file = new File([blob], 'invite-qr.png', { type: 'image/png' });
+                const file = new File([blob], 'meetup-friend-qr.png', { type: 'image/png' });
                 
                 if (navigator.share && navigator.canShare({ files: [file] })) {
                   await navigator.share({
                     files: [file],
-                    title: 'Присоединяйтесь ко мне в MeetUP!',
-                    text: 'Используйте этот QR код для регистрации и автоматического добавления в друзья.'
+                    title: 'Добавь меня в друзья в MeetUP!',
+                    text: 'Отсканируй этот QR-код, чтобы добавить меня в друзья в приложении MeetUP.'
                   });
                 } else {
                   // Fallback: скачивание
                   const link = document.createElement('a');
-                  link.download = 'meetup-invite-qr.png';
+                  link.download = 'meetup-friend-qr.png';
                   link.href = qrCanvas.toDataURL();
                   link.click();
                   showTempMessage('QR код сохранен');
                 }
               });
+            } else {
+              // Если нет canvas, предлагаем поделиться ссылкой
+              if (navigator.share) {
+                await navigator.share({
+                  title: 'Добавь меня в друзья в MeetUP!',
+                  text: `Добавь меня в друзья: ${referralLink}`,
+                  url: referralLink
+                });
+              } else {
+                await navigator.clipboard.writeText(referralLink);
+                showTempMessage('Ссылка скопирована в буфер обмена');
+              }
             }
           } catch (error) {
             console.log('Ошибка при совместном использовании:', error);
+            // Копируем ссылку в буфер обмена как запасной вариант
+            await navigator.clipboard.writeText(referralLink);
+            showTempMessage('Ссылка скопирована в буфер обмена');
           }
         };
         
@@ -1659,50 +1768,6 @@
           }
         };
       }
-      
-      // Загружаем статистику рефералов
-      loadReferralStats();
-    }
-
-    // Генерация QR кода
-    function generateQRCode(text) {
-      const qrContainer = document.getElementById('qr-code');
-      qrContainer.innerHTML = '';
-      
-      // Используем QRCode.js
-      new QRCode(qrContainer, {
-        text: text,
-        width: 200,
-        height: 200,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-      });
-    }
-
-    // Загрузка реферальной статистики
-    function loadReferralStats() {
-      const currentUser = UserSystem.getCurrentUser();
-      if (!currentUser) return;
-      
-      const users = UserSystem.getUsers();
-      
-      // Считаем приглашенных пользователей
-      const referredUsers = users.filter(u => u.referredBy === currentUser.id);
-      const activeReferred = referredUsers.filter(u => u.isActive);
-      
-      // Обновляем статистику
-      document.getElementById('referrals-count').textContent = referredUsers.length;
-      document.getElementById('referral-friends').textContent = activeReferred.length;
-      
-      // Вычисляем бонус (например, +1% за каждого приглашенного)
-      const bonus = Math.min(referredUsers.length * 1, 20);
-      document.getElementById('referral-bonus').textContent = `+${bonus}%`;
-      
-      // Обновляем основную статистику друзей
-      const friendsCount = document.getElementById('friends-count');
-      const currentFriends = parseInt(friendsCount.textContent) || 0;
-      friendsCount.textContent = currentFriends + activeReferred.length;
     }
 
     // Функции для работы со сканером QR-кода
@@ -1850,23 +1915,67 @@
         
         // Парсим QR-код
         try {
+          // Пробуем обработать как URL схемы meetup://
+          if (qrContent.startsWith('meetup://')) {
+            handleMeetupQRCode(qrContent);
+          }
           // Пробуем обработать как URL
-          const url = new URL(qrContent);
-          const params = new URLSearchParams(url.search);
-          const qrCode = params.get('scan') || params.get('ref');
-          
-          if (qrCode) {
-            handleQRCode(qrCode);
+          else if (qrContent.startsWith('http')) {
+            const url = new URL(qrContent);
+            const params = new URLSearchParams(url.search);
+            const qrCode = params.get('scan') || params.get('ref');
+            
+            if (qrCode) {
+              handleQRCode(qrCode);
+            } else {
+              showResult('error', 'Неверный QR-код', 'QR-код не содержит информацию для добавления в друзья.');
+            }
           } else {
-            showResult('error', 'Неверный QR-код', 'QR-код не содержит информацию для добавления в друзья.');
+            // Если не URL, пробуем обработать напрямую
+            if (qrContent.startsWith('FRIEND_') || qrContent.startsWith('PROFILE_') || qrContent.startsWith('REF_')) {
+              handleQRCode(qrContent);
+            } else {
+              showResult('error', 'Неверный QR-код', 'QR-код не содержит информацию для добавления в друзья.');
+            }
           }
         } catch (error) {
-          // Если не URL, пробуем обработать напрямую
-          if (qrContent.startsWith('FRIEND_') || qrContent.startsWith('PROFILE_') || qrContent.startsWith('REF_')) {
-            handleQRCode(qrContent);
-          } else {
-            showResult('error', 'Неверный QR-код', 'QR-код не содержит информацию для добавления в друзья.');
+          console.error('Ошибка обработки QR-кода:', error);
+          showResult('error', 'Ошибка', 'Не удалось обработать QR-код. Попробуйте еще раз.');
+        }
+      }
+      
+      // Обработка QR-кода схемы meetup://
+      function handleMeetupQRCode(qrContent) {
+        const currentUser = UserSystem.getCurrentUser();
+        
+        // Парсим URL схемы meetup://
+        const match = qrContent.match(/meetup:\/\/add-friend\/([^\/]+)\/(.+)/);
+        if (match) {
+          const userId = match[1];
+          const nickname = decodeURIComponent(match[2]);
+          
+          // Проверяем, не сканируем ли мы свой собственный QR-код
+          if (userId === currentUser.id) {
+            showResult('info', 'Это ваш QR-код', 'Вы не можете добавить себя в друзья.');
+            return;
           }
+          
+          // Ищем пользователя
+          const user = UserSystem.findUser(userId);
+          if (user) {
+            showUserProfileResult(user);
+          } else {
+            // Если пользователь не найден в локальной базе, создаем временный объект
+            const tempUser = {
+              id: userId,
+              nickname: nickname,
+              avatar: '',
+              status: 'offline'
+            };
+            showUserProfileResult(tempUser);
+          }
+        } else {
+          showResult('error', 'Неверный формат QR-кода', 'QR-код не соответствует формату добавления в друзья.');
         }
       }
       
@@ -2051,6 +2160,20 @@
         window.location.href = 'registration.html';
         return;
       }
+
+      // Проверяем загрузку QRCode библиотеки
+      setTimeout(() => {
+        if (typeof QRCode === 'undefined') {
+          console.warn('QRCode библиотека не загрузилась');
+          // Показываем предупреждение пользователю
+          const qrBtn = document.getElementById('qr-btn');
+          if (qrBtn) {
+            qrBtn.innerHTML = '<span class="material-icons">warning</span> QR (ошибка)';
+            qrBtn.style.background = 'linear-gradient(90deg, #FF4444, #992222)';
+            qrBtn.title = 'Библиотека QR-кода не загружена. Обновите страницу.';
+          }
+        }
+      }, 3000);
 
       // Обновляем активность пользователя
       updateUserActivity(currentUser);
