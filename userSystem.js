@@ -84,13 +84,13 @@ const UserSystem = {
                 nickname: userData.nickname.trim(),
                 password: hashedPassword,
                 avatar: userData.avatar || '',
-                status: userData.status || 'online',
-                invisible: userData.invisible || false,
+                status: 'online',
+                invisible: false,
                 registeredAt: new Date().toISOString(),
                 lastSeen: new Date().toISOString(),
                 lastActive: Date.now(),
                 position: userData.position || [55.751244, 37.618423],
-                about: userData.about || '',
+                about: '',
                 stats: {
                     friendsCount: 0,
                     totalDistance: 0,
@@ -113,14 +113,23 @@ const UserSystem = {
                 },
                 isVerified: false,
                 isActive: true,
-                referredBy: userData.referredBy || null
+                referredBy: userData.referredBy || null,
+                referralCode: userData.referralCode || null
             };
+
+            // Генерируем реферальный код, если не передан
+            if (!newUser.referralCode) {
+                newUser.referralCode = this.generateReferralCode(newUser.id);
+                newUser.referralGeneratedAt = Date.now();
+            }
 
             users.push(newUser);
             
             if (this.saveUsers(users)) {
                 // Создаем профиль активности
                 this.createUserActivityProfile(newUser.id);
+                
+                console.log('✅ Пользователь создан:', newUser.email);
                 return newUser;
             }
             
@@ -145,7 +154,8 @@ const UserSystem = {
             const allowedFields = [
                 'nickname', 'avatar', 'status', 'invisible',
                 'position', 'about', 'settings', 'stats',
-                'referralCode', 'referralGeneratedAt', 'referredBy'
+                'referralCode', 'referralGeneratedAt', 'referredBy',
+                'password', 'lastSeen', 'lastActive'
             ];
             
             const updatedUser = { ...users[userIndex] };
@@ -160,8 +170,6 @@ const UserSystem = {
             });
 
             updatedUser.metadata.modified = Date.now();
-            updatedUser.lastSeen = new Date().toISOString();
-            updatedUser.lastActive = Date.now();
 
             users[userIndex] = updatedUser;
             
@@ -300,10 +308,13 @@ const UserSystem = {
     // Вход в систему (ИСПРАВЛЕННАЯ ВЕРСИЯ)
     login: function(identifier, password) {
         try {
+            console.log('🔐 Попытка входа:', identifier);
+            
             // Ищем пользователя по email или никнейму
             const user = this.findUser(identifier);
             
             if (!user) {
+                console.log('❌ Пользователь не найден:', identifier);
                 throw new Error('Пользователь не найден');
             }
 
@@ -319,6 +330,7 @@ const UserSystem = {
             });
 
             if (user.password !== hashedPassword) {
+                console.log('❌ Неверный пароль для пользователя:', user.email);
                 throw new Error('Неверный пароль');
             }
 
@@ -329,7 +341,8 @@ const UserSystem = {
             // Обновляем данные пользователя
             const updatedUser = this.updateUser(user.id, {
                 status: 'online',
-                lastSeen: new Date().toISOString()
+                lastSeen: new Date().toISOString(),
+                lastActive: Date.now()
             });
 
             if (!updatedUser) {
@@ -527,8 +540,7 @@ const UserSystem = {
                 timestamp: Date.now(),
                 status: 'pending',
                 metadata: {
-                    version: 1,
-                    created: Date.now()
+                    viaQR: false // По умолчанию, будет установлено в true если через QR
                 }
             };
 
@@ -541,6 +553,34 @@ const UserSystem = {
             return newRequest;
         } catch (error) {
             console.error('❌ Ошибка отправки запроса в друзья:', error);
+            throw error;
+        }
+    },
+
+    // Отправить запрос в друзья через QR-код
+    sendFriendRequestViaQR: function(fromUserId, toUserId) {
+        try {
+            const request = this.sendFriendRequest(fromUserId, toUserId);
+            
+            // Помечаем запрос как отправленный через QR
+            const requests = this.getFriendRequests();
+            const requestIndex = requests.findIndex(req => req.id === request.id);
+            if (requestIndex !== -1) {
+                requests[requestIndex].metadata = {
+                    ...requests[requestIndex].metadata,
+                    viaQR: true,
+                    scannedAt: Date.now()
+                };
+                localStorage.setItem('meetup_friend_requests', JSON.stringify(requests));
+            }
+            
+            // Обновляем статистику QR-приглашений
+            this.updateUserStats(fromUserId, 'qrInvitations', 1);
+            this.updateUserStats(toUserId, 'qrInvitationsReceived', 1);
+            
+            return request;
+        } catch (error) {
+            console.error('❌ Ошибка отправки запроса через QR:', error);
             throw error;
         }
     },
@@ -632,15 +672,331 @@ const UserSystem = {
         }
     },
 
+    // ============ QR-КОДЫ ДЛЯ ДОБАВЛЕНИЯ В ДРУЗЬЯ ============
+    
+    // Генерировать персональный QR-код для добавления в друзья
+    generateFriendQRCode: function(userId) {
+        try {
+            const user = this.findUser(userId);
+            if (!user) {
+                throw new Error('Пользователь не найден');
+            }
+            
+            // Создаем уникальный код на основе ID пользователя
+            const qrData = {
+                type: 'friend_request',
+                userId: userId,
+                nickname: user.nickname,
+                timestamp: Date.now(),
+                expiresAt: Date.now() + (24 * 60 * 60 * 1000) // Действует 24 часа
+            };
+            
+            // Конвертируем в строку для QR-кода
+            const qrString = JSON.stringify(qrData);
+            
+            // Сохраняем в хранилище для валидации
+            this.saveQRData(qrString, userId);
+            
+            return {
+                data: qrString,
+                url: this.generateQRUrl(qrString),
+                expiresAt: qrData.expiresAt
+            };
+        } catch (error) {
+            console.error('❌ Ошибка генерации QR-кода:', error);
+            throw error;
+        }
+    },
+
+    // Сгенерировать URL для QR-кода
+    generateQRUrl: function(qrData) {
+        const encodedData = encodeURIComponent(qrData);
+        return `${window.location.origin}/profile.html?qr=${encodedData}`;
+    },
+
+    // Сохранить данные QR-кода
+    saveQRData: function(qrData, userId) {
+        try {
+            const qrRecords = JSON.parse(localStorage.getItem('meetup_qr_records') || '{}');
+            const qrId = `qr_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+            
+            qrRecords[qrId] = {
+                data: qrData,
+                userId: userId,
+                generatedAt: Date.now(),
+                used: false
+            };
+            
+            localStorage.setItem('meetup_qr_records', JSON.stringify(qrRecords));
+            return qrId;
+        } catch (error) {
+            console.error('❌ Ошибка сохранения QR-данных:', error);
+            return null;
+        }
+    },
+
+    // Обработать отсканированный QR-код
+    processScannedQRCode: function(qrData, scannerUserId) {
+        try {
+            // Парсим данные QR-кода
+            let parsedData;
+            try {
+                parsedData = JSON.parse(qrData);
+            } catch (e) {
+                // Если не JSON, пробуем обработать как URL или простую строку
+                return this.processSimpleQRCode(qrData, scannerUserId);
+            }
+            
+            // Проверяем тип QR-кода
+            if (parsedData.type === 'friend_request') {
+                return this.processFriendRequestQR(parsedData, scannerUserId);
+            } else if (parsedData.type === 'user_profile') {
+                return this.processProfileQR(parsedData, scannerUserId);
+            } else {
+                throw new Error('Неизвестный тип QR-кода');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка обработки QR-кода:', error);
+            return {
+                success: false,
+                message: error.message || 'Не удалось обработать QR-код'
+            };
+        }
+    },
+
+    // Обработать QR-код запроса в друзья
+    processFriendRequestQR: function(qrData, scannerUserId) {
+        try {
+            // Проверяем срок действия
+            if (qrData.expiresAt && qrData.expiresAt < Date.now()) {
+                return {
+                    success: false,
+                    message: 'QR-код устарел'
+                };
+            }
+            
+            const targetUserId = qrData.userId;
+            
+            // Проверяем, не сканирует ли пользователь свой QR-код
+            if (targetUserId === scannerUserId) {
+                return {
+                    success: false,
+                    message: 'Нельзя добавить себя в друзья через собственный QR-код'
+                };
+            }
+            
+            // Ищем пользователя
+            const targetUser = this.findUser(targetUserId);
+            if (!targetUser) {
+                return {
+                    success: false,
+                    message: 'Пользователь не найден'
+                };
+            }
+            
+            // Проверяем, не друзья ли уже
+            const existingRequest = this.getExistingFriendRequest(scannerUserId, targetUserId);
+            if (existingRequest) {
+                if (existingRequest.status === 'accepted') {
+                    return {
+                        success: false,
+                        message: 'Вы уже друзья с этим пользователем'
+                    };
+                } else if (existingRequest.status === 'pending') {
+                    return {
+                        success: false,
+                        message: 'Запрос уже отправлен'
+                    };
+                }
+            }
+            
+            // Отправляем запрос через QR-код
+            const request = this.sendFriendRequestViaQR(scannerUserId, targetUserId);
+            
+            return {
+                success: true,
+                message: `Запрос в друзья отправлен пользователю ${targetUser.nickname}`,
+                user: targetUser,
+                requestId: request.id
+            };
+        } catch (error) {
+            console.error('❌ Ошибка обработки QR запроса в друзья:', error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    },
+
+    // Обработать QR-код профиля
+    processProfileQR: function(qrData, scannerUserId) {
+        try {
+            const targetUserId = qrData.userId;
+            const targetUser = this.findUser(targetUserId);
+            
+            if (!targetUser) {
+                return {
+                    success: false,
+                    message: 'Пользователь не найден'
+                };
+            }
+            
+            return {
+                success: true,
+                message: 'Профиль пользователя найден',
+                user: targetUser,
+                action: 'view_profile'
+            };
+        } catch (error) {
+            console.error('❌ Ошибка обработки QR профиля:', error);
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    },
+
+    // Обработать простой QR-код (не JSON)
+    processSimpleQRCode: function(qrData, scannerUserId) {
+        try {
+            // Пробуем извлечь ID пользователя из различных форматов
+            
+            // Формат: meetup://add-friend/userId/nickname
+            if (qrData.startsWith('meetup://add-friend/')) {
+                const parts = qrData.split('/');
+                if (parts.length >= 3) {
+                    const userId = parts[2];
+                    return this.processFriendRequestQR({
+                        type: 'friend_request',
+                        userId: userId,
+                        nickname: parts[3] || 'Пользователь'
+                    }, scannerUserId);
+                }
+            }
+            
+            // Формат: FRIEND_userId_timestamp
+            if (qrData.startsWith('FRIEND_')) {
+                const parts = qrData.split('_');
+                if (parts.length >= 2) {
+                    const userId = parts[1];
+                    return this.processFriendRequestQR({
+                        type: 'friend_request',
+                        userId: userId
+                    }, scannerUserId);
+                }
+            }
+            
+            // Простая ссылка с параметром ref
+            try {
+                const url = new URL(qrData);
+                const refCode = url.searchParams.get('ref');
+                if (refCode) {
+                    return this.processReferralCode(refCode, scannerUserId);
+                }
+            } catch (e) {
+                // Не URL, продолжаем
+            }
+            
+            // Пробуем найти пользователя по ID напрямую
+            const user = this.findUser(qrData);
+            if (user) {
+                return {
+                    success: true,
+                    message: 'Пользователь найден',
+                    user: user,
+                    action: 'view_profile'
+                };
+            }
+            
+            return {
+                success: false,
+                message: 'Не удалось распознать QR-код'
+            };
+        } catch (error) {
+            console.error('❌ Ошибка обработки простого QR:', error);
+            return {
+                success: false,
+                message: 'Ошибка обработки QR-кода'
+            };
+        }
+    },
+
+    // Получить существующий запрос в друзья
+    getExistingFriendRequest: function(userId1, userId2) {
+        const requests = this.getFriendRequests();
+        return requests.find(req => 
+            (req.fromUserId === userId1 && req.toUserId === userId2) ||
+            (req.fromUserId === userId2 && req.toUserId === userId1)
+        );
+    },
+
+    // Создать QR-код для профиля пользователя
+    createProfileQRCode: function(userId) {
+        try {
+            const user = this.findUser(userId);
+            if (!user) {
+                throw new Error('Пользователь не найден');
+            }
+            
+            const qrData = {
+                type: 'user_profile',
+                userId: userId,
+                nickname: user.nickname,
+                avatar: user.avatar,
+                timestamp: Date.now()
+            };
+            
+            const qrString = JSON.stringify(qrData);
+            return {
+                data: qrString,
+                url: this.generateQRUrl(qrString)
+            };
+        } catch (error) {
+            console.error('❌ Ошибка создания QR профиля:', error);
+            throw error;
+        }
+    },
+
+    // Получить статистику QR-кодов
+    getQRStats: function(userId) {
+        try {
+            const requests = this.getFriendRequests();
+            const qrRequests = requests.filter(req => 
+                (req.fromUserId === userId || req.toUserId === userId) &&
+                req.metadata?.viaQR === true
+            );
+            
+            const sentViaQR = qrRequests.filter(req => req.fromUserId === userId);
+            const receivedViaQR = qrRequests.filter(req => req.toUserId === userId);
+            
+            return {
+                totalSentViaQR: sentViaQR.length,
+                totalReceivedViaQR: receivedViaQR.length,
+                acceptedViaQR: qrRequests.filter(req => req.status === 'accepted').length,
+                pendingViaQR: qrRequests.filter(req => req.status === 'pending').length
+            };
+        } catch (error) {
+            console.error('❌ Ошибка получения статистики QR:', error);
+            return null;
+        }
+    },
+
     // ============ ПРИГЛАСИТЕЛЬНЫЕ ССЫЛКИ ============
     
     // Генерация реферального кода
     generateReferralCode: function(userId) {
+        if (!userId) {
+            // Генерируем случайный код для нового пользователя
+            const timestamp = Date.now().toString(36);
+            const random = Math.random().toString(36).substr(2, 6);
+            return `REF_${timestamp}_${random}`.toUpperCase();
+        }
+        
         const user = this.findUser(userId);
         if (!user) return null;
         
         // Создаем уникальный код на основе ID и текущего времени
-        const code = `REF_${userId.substring(4, 8)}_${Date.now().toString(36).slice(-6)}`;
+        const code = `REF_${userId.substring(4, 8)}_${Date.now().toString(36).slice(-6)}`.toUpperCase();
         
         // Сохраняем код в профиль пользователя
         this.updateUser(userId, {
@@ -663,23 +1019,27 @@ const UserSystem = {
         
         // Генерируем полную ссылку
         const currentDomain = window.location.origin;
-        return `${currentDomain}/registration.html?ref=${code}`;
+        return `${currentDomain}/index.html?ref=${code}`;
     },
 
     // Проверить и использовать реферальную ссылку
     useReferralLink: function(code, newUserId) {
         try {
+            console.log('🔗 Использование реферальной ссылки:', { code, newUserId });
+            
             // Находим пользователя по реферальному коду
             const users = this.getUsers();
             const referrer = users.find(u => u.referralCode === code);
             
             if (!referrer) {
+                console.log('❌ Реферальный код не найден:', code);
                 return { success: false, message: 'Неверный реферальный код' };
             }
             
             // Проверяем срок действия (30 дней)
             const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
             if (referrer.referralGeneratedAt && referrer.referralGeneratedAt < thirtyDaysAgo) {
+                console.log('⚠️ Ссылка устарела');
                 return { success: false, message: 'Ссылка устарела' };
             }
             
@@ -712,13 +1072,23 @@ const UserSystem = {
                 message: 'Ссылка успешно использована',
                 referrer: {
                     id: referrer.id,
-                    nickname: referrer.nickname
-                }
+                    nickname: referrer.nickname,
+                    email: referrer.email
+                },
+                bonus: 1
             };
         } catch (error) {
             console.error('❌ Ошибка использования реферальной ссылки:', error);
             return { success: false, message: 'Ошибка обработки ссылки' };
         }
+    },
+
+    // Обработать реферальный код
+    processReferralCode: function(code, newUserId) {
+        if (code.startsWith('REF_')) {
+            return this.useReferralLink(code, newUserId);
+        }
+        return { success: false, message: 'Неверный формат кода' };
     },
 
     // Получить реферальную статистику
@@ -737,156 +1107,6 @@ const UserSystem = {
             lastReferral: referrals.length > 0 ? referrals[referrals.length - 1] : null,
             stats: user.stats || {}
         };
-    },
-
-    // ============ QR-КОДЫ ДЛЯ ДРУЗЕЙ ============
-    
-    // Генерация QR-кода для добавления в друзья
-    generateFriendQRCode: function(userId) {
-        const user = this.findUser(userId);
-        if (!user) return null;
-        
-        // Создаем специальный код для добавления в друзья
-        const friendCode = `FRIEND_${userId}_${Date.now().toString(36).slice(-6)}`;
-        
-        // Сохраняем временный код (действует 5 минут)
-        const qrData = {
-            type: 'friend_request',
-            userId: userId,
-            code: friendCode,
-            expiresAt: Date.now() + (5 * 60 * 1000), // 5 минут
-            timestamp: Date.now()
-        };
-        
-        // Сохраняем в localStorage
-        const existingQRCodes = JSON.parse(localStorage.getItem('meetup_qr_codes') || '{}');
-        existingQRCodes[friendCode] = qrData;
-        localStorage.setItem('meetup_qr_codes', JSON.stringify(existingQRCodes));
-        
-        // Создаем URL для QR-кода
-        const qrUrl = `${window.location.origin}/profile.html?scan=${friendCode}`;
-        
-        return {
-            url: qrUrl,
-            code: friendCode,
-            expiresAt: qrData.expiresAt
-        };
-    },
-    
-    // Обработка отсканированного QR-кода
-    processScannedQRCode: function(qrCode, scannerUserId) {
-        try {
-            // Получаем все сохраненные QR-коды
-            const existingQRCodes = JSON.parse(localStorage.getItem('meetup_qr_codes') || '{}');
-            const qrData = existingQRCodes[qrCode];
-            
-            if (!qrData) {
-                return { success: false, message: 'QR-код не найден или устарел' };
-            }
-            
-            // Проверяем срок действия
-            if (qrData.expiresAt < Date.now()) {
-                // Удаляем просроченный код
-                delete existingQRCodes[qrCode];
-                localStorage.setItem('meetup_qr_codes', JSON.stringify(existingQRCodes));
-                return { success: false, message: 'QR-код устарел' };
-            }
-            
-            // Проверяем тип QR-кода
-            if (qrData.type === 'friend_request') {
-                const targetUserId = qrData.userId;
-                
-                // Проверяем, не добавляем ли мы себя
-                if (targetUserId === scannerUserId) {
-                    return { success: false, message: 'Нельзя добавить себя в друзья' };
-                }
-                
-                // Проверяем, не друзья ли уже
-                const existingRequests = this.getFriendRequests();
-                const existingRequest = existingRequests.find(req => 
-                    (req.fromUserId === scannerUserId && req.toUserId === targetUserId) ||
-                    (req.fromUserId === targetUserId && req.toUserId === scannerUserId)
-                );
-                
-                if (existingRequest) {
-                    if (existingRequest.status === 'accepted') {
-                        return { success: false, message: 'Вы уже друзья с этим пользователем' };
-                    }
-                    if (existingRequest.status === 'pending') {
-                        return { success: false, message: 'Запрос уже отправлен' };
-                    }
-                }
-                
-                // Отправляем запрос в друзья
-                try {
-                    const request = this.sendFriendRequest(scannerUserId, targetUserId);
-                    
-                    // Удаляем использованный QR-код
-                    delete existingQRCodes[qrCode];
-                    localStorage.setItem('meetup_qr_codes', JSON.stringify(existingQRCodes));
-                    
-                    return { 
-                        success: true, 
-                        message: 'Запрос в друзья отправлен',
-                        request: request
-                    };
-                } catch (error) {
-                    return { success: false, message: error.message };
-                }
-            } else if (qrData.type === 'user_profile') {
-                // Открытие профиля пользователя
-                return { 
-                    success: true, 
-                    message: 'Профиль пользователя найден',
-                    userId: qrData.userId,
-                    action: 'view_profile'
-                };
-            }
-            
-            return { success: false, message: 'Неизвестный тип QR-кода' };
-        } catch (error) {
-            console.error('❌ Ошибка обработки QR-кода:', error);
-            return { success: false, message: 'Ошибка обработки QR-кода' };
-        }
-    },
-    
-    // Генерация QR-кода профиля пользователя
-    generateProfileQRCode: function(userId) {
-        const user = this.findUser(userId);
-        if (!user) return null;
-        
-        // Создаем код для профиля
-        const profileCode = `PROFILE_${userId}`;
-        
-        // Создаем URL для QR-кода
-        const qrUrl = `${window.location.origin}/profile.html?user=${userId}`;
-        
-        return {
-            url: qrUrl,
-            code: profileCode
-        };
-    },
-    
-    // Очистка устаревших QR-кодов
-    cleanupExpiredQRCodes: function() {
-        try {
-            const existingQRCodes = JSON.parse(localStorage.getItem('meetup_qr_codes') || '{}');
-            const now = Date.now();
-            let cleaned = false;
-            
-            Object.keys(existingQRCodes).forEach(code => {
-                if (existingQRCodes[code].expiresAt && existingQRCodes[code].expiresAt < now) {
-                    delete existingQRCodes[code];
-                    cleaned = true;
-                }
-            });
-            
-            if (cleaned) {
-                localStorage.setItem('meetup_qr_codes', JSON.stringify(existingQRCodes));
-            }
-        } catch (error) {
-            console.error('❌ Ошибка очистки QR-кодов:', error);
-        }
     },
 
     // ============ КАРТА И ГЕОЛОКАЦИЯ ============
@@ -978,7 +1198,10 @@ const UserSystem = {
                 totalFriends: Number(user.stats?.totalFriends) || 0,
                 meetingCount: Number(user.stats?.meetingCount) || 0,
                 referralsCount: Number(user.stats?.referralsCount) || 0,
-                referralBonus: Number(user.stats?.referralBonus) || 0
+                referralBonus: Number(user.stats?.referralBonus) || 0,
+                qrInvitations: Number(user.stats?.qrInvitations) || 0,
+                qrInvitationsReceived: Number(user.stats?.qrInvitationsReceived) || 0,
+                sentRequests: Number(user.stats?.sentRequests) || 0
             },
             settings: {
                 notifications: Boolean(user.settings?.notifications ?? true),
@@ -1027,7 +1250,10 @@ const UserSystem = {
                 totalFriends: 0,
                 meetingCount: 0,
                 referralsCount: 0,
-                referralBonus: 0
+                referralBonus: 0,
+                qrInvitations: 0,
+                qrInvitationsReceived: 0,
+                sentRequests: 0
             },
             settings: {
                 notifications: true,
@@ -1129,6 +1355,29 @@ const UserSystem = {
         }
     },
 
+    // Очистка устаревших QR-коды
+    cleanupExpiredQRCodes: function() {
+        try {
+            const qrRecords = JSON.parse(localStorage.getItem('meetup_qr_records') || '{}');
+            const now = Date.now();
+            const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+            let cleaned = false;
+            
+            Object.keys(qrRecords).forEach(key => {
+                if (qrRecords[key].generatedAt < twentyFourHoursAgo) {
+                    delete qrRecords[key];
+                    cleaned = true;
+                }
+            });
+            
+            if (cleaned) {
+                localStorage.setItem('meetup_qr_records', JSON.stringify(qrRecords));
+            }
+        } catch (error) {
+            console.error('❌ Ошибка очистки QR-кодов:', error);
+        }
+    },
+
     // ============ УТИЛИТЫ И РАСЧЕТЫ ============
     
     // Вычисление расстояния между координатами
@@ -1219,7 +1468,10 @@ const UserSystem = {
             const users = this.getUsers();
             const userIndex = users.findIndex(u => u.id === userId);
             
-            if (userIndex !== -1 && users[userIndex].stats[statName] !== undefined) {
+            if (userIndex !== -1) {
+                if (users[userIndex].stats[statName] === undefined) {
+                    users[userIndex].stats[statName] = 0;
+                }
                 users[userIndex].stats[statName] += value;
                 this.saveUsers(users);
             }
@@ -1349,6 +1601,9 @@ const UserSystem = {
             const users = this.getUsers();
             const requests = this.getFriendRequests();
             
+            const qrRequests = requests.filter(req => req.metadata?.viaQR === true);
+            const acceptedQRRequests = qrRequests.filter(req => req.status === 'accepted');
+            
             return {
                 totalUsers: users.length,
                 onlineUsers: users.filter(u => u.status === 'online' && !u.invisible).length,
@@ -1361,7 +1616,10 @@ const UserSystem = {
                 }).length,
                 averageFriends: users.reduce((sum, user) => sum + user.stats.friendsCount, 0) / users.length || 0,
                 totalReferrals: users.filter(u => u.referredBy).length,
-                activeReferrers: users.filter(u => u.stats.referralsCount > 0).length
+                activeReferrers: users.filter(u => u.stats.referralsCount > 0).length,
+                qrFriendRequests: qrRequests.length,
+                qrAcceptedRequests: acceptedQRRequests.length,
+                qrSuccessRate: qrRequests.length > 0 ? (acceptedQRRequests.length / qrRequests.length * 100).toFixed(1) : 0
             };
         } catch (error) {
             console.error('❌ Ошибка получения статистики:', error);
