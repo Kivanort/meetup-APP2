@@ -1006,22 +1006,17 @@
         if (refCode && refCode.trim() !== '') {
           currentRefCode = refCode.trim();
           
-          // Проверяем валидность реферального кода
-          if (UserSystem.validateReferralCode(currentRefCode)) {
-            // Показываем информацию о реферальной регистрации
-            showReferralInfo(currentRefCode);
-            console.log('✅ Реферальный код обнаружен:', currentRefCode);
-          } else {
-            console.log('❌ Невалидный реферальный код:', currentRefCode);
-            currentRefCode = null;
-          }
+          // Показываем информацию о реферальной регистрации
+          showReferralInfo(currentRefCode);
+          console.log('✅ Реферальный код обнаружен:', currentRefCode);
         }
       }
       
       // Показать информацию о реферальной регистрации
       function showReferralInfo(refCode) {
         // Пытаемся получить информацию о реферере
-        const referrer = UserSystem.getUserByReferralCode(refCode);
+        const users = UserSystem.getUsers();
+        const referrer = users.find(u => u.referralCode === refCode);
         
         if (referrer) {
           const displayName = referrer.nickname || referrer.email.split('@')[0];
@@ -1112,8 +1107,8 @@
           message += `\nПолучено бонусов: ${result.bonus}`;
         }
         
-        if (result.referrerName) {
-          message += `\nПригласивший: ${result.referrerName}`;
+        if (result.referrer && result.referrer.nickname) {
+          message += `\nПригласивший: ${result.referrer.nickname}`;
         }
         
         notification.textContent = message;
@@ -1417,7 +1412,7 @@
         }
       }
       
-      // Форма входа
+      // Форма входа (ИСПРАВЛЕННАЯ ВЕРСИЯ)
       function setupLoginForm() {
         const loginForm = document.getElementById('login-form');
         if (!loginForm) return;
@@ -1440,6 +1435,7 @@
           
           setTimeout(() => {
             try {
+              // Используем стандартную функцию входа из UserSystem
               const user = UserSystem.login(identity, password);
               
               if (user) {
@@ -1464,15 +1460,21 @@
                 }, 500);
               }
             } catch (error) {
-              console.error('Ошибка входа:', error);
+              console.error('Ошибка входа:', error.message);
               elements.spinner.style.display = 'none';
               document.getElementById('login-error').style.display = 'flex';
+              
+              // Анимация ошибки
+              loginForm.classList.add('shake');
+              setTimeout(() => {
+                loginForm.classList.remove('shake');
+              }, 500);
             }
           }, 500);
         });
       }
       
-      // Форма регистрации (С ОБРАБОТКОЙ РЕФЕРАЛЬНОГО КОДА)
+      // Форма регистрации
       function setupRegisterForm() {
         const registerForm = document.getElementById('register-form');
         if (!registerForm) return;
@@ -1563,9 +1565,7 @@
               password: password,
               avatar: avatarData,
               position: [55.751244, 37.618423],
-              registeredAt: new Date().toISOString(),
-              // Добавляем реферальный код текущего пользователя, если он есть
-              referralCode: currentRefCode ? null : UserSystem.generateReferralCode()
+              registeredAt: new Date().toISOString()
             };
             
             const createdUser = UserSystem.createUser(newUser);
@@ -1787,7 +1787,9 @@
               const userIndex = users.findIndex(u => u.email === resetEmail.toLowerCase());
               
               if (userIndex !== -1) {
-                users[userIndex].password = UserSystem.hashPassword(newPassword);
+                // Хешируем новый пароль
+                const hashedPassword = UserSystem.hashPassword(newPassword);
+                users[userIndex].password = hashedPassword;
                 users[userIndex].updatedAt = new Date().toISOString();
                 UserSystem.saveUsers(users);
                 
@@ -1900,12 +1902,6 @@
         });
       }
       
-      // Поделиться реферальной ссылкой
-      function setupReferralSharing() {
-        // Можно добавить кнопку "Поделиться ссылкой" для зарегистрированных пользователей
-        // Эта функция будет вызвана после успешного входа
-      }
-      
       // Инициализация приложения
       function init() {
         console.log('🚀 Инициализация приложения Карта друзей');
@@ -1927,7 +1923,6 @@
         setupPWA();
         setupAutoFocus();
         setupOfflineDetection();
-        setupReferralSharing();
         
         // Инициализация таймера
         document.getElementById('timer').style.display = 'block';
