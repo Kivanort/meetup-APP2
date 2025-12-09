@@ -1,19 +1,17 @@
 // ============================================
-// ПРОСТАЯ И РАБОЧАЯ СИСТЕМА УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ
+// ПОЛНАЯ СИСТЕМА УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ С ИСПРАВЛЕНИЯМИ
 // ============================================
 
 const UserSystem = {
     
     // ============ ОСНОВНЫЕ ФУНКЦИИ ============
     
-    // Получить всех пользователей
+    // Получить всех пользователей (БЕЗ КЕШИРОВАНИЯ)
     getUsers: function() {
         try {
             const usersJson = localStorage.getItem('meetup_users');
             if (!usersJson) {
-                console.log('📁 Пользователи не найдены, создаем тестового...');
-                
-                // Создаем тестового пользователя
+                // Создаем тестового пользователя если нет ни одного
                 const testUser = {
                     id: 'test_user_' + Date.now(),
                     email: 'test@test.com',
@@ -21,18 +19,40 @@ const UserSystem = {
                     password: this.hashPassword('Test12345'),
                     avatar: '',
                     status: 'online',
+                    invisible: false,
                     registeredAt: new Date().toISOString(),
                     lastSeen: new Date().toISOString(),
+                    lastActive: Date.now(),
                     position: [55.751244, 37.618423],
+                    about: '',
                     stats: {
                         friendsCount: 0,
                         totalDistance: 0,
-                        onlineHours: 0
+                        onlineHours: 0,
+                        totalFriends: 0,
+                        meetingCount: 0,
+                        referralsCount: 0,
+                        referralBonus: 0,
+                        qrInvitations: 0,
+                        qrInvitationsReceived: 0,
+                        sentRequests: 0
                     },
                     settings: {
                         notifications: true,
-                        showOnMap: true
-                    }
+                        showOnMap: true,
+                        privacy: 'public',
+                        theme: 'dark'
+                    },
+                    metadata: {
+                        version: 2,
+                        created: Date.now(),
+                        modified: Date.now()
+                    },
+                    referralCode: null,
+                    referralGeneratedAt: null,
+                    referredBy: null,
+                    isVerified: false,
+                    isActive: true
                 };
                 
                 localStorage.setItem('meetup_users', JSON.stringify([testUser]));
@@ -45,20 +65,8 @@ const UserSystem = {
             
             const users = JSON.parse(usersJson);
             
-            // Убедимся, что все пользователи имеют корректные данные
-            return users.map(user => ({
-                id: user.id || 'usr_' + Date.now(),
-                email: (user.email || '').toLowerCase().trim(),
-                nickname: user.nickname || 'Пользователь',
-                password: user.password || '',
-                avatar: user.avatar || '',
-                status: user.status || 'offline',
-                registeredAt: user.registeredAt || new Date().toISOString(),
-                lastSeen: user.lastSeen || new Date().toISOString(),
-                position: user.position || [55.751244, 37.618423],
-                stats: user.stats || { friendsCount: 0 },
-                settings: user.settings || { notifications: true }
-            }));
+            // Валидация данных пользователей
+            return users.map(user => this.validateUserData(user));
             
         } catch (error) {
             console.error('❌ Ошибка загрузки пользователей:', error);
@@ -69,7 +77,11 @@ const UserSystem = {
     // Сохранить всех пользователей
     saveUsers: function(users) {
         try {
-            localStorage.setItem('meetup_users', JSON.stringify(users));
+            // Валидация перед сохранением
+            const validatedUsers = users.map(user => this.validateUserData(user));
+            
+            localStorage.setItem('meetup_users', JSON.stringify(validatedUsers));
+            
             return true;
         } catch (error) {
             console.error('❌ Ошибка сохранения пользователей:', error);
@@ -77,58 +89,173 @@ const UserSystem = {
         }
     },
 
+    // Валидация данных пользователя
+    validateUserData: function(user) {
+        if (!user || typeof user !== 'object') {
+            return this.getDefaultUser();
+        }
+
+        const validated = {
+            id: user.id || this.generateUserId(),
+            email: user.email ? user.email.toLowerCase().trim() : '',
+            nickname: user.nickname ? user.nickname.trim() : 'Пользователь',
+            password: user.password || '',
+            avatar: user.avatar || '',
+            status: ['online', 'offline', 'away'].includes(user.status) ? user.status : 'offline',
+            invisible: Boolean(user.invisible),
+            registeredAt: user.registeredAt || new Date().toISOString(),
+            lastSeen: user.lastSeen || new Date().toISOString(),
+            lastActive: user.lastActive || Date.now(),
+            position: Array.isArray(user.position) ? user.position : [55.751244, 37.618423],
+            about: user.about || '',
+            stats: {
+                friendsCount: Number(user.stats?.friendsCount) || 0,
+                totalDistance: Number(user.stats?.totalDistance) || 0,
+                onlineHours: Number(user.stats?.onlineHours) || 0,
+                totalFriends: Number(user.stats?.totalFriends) || 0,
+                meetingCount: Number(user.stats?.meetingCount) || 0,
+                referralsCount: Number(user.stats?.referralsCount) || 0,
+                referralBonus: Number(user.stats?.referralBonus) || 0,
+                qrInvitations: Number(user.stats?.qrInvitations) || 0,
+                qrInvitationsReceived: Number(user.stats?.qrInvitationsReceived) || 0,
+                sentRequests: Number(user.stats?.sentRequests) || 0
+            },
+            settings: {
+                notifications: Boolean(user.settings?.notifications ?? true),
+                showOnMap: Boolean(user.settings?.showOnMap ?? true),
+                privacy: ['public', 'friends', 'private'].includes(user.settings?.privacy) 
+                    ? user.settings.privacy 
+                    : 'public',
+                theme: ['dark', 'light', 'auto'].includes(user.settings?.theme) 
+                    ? user.settings.theme 
+                    : 'dark'
+            },
+            metadata: {
+                version: 2,
+                created: user.metadata?.created || Date.now(),
+                modified: Date.now()
+            },
+            referralCode: user.referralCode || null,
+            referralGeneratedAt: user.referralGeneratedAt || null,
+            referredBy: user.referredBy || null,
+            isVerified: Boolean(user.isVerified),
+            isActive: Boolean(user.isActive ?? true)
+        };
+
+        return validated;
+    },
+
+    // Создать пользователя по умолчанию
+    getDefaultUser: function() {
+        return {
+            id: this.generateUserId(),
+            email: '',
+            nickname: 'Пользователь',
+            password: '',
+            avatar: '',
+            status: 'offline',
+            invisible: false,
+            registeredAt: new Date().toISOString(),
+            lastSeen: new Date().toISOString(),
+            lastActive: Date.now(),
+            position: [55.751244, 37.618423],
+            about: '',
+            stats: {
+                friendsCount: 0,
+                totalDistance: 0,
+                onlineHours: 0,
+                totalFriends: 0,
+                meetingCount: 0,
+                referralsCount: 0,
+                referralBonus: 0,
+                qrInvitations: 0,
+                qrInvitationsReceived: 0,
+                sentRequests: 0
+            },
+            settings: {
+                notifications: true,
+                showOnMap: true,
+                privacy: 'public',
+                theme: 'dark'
+            },
+            metadata: {
+                version: 2,
+                created: Date.now(),
+                modified: Date.now()
+            },
+            referralCode: null,
+            referralGeneratedAt: null,
+            referredBy: null,
+            isVerified: false,
+            isActive: true
+        };
+    },
+
     // Создать нового пользователя
     createUser: function(userData) {
         try {
             const users = this.getUsers();
             
-            console.log('📝 Создание пользователя:', {
-                email: userData.email,
-                nickname: userData.nickname
-            });
-            
-            // Проверяем уникальность email
+            // Проверяем уникальность email и nickname
             if (this.isEmailUsed(userData.email)) {
-                console.log('❌ Email уже используется:', userData.email);
                 throw new Error('Email уже используется');
             }
             
-            // Проверяем уникальность никнейма
             if (this.isNicknameUsed(userData.nickname)) {
-                console.log('❌ Никнейм уже занят:', userData.nickname);
                 throw new Error('Никнейм уже занят');
             }
 
-            // Хешируем пароль
+            // Хэшируем пароль перед сохранением
             const hashedPassword = this.hashPassword(userData.password);
             
-            console.log('🔐 Хеширование пароля:', {
-                оригинал: userData.password,
-                хеш: hashedPassword
+            console.log('🔐 Регистрация:', {
+                email: userData.email,
+                nickname: userData.nickname,
+                passwordHash: hashedPassword
             });
 
-            // Создаем объект пользователя
+            // Создаем полный объект пользователя
             const newUser = {
-                id: 'usr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                id: this.generateUserId(),
                 email: userData.email.toLowerCase().trim(),
                 nickname: userData.nickname.trim(),
                 password: hashedPassword,
                 avatar: userData.avatar || '',
                 status: 'online',
+                invisible: false,
                 registeredAt: new Date().toISOString(),
                 lastSeen: new Date().toISOString(),
+                lastActive: Date.now(),
                 position: userData.position || [55.751244, 37.618423],
+                about: userData.about || '',
                 stats: {
                     friendsCount: 0,
                     totalDistance: 0,
-                    onlineHours: 0
+                    onlineHours: 0,
+                    totalFriends: 0,
+                    meetingCount: 0,
+                    referralsCount: 0,
+                    referralBonus: 0,
+                    qrInvitations: 0,
+                    qrInvitationsReceived: 0,
+                    sentRequests: 0
                 },
                 settings: {
                     notifications: true,
                     showOnMap: true,
                     privacy: 'public',
                     theme: 'dark'
-                }
+                },
+                metadata: {
+                    version: 2,
+                    created: Date.now(),
+                    modified: Date.now()
+                },
+                referralCode: this.generateReferralCode(),
+                referralGeneratedAt: Date.now(),
+                referredBy: userData.referredBy || null,
+                isVerified: false,
+                isActive: true
             };
 
             users.push(newUser);
@@ -141,7 +268,57 @@ const UserSystem = {
             }
             
         } catch (error) {
-            console.error('❌ Ошибка создания пользователя:', error.message);
+            console.error('❌ Ошибка создания пользователя:', error);
+            throw error;
+        }
+    },
+
+    // Обновить данные пользователя
+    updateUser: function(userId, updates) {
+        try {
+            const users = this.getUsers();
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex === -1) {
+                throw new Error('Пользователь не найден');
+            }
+
+            // Обновляем только разрешенные поля
+            const allowedFields = [
+                'nickname', 'avatar', 'status', 'invisible',
+                'position', 'about', 'settings', 'stats',
+                'referralCode', 'referralGeneratedAt', 'referredBy',
+                'password', 'lastSeen', 'lastActive'
+            ];
+            
+            const updatedUser = { ...users[userIndex] };
+            
+            Object.keys(updates).forEach(key => {
+                if (allowedFields.includes(key)) {
+                    if (key === 'nickname' && this.isNicknameUsed(updates[key], userId)) {
+                        throw new Error('Никнейм уже занят');
+                    }
+                    updatedUser[key] = updates[key];
+                }
+            });
+
+            updatedUser.metadata.modified = Date.now();
+
+            users[userIndex] = updatedUser;
+            
+            if (this.saveUsers(users)) {
+                // Обновляем текущего пользователя если это он
+                const currentUser = this.getCurrentUser();
+                if (currentUser && currentUser.id === userId) {
+                    this.setCurrentUser(updatedUser);
+                }
+                
+                return updatedUser;
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('❌ Ошибка обновления пользователя:', error);
             throw error;
         }
     },
@@ -160,13 +337,12 @@ const UserSystem = {
         
         console.log('🔍 Поиск пользователя:', searchTerm);
         
-        // Сначала ищем по email
-        let user = users.find(u => u.email && u.email.toLowerCase() === searchTerm);
-        
-        // Если не нашли по email, ищем по nickname
-        if (!user) {
-            user = users.find(u => u.nickname && u.nickname.toLowerCase() === searchTerm);
-        }
+        // Ищем по email, nickname или ID
+        const user = users.find(user => 
+            (user.email && user.email.toLowerCase() === searchTerm) ||
+            (user.nickname && user.nickname.toLowerCase() === searchTerm) ||
+            (user.id && user.id.toLowerCase() === searchTerm)
+        );
         
         if (user) {
             console.log('✅ Пользователь найден:', user.email);
@@ -178,23 +354,31 @@ const UserSystem = {
     },
 
     // Проверить занятость email
-    isEmailUsed: function(email) {
-        if (!email) return false;
+    isEmailUsed: function(email, excludeUserId = null) {
+        if (!email || typeof email !== 'string') return false;
         
         const searchEmail = email.toLowerCase().trim();
         const users = this.getUsers();
         
-        return users.some(user => user.email === searchEmail);
+        return users.some(user => 
+            user.email && 
+            user.email.toLowerCase() === searchEmail &&
+            (!excludeUserId || user.id !== excludeUserId)
+        );
     },
 
     // Проверить занятость никнейма
-    isNicknameUsed: function(nickname) {
-        if (!nickname) return false;
+    isNicknameUsed: function(nickname, excludeUserId = null) {
+        if (!nickname || typeof nickname !== 'string') return false;
         
         const searchNickname = nickname.toLowerCase().trim();
         const users = this.getUsers();
         
-        return users.some(user => user.nickname.toLowerCase() === searchNickname);
+        return users.some(user => 
+            user.nickname && 
+            user.nickname.toLowerCase() === searchNickname &&
+            (!excludeUserId || user.id !== excludeUserId)
+        );
     },
 
     // ============ АВТОРИЗАЦИЯ ============
@@ -210,7 +394,7 @@ const UserSystem = {
             
             const user = JSON.parse(userJson);
             console.log('👤 Текущий пользователь:', user.email);
-            return user;
+            return this.validateUserData(user);
         } catch (error) {
             console.error('❌ Ошибка загрузки текущего пользователя:', error);
             localStorage.removeItem('meetup_current_user');
@@ -221,8 +405,10 @@ const UserSystem = {
     // Установить текущего пользователя
     setCurrentUser: function(user) {
         try {
-            localStorage.setItem('meetup_current_user', JSON.stringify(user));
-            console.log('✅ Текущий пользователь установлен:', user.email);
+            const validatedUser = this.validateUserData(user);
+            localStorage.setItem('meetup_current_user', JSON.stringify(validatedUser));
+            
+            console.log('✅ Текущий пользователь установлен:', validatedUser.email);
             return true;
         } catch (error) {
             console.error('❌ Ошибка сохранения текущего пользователя:', error);
@@ -230,12 +416,12 @@ const UserSystem = {
         }
     },
 
-    // Вход в систему (РАБОЧАЯ ВЕРСИЯ)
+    // Вход в систему
     login: function(identifier, password) {
         try {
             console.log('🔐 Попытка входа для:', identifier);
             
-            // Ищем пользователя
+            // Ищем пользователя по email или никнейму
             const user = this.findUser(identifier);
             
             if (!user) {
@@ -243,11 +429,12 @@ const UserSystem = {
                 throw new Error('Пользователь не найден');
             }
 
-            // Хешируем введенный пароль
+            // Хэшируем введенный пароль для сравнения
             const hashedPassword = this.hashPassword(password);
             
             console.log('🔐 Сравнение паролей:', {
-                email: user.email,
+                identifier: identifier,
+                userEmail: user.email,
                 storedHash: user.password,
                 inputHash: hashedPassword,
                 match: user.password === hashedPassword
@@ -258,25 +445,26 @@ const UserSystem = {
                 throw new Error('Неверный пароль');
             }
 
-            // Обновляем статус и время последнего входа
-            const users = this.getUsers();
-            const userIndex = users.findIndex(u => u.id === user.id);
-            
-            if (userIndex !== -1) {
-                users[userIndex].status = 'online';
-                users[userIndex].lastSeen = new Date().toISOString();
-                this.saveUsers(users);
+            if (!user.isActive) {
+                throw new Error('Аккаунт деактивирован');
             }
 
-            // Устанавливаем как текущего пользователя
-            this.setCurrentUser({
-                ...user,
+            // Обновляем данные пользователя
+            const updatedUser = this.updateUser(user.id, {
                 status: 'online',
-                lastSeen: new Date().toISOString()
+                lastSeen: new Date().toISOString(),
+                lastActive: Date.now()
             });
+
+            if (!updatedUser) {
+                throw new Error('Ошибка обновления данных пользователя');
+            }
+
+            // Устанавливаем как текущего
+            this.setCurrentUser(updatedUser);
             
-            console.log('✅ Успешный вход:', user.email);
-            return user;
+            console.log('✅ Успешный вход:', updatedUser.email);
+            return updatedUser;
             
         } catch (error) {
             console.error('❌ Ошибка входа:', error.message);
@@ -290,15 +478,11 @@ const UserSystem = {
             const currentUser = this.getCurrentUser();
             
             if (currentUser) {
-                // Обновляем статус пользователя
-                const users = this.getUsers();
-                const userIndex = users.findIndex(u => u.id === currentUser.id);
-                
-                if (userIndex !== -1) {
-                    users[userIndex].status = 'offline';
-                    users[userIndex].lastSeen = new Date().toISOString();
-                    this.saveUsers(users);
-                }
+                // Устанавливаем статус "не в сети"
+                this.updateUser(currentUser.id, {
+                    status: 'offline',
+                    lastSeen: new Date().toISOString()
+                });
                 
                 console.log('👋 Выход пользователя:', currentUser.email);
             }
@@ -313,27 +497,41 @@ const UserSystem = {
 
     // ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
     
-    // Хеширование пароля (ОДИНАКОВЫЙ АЛГОРИТМ ВЕЗДЕ)
+    // Генерация ID пользователя
+    generateUserId: function() {
+        const timestamp = Date.now().toString(36);
+        const random = Math.random().toString(36).substr(2, 9);
+        return `usr_${timestamp}_${random}`;
+    },
+
+    // Хэширование пароля
     hashPassword: function(password) {
         if (!password || typeof password !== 'string') {
             console.log('⚠️ Пустой пароль для хеширования');
             return '';
         }
         
-        // Простой и стабильный алгоритм
-        const salt = 'meetup_simple_salt';
+        // Стабильный алгоритм
+        const salt = 'meetup_secure_salt_2024_v2';
         const saltedPassword = password + salt;
         
         let hash = 0;
         for (let i = 0; i < saltedPassword.length; i++) {
             const char = saltedPassword.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
-            hash = hash & 0xFFFFFFFF; // 32-битное целое
+            hash = hash & 0xFFFFFFFF;
         }
         
         const result = hash.toString(16);
         console.log('🔐 Хеширование:', { пароль: password, хеш: result });
         return result;
+    },
+
+    // Генерация реферального кода
+    generateReferralCode: function() {
+        const timestamp = Date.now().toString(36);
+        const random = Math.random().toString(36).substr(2, 6);
+        return `REF_${timestamp}_${random}`.toUpperCase();
     },
 
     // Конвертация файла в base64
@@ -365,103 +563,6 @@ const UserSystem = {
             reader.onerror = () => reject(new Error('Ошибка чтения файла'));
             reader.readAsDataURL(file);
         });
-    },
-
-    // Обновить данные пользователя
-    updateUser: function(userId, updates) {
-        try {
-            const users = this.getUsers();
-            const userIndex = users.findIndex(u => u.id === userId);
-            
-            if (userIndex === -1) {
-                throw new Error('Пользователь не найден');
-            }
-
-            // Обновляем разрешенные поля
-            const allowedFields = ['nickname', 'avatar', 'status', 'position', 'stats', 'settings'];
-            const updatedUser = { ...users[userIndex] };
-            
-            Object.keys(updates).forEach(key => {
-                if (allowedFields.includes(key)) {
-                    if (key === 'nickname' && this.isNicknameUsed(updates[key], userId)) {
-                        throw new Error('Никнейм уже занят');
-                    }
-                    updatedUser[key] = updates[key];
-                }
-            });
-
-            updatedUser.lastSeen = new Date().toISOString();
-            users[userIndex] = updatedUser;
-            
-            if (this.saveUsers(users)) {
-                // Обновляем текущего пользователя если это он
-                const currentUser = this.getCurrentUser();
-                if (currentUser && currentUser.id === userId) {
-                    this.setCurrentUser(updatedUser);
-                }
-                
-                console.log('✅ Пользователь обновлен:', updatedUser.email);
-                return updatedUser;
-            }
-            
-            return null;
-        } catch (error) {
-            console.error('❌ Ошибка обновления пользователя:', error);
-            throw error;
-        }
-    },
-
-    // Обновить позицию пользователя
-    updateUserPosition: function(userId, position) {
-        return this.updateUser(userId, {
-            position: position,
-            lastSeen: new Date().toISOString()
-        });
-    },
-
-    // Получить пользователей рядом
-    getNearbyUsers: function(position, radius = 10) {
-        try {
-            const users = this.getUsers();
-            const currentUser = this.getCurrentUser();
-            
-            return users.filter(user => {
-                // Исключаем текущего пользователя
-                if (currentUser && user.id === currentUser.id) {
-                    return false;
-                }
-                
-                // Исключаем пользователей без позиции
-                if (!user.position || !Array.isArray(user.position)) {
-                    return false;
-                }
-                
-                // Вычисляем расстояние
-                const distance = this.calculateDistance(position, user.position);
-                return distance <= radius;
-            });
-        } catch (error) {
-            console.error('❌ Ошибка поиска пользователей рядом:', error);
-            return [];
-        }
-    },
-
-    // Вычисление расстояния между координатами
-    calculateDistance: function(pos1, pos2) {
-        const [lat1, lon1] = pos1;
-        const [lat2, lon2] = pos2;
-        
-        const R = 6371; // Радиус Земли в км
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        
-        const a = 
-            Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-        
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c; // Расстояние в км
     },
 
     // ============ ДРУЗЬЯ ============
@@ -499,6 +600,9 @@ const UserSystem = {
                 if (existingRequest.status === 'accepted') {
                     throw new Error('Уже друзья');
                 }
+                if (existingRequest.status === 'rejected') {
+                    throw new Error('Запрос был отклонен ранее');
+                }
             }
 
             const newRequest = {
@@ -506,7 +610,10 @@ const UserSystem = {
                 fromUserId: fromUserId,
                 toUserId: toUserId,
                 timestamp: Date.now(),
-                status: 'pending'
+                status: 'pending',
+                metadata: {
+                    viaQR: false
+                }
             };
 
             requests.push(newRequest);
@@ -518,10 +625,166 @@ const UserSystem = {
             console.error('❌ Ошибка отправки запроса в друзья:', error);
             throw error;
         }
+    },
+
+    // ============ РЕФЕРАЛЬНАЯ СИСТЕМА ============
+    
+    // Использовать реферальную ссылку
+    useReferralLink: function(code, newUserId) {
+        try {
+            console.log('🔗 Использование реферальной ссылки:', { code, newUserId });
+            
+            // Находим пользователя по реферальному коду
+            const users = this.getUsers();
+            const referrer = users.find(u => u.referralCode === code);
+            
+            if (!referrer) {
+                console.log('❌ Реферальный код не найден:', code);
+                return { success: false, message: 'Неверный реферальный код' };
+            }
+            
+            // Проверяем срок действия (30 дней)
+            const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+            if (referrer.referralGeneratedAt && referrer.referralGeneratedAt < thirtyDaysAgo) {
+                console.log('⚠️ Ссылка устарела');
+                return { success: false, message: 'Ссылка устарела' };
+            }
+            
+            // Обновляем статистику пригласившего
+            this.updateUser(referrer.id, {
+                stats: {
+                    ...referrer.stats,
+                    referralsCount: (referrer.stats.referralsCount || 0) + 1,
+                    referralBonus: (referrer.stats.referralBonus || 0) + 1
+                }
+            });
+            
+            // Обновляем профиль нового пользователя
+            this.updateUser(newUserId, {
+                referredBy: referrer.id
+            });
+            
+            // Создаем автоматический запрос в друзья
+            setTimeout(() => {
+                try {
+                    this.sendFriendRequest(referrer.id, newUserId);
+                    this.sendFriendRequest(newUserId, referrer.id);
+                } catch (error) {
+                    console.log('Автоматическое добавление в друзья не удалось:', error);
+                }
+            }, 1000);
+            
+            return { 
+                success: true, 
+                message: 'Ссылка успешно использована',
+                referrer: {
+                    id: referrer.id,
+                    nickname: referrer.nickname,
+                    email: referrer.email
+                },
+                bonus: 1
+            };
+        } catch (error) {
+            console.error('❌ Ошибка использования реферальной ссылки:', error);
+            return { success: false, message: 'Ошибка обработки ссылки' };
+        }
+    },
+
+    // Получить реферальную ссылку
+    getReferralLink: function(userId) {
+        const user = this.findUser(userId);
+        if (!user) return null;
+        
+        let code = user.referralCode;
+        if (!code) {
+            code = this.generateReferralCode();
+            this.updateUser(userId, {
+                referralCode: code,
+                referralGeneratedAt: Date.now()
+            });
+        }
+        
+        const currentDomain = window.location.origin;
+        return `${currentDomain}/index.html?ref=${code}`;
+    },
+
+    // ============ ГЕОЛОКАЦИЯ ============
+    
+    // Обновить позицию пользователя
+    updateUserPosition: function(userId, position) {
+        try {
+            const user = this.findUser(userId);
+            
+            if (!user) {
+                throw new Error('Пользователь не найден');
+            }
+
+            if (!Array.isArray(position) || position.length !== 2) {
+                throw new Error('Некорректные координаты');
+            }
+
+            // Проверяем корректность координат
+            const [lat, lng] = position;
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                throw new Error('Некорректные координаты');
+            }
+
+            // Обновляем позицию
+            const updatedUser = this.updateUser(userId, {
+                position: position,
+                lastSeen: new Date().toISOString(),
+                lastActive: Date.now()
+            });
+            
+            return updatedUser;
+        } catch (error) {
+            console.error('❌ Ошибка обновления позиции:', error);
+            throw error;
+        }
+    },
+
+    // Получить пользователей рядом
+    getNearbyUsers: function(position, radius = 10) {
+        try {
+            const users = this.getUsers();
+            const currentUser = this.getCurrentUser();
+            
+            return users.filter(user => {
+                // Исключаем текущего пользователя и скрытых
+                if (user.id === currentUser?.id || user.invisible || !user.position) {
+                    return false;
+                }
+
+                // Вычисляем расстояние
+                const distance = this.calculateDistance(position, user.position);
+                return distance <= radius;
+            });
+        } catch (error) {
+            console.error('❌ Ошибка поиска пользователей рядом:', error);
+            return [];
+        }
+    },
+
+    // Вычисление расстояния между координатами
+    calculateDistance: function(pos1, pos2) {
+        const [lat1, lon1] = pos1;
+        const [lat2, lon2] = pos2;
+        
+        const R = 6371; // Радиус Земли в км
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        
+        const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+        
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c; // Расстояние в км
     }
 };
 
-// ============ АВТОМАТИЧЕСКАЯ ИНИЦИАЛИЗАЦИЯ ============
+// ============ ИНИЦИАЛИЗАЦИЯ ============
 
 // Запуск при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
