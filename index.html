@@ -476,6 +476,12 @@
       font-size: 14px;
       margin: 16px 0;
       font-variant-numeric: tabular-nums;
+      display: none; /* Скрыт по умолчанию */
+    }
+    
+    .resend-link {
+      text-align: center;
+      margin: 16px 0;
     }
     
     .resend-btn {
@@ -486,16 +492,20 @@
       cursor: pointer;
       text-decoration: underline;
       transition: opacity var(--transition-fast);
+      padding: 8px 16px;
+      border-radius: var(--radius-small);
     }
     
     .resend-btn:hover:not(:disabled) {
       opacity: 0.8;
+      background: rgba(0, 255, 255, 0.1);
     }
     
     .resend-btn:disabled {
       color: var(--text-disabled);
       cursor: not-allowed;
       text-decoration: none;
+      background: none;
     }
     
     /* Демо-подсказка */
@@ -744,7 +754,11 @@
           </div>
           <div class="message error" id="login-error">
             <span class="material-icons">error</span>
-            Неверные данные для входа
+            <div>
+              <span id="login-error-text">Неверные данные для входа</span>
+              <br>
+              <small style="opacity: 0.8; font-size: 11px;">Проверьте email/никнейм и пароль</small>
+            </div>
           </div>
         </div>
         
@@ -1007,7 +1021,7 @@
           currentRefCode = refCode.trim();
           
           // Проверяем валидность реферального кода
-          if (UserSystem.validateReferralCode(currentRefCode)) {
+          if (UserSystem.validateReferralCode && UserSystem.validateReferralCode(currentRefCode)) {
             // Показываем информацию о реферальной регистрации
             showReferralInfo(currentRefCode);
             console.log('✅ Реферальный код обнаружен:', currentRefCode);
@@ -1021,7 +1035,7 @@
       // Показать информацию о реферальной регистрации
       function showReferralInfo(refCode) {
         // Пытаемся получить информацию о реферере
-        const referrer = UserSystem.getUserByReferralCode(refCode);
+        const referrer = UserSystem.getUserByReferralCode ? UserSystem.getUserByReferralCode(refCode) : null;
         
         if (referrer) {
           const displayName = referrer.nickname || referrer.email.split('@')[0];
@@ -1158,19 +1172,56 @@
         });
       }
       
-      // Переключение видимости пароля
+      // Переключение видимости пароля (ИСПРАВЛЕННАЯ ВЕРСИЯ ДЛЯ МОБИЛЬНЫХ)
       function setupPasswordToggle(inputId, buttonId) {
         const input = document.getElementById(inputId);
         const button = document.getElementById(buttonId);
         
         if (!input || !button) return;
         
-        button.addEventListener('click', () => {
+        // Для мобильных устройств
+        button.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          
           const isPassword = input.type === 'password';
           input.type = isPassword ? 'text' : 'password';
+          
+          // Анимация иконки
+          button.style.transform = 'scale(0.8)';
+          setTimeout(() => {
+            button.style.transform = 'scale(1)';
+          }, 150);
+          
           button.innerHTML = `<span class="material-icons">${isPassword ? 'visibility' : 'visibility_off'}</span>`;
           button.setAttribute('aria-label', isPassword ? 'Скрыть пароль' : 'Показать пароль');
         });
+        
+        // Для десктопов
+        button.addEventListener('click', function(e) {
+          e.preventDefault();
+          
+          const isPassword = input.type === 'password';
+          input.type = isPassword ? 'text' : 'password';
+          
+          button.innerHTML = `<span class="material-icons">${isPassword ? 'visibility' : 'visibility_off'}</span>`;
+          button.setAttribute('aria-label', isPassword ? 'Скрыть пароль' : 'Показать пароль');
+        });
+        
+        // Автоматическое скрытие пароля через 3 секунды на мобильных
+        if ('ontouchstart' in window) {
+          input.addEventListener('blur', function() {
+            if (input.type === 'text') {
+              setTimeout(() => {
+                if (input.type === 'text') {
+                  input.type = 'password';
+                  button.innerHTML = `<span class="material-icons">visibility_off</span>`;
+                  button.setAttribute('aria-label', 'Показать пароль');
+                }
+              }, 3000);
+            }
+          });
+        }
       }
       
       // Загрузка аватара
@@ -1384,17 +1435,23 @@
         });
       }
       
-      // Таймер для повторной отправки кода
+      // Таймер для повторной отправки кода (ИСПРАВЛЕННАЯ ВЕРСИЯ)
       function startTimer() {
         clearInterval(resetTimer);
-        timeLeft = 300;
+        timeLeft = 300; // 5 минут в секундах
         updateTimerDisplay();
         
         const timerElement = document.getElementById('timer');
         const resendBtn = document.getElementById('resend-btn');
         
-        if (timerElement) timerElement.style.display = 'block';
-        if (resendBtn) resendBtn.disabled = true;
+        if (timerElement) {
+          timerElement.style.display = 'block';
+          timerElement.style.opacity = '1';
+        }
+        if (resendBtn) {
+          resendBtn.disabled = true;
+          resendBtn.style.opacity = '0.5';
+        }
         
         resetTimer = setInterval(() => {
           timeLeft--;
@@ -1402,8 +1459,22 @@
           
           if (timeLeft <= 0) {
             clearInterval(resetTimer);
-            if (timerElement) timerElement.style.display = 'none';
-            if (resendBtn) resendBtn.disabled = false;
+            if (timerElement) {
+              // Плавное скрытие таймера
+              timerElement.style.opacity = '0';
+              setTimeout(() => {
+                timerElement.style.display = 'none';
+              }, 300);
+            }
+            if (resendBtn) {
+              resendBtn.disabled = false;
+              resendBtn.style.opacity = '1';
+              // Анимация появления кнопки
+              resendBtn.style.transform = 'scale(0.95)';
+              setTimeout(() => {
+                resendBtn.style.transform = 'scale(1)';
+              }, 150);
+            }
           }
         }, 1000);
       }
@@ -1414,10 +1485,20 @@
           const minutes = Math.floor(timeLeft / 60);
           const seconds = timeLeft % 60;
           timeLeftElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+          
+          // Изменение цвета при малом времени
+          if (timeLeft < 60) {
+            timeLeftElement.style.color = 'var(--border-error)';
+            timeLeftElement.style.fontWeight = 'bold';
+          } else if (timeLeft < 120) {
+            timeLeftElement.style.color = '#FFA500';
+          } else {
+            timeLeftElement.style.color = 'var(--accent-cyan)';
+          }
         }
       }
       
-      // Форма входа
+      // Форма входа (ИСПРАВЛЕННАЯ ВЕРСИЯ)
       function setupLoginForm() {
         const loginForm = document.getElementById('login-form');
         if (!loginForm) return;
@@ -1426,7 +1507,7 @@
           e.preventDefault();
           
           const identity = document.getElementById('login-identity').value.trim();
-          const password = document.getElementById('login-password').value;
+          const password = document.getElementById('login-password').value.trim();
           const error = document.getElementById('login-error');
           
           hideAllMessages();
@@ -1438,23 +1519,33 @@
             return;
           }
           
+          // Добавляем небольшую задержку для UX
           setTimeout(() => {
             try {
+              console.log('🔐 Пытаемся войти с идентификатором:', identity);
+              
+              // Проверяем существующих пользователей
+              const allUsers = UserSystem.getUsers();
+              console.log('👥 Всего пользователей:', allUsers.length);
+              
               const user = UserSystem.login(identity, password);
               
               if (user) {
                 // Успешный вход
-                elements.spinner.style.display = 'block';
+                console.log('✅ Успешный вход! Пользователь:', user.nickname);
                 
                 // Сохраняем сессию
                 localStorage.setItem('last_login', new Date().toISOString());
                 
-                // Перенаправление
+                // Плавный переход на карту
+                elements.spinner.style.display = 'block';
+                
                 setTimeout(() => {
                   window.location.href = 'map.html';
                 }, 800);
               } else {
                 elements.spinner.style.display = 'none';
+                document.getElementById('login-error-text').textContent = 'Неверные данные для входа';
                 error.style.display = 'flex';
                 
                 // Анимация ошибки
@@ -1464,15 +1555,27 @@
                 }, 500);
               }
             } catch (error) {
-              console.error('Ошибка входа:', error);
+              console.error('❌ Ошибка входа:', error);
               elements.spinner.style.display = 'none';
-              document.getElementById('login-error').style.display = 'flex';
+              
+              // Более информативное сообщение об ошибке
+              const errorElement = document.getElementById('login-error');
+              if (errorElement) {
+                document.getElementById('login-error-text').textContent = error.message || 'Ошибка входа';
+                errorElement.style.display = 'flex';
+              }
+              
+              // Анимация ошибки
+              loginForm.classList.add('shake');
+              setTimeout(() => {
+                loginForm.classList.remove('shake');
+              }, 500);
             }
           }, 500);
         });
       }
       
-      // Форма регистрации (С ОБРАБОТКОЙ РЕФЕРАЛЬНОГО КОДА)
+      // Форма регистрации
       function setupRegisterForm() {
         const registerForm = document.getElementById('register-form');
         if (!registerForm) return;
@@ -1563,9 +1666,7 @@
               password: password,
               avatar: avatarData,
               position: [55.751244, 37.618423],
-              registeredAt: new Date().toISOString(),
-              // Добавляем реферальный код текущего пользователя, если он есть
-              referralCode: currentRefCode ? null : UserSystem.generateReferralCode()
+              registeredAt: new Date().toISOString()
             };
             
             const createdUser = UserSystem.createUser(newUser);
@@ -1603,13 +1704,38 @@
             
           } catch (error) {
             elements.spinner.style.display = 'none';
-            alert('Ошибка при регистрации: ' + error.message);
+            
+            // Более информативное сообщение об ошибке
+            const errorMsg = document.createElement('div');
+            errorMsg.style.cssText = `
+              position: fixed;
+              top: 20px;
+              left: 50%;
+              transform: translateX(-50%);
+              background: rgba(255, 68, 68, 0.9);
+              color: white;
+              padding: 12px 20px;
+              border-radius: 8px;
+              z-index: 10000;
+              font-size: 14px;
+              max-width: 90%;
+              text-align: center;
+            `;
+            errorMsg.textContent = `Ошибка: ${error.message}`;
+            document.body.appendChild(errorMsg);
+            
+            setTimeout(() => {
+              if (errorMsg.parentNode) {
+                errorMsg.parentNode.removeChild(errorMsg);
+              }
+            }, 3000);
+            
             console.error('Registration error:', error);
           }
         });
       }
       
-      // Форма восстановления пароля
+      // Форма восстановления пароля (ИСПРАВЛЕННАЯ ВЕРСИЯ)
       function setupForgotPasswordForms() {
         // Форма email
         const forgotEmailForm = document.getElementById('forgot-email-form');
@@ -1674,14 +1800,22 @@
           });
         }
         
-        // Повторная отправка кода
+        // Повторная отправка кода (ИСПРАВЛЕННАЯ ВЕРСИЯ)
         const resendBtn = document.getElementById('resend-btn');
         if (resendBtn) {
           resendBtn.addEventListener('click', async function() {
             if (!resetEmail) return;
             
             this.disabled = true;
-            document.getElementById('timer').style.display = 'block';
+            this.style.opacity = '0.5';
+            
+            // Показываем таймер
+            const timerElement = document.getElementById('timer');
+            if (timerElement) {
+              timerElement.style.display = 'block';
+              timerElement.style.opacity = '1';
+            }
+            
             elements.spinner.style.display = 'block';
             
             try {
@@ -1693,11 +1827,50 @@
               console.log('🔐 Демо-режим: Новый код:', resetCode);
               console.log('📧 Email:', resetEmail);
               
+              elements.spinner.style.display = 'none';
+              
+              // Показываем уведомление
+              const notification = document.createElement('div');
+              notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: linear-gradient(135deg, #00FFFF 0%, #9400D3 100%);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 10000;
+                font-size: 14px;
+                max-width: 90%;
+                text-align: center;
+                animation: fadeIn 0.3s ease;
+              `;
+              notification.textContent = '✅ Новый код отправлен!';
+              document.body.appendChild(notification);
+              
+              setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(-50%) translateY(-10px)';
+                setTimeout(() => {
+                  if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                  }
+                }, 300);
+              }, 2000);
+              
+              // Запускаем таймер заново
               startTimer();
             } catch (error) {
               console.error('Error resending code:', error);
-            } finally {
               elements.spinner.style.display = 'none';
+              
+              // Показываем ошибку
+              const errorElement = document.getElementById('code-error');
+              if (errorElement) {
+                errorElement.textContent = 'Ошибка при отправке кода';
+                errorElement.style.display = 'flex';
+              }
             }
           });
         }
@@ -1804,6 +1977,8 @@
                 setTimeout(() => {
                   showView('login');
                   resetEmail = '';
+                  clearInterval(resetTimer);
+                  resetTimer = null;
                 }, 2000);
               } else {
                 throw new Error('Пользователь не найден');
@@ -1900,15 +2075,43 @@
         });
       }
       
-      // Поделиться реферальной ссылкой
-      function setupReferralSharing() {
-        // Можно добавить кнопку "Поделиться ссылкой" для зарегистрированных пользователей
-        // Эта функция будет вызвана после успешного входа
-      }
-      
       // Инициализация приложения
       function init() {
         console.log('🚀 Инициализация приложения Карта друзей');
+        
+        // Проверяем, есть ли уже авторизованный пользователь
+        const currentUser = UserSystem.getCurrentUser();
+        if (currentUser) {
+          console.log('👤 Пользователь уже авторизован:', currentUser.nickname);
+          console.log('🔗 Автоматический переход на карту через 2 секунды...');
+          
+          // Показываем уведомление
+          const notification = document.createElement('div');
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #00FFFF 0%, #9400D3 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-size: 14px;
+            max-width: 90%;
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+          `;
+          notification.textContent = `👋 С возвращением, ${currentUser.nickname}! Переход на карту...`;
+          document.body.appendChild(notification);
+          
+          // Автоматический редирект на карту
+          setTimeout(() => {
+            window.location.href = 'map.html';
+          }, 2000);
+          
+          return;
+        }
         
         // Проверяем реферальный код при загрузке
         checkReferralCode();
@@ -1927,11 +2130,18 @@
         setupPWA();
         setupAutoFocus();
         setupOfflineDetection();
-        setupReferralSharing();
         
-        // Инициализация таймера
-        document.getElementById('timer').style.display = 'block';
-        document.getElementById('resend-btn').disabled = true;
+        // Инициализация таймера (скрыт по умолчанию)
+        const timerElement = document.getElementById('timer');
+        if (timerElement) {
+          timerElement.style.display = 'none';
+        }
+        
+        const resendBtn = document.getElementById('resend-btn');
+        if (resendBtn) {
+          resendBtn.disabled = true;
+          resendBtn.style.opacity = '0.5';
+        }
         
         // Проверка сессии
         const lastLogin = localStorage.getItem('last_login');
@@ -1952,6 +2162,31 @@
         }
         
         console.log('✅ Приложение инициализировано');
+        
+        // Добавляем утилиту для сброса паролей (для отладки)
+        window.resetUserPasswords = function() {
+          const users = UserSystem.getUsers();
+          console.log('👥 Найдено пользователей:', users.length);
+          
+          users.forEach((user, index) => {
+            console.log(`\n${index + 1}. ${user.email} (${user.nickname})`);
+            console.log('   Старый хеш:', user.password);
+            
+            // Создаем новый пароль (можно изменить на нужный)
+            const newPassword = '12345678';
+            const newHash = UserSystem.hashPassword(newPassword);
+            
+            // Обновляем пароль
+            user.password = newHash;
+            console.log('   Новый пароль:', newPassword);
+            console.log('   Новый хеш:', newHash);
+          });
+          
+          UserSystem.saveUsers(users);
+          console.log('\n✅ Пароли сброшены!');
+          console.log('📝 Теперь можно войти с паролем: 12345678');
+          alert('Пароли сброшены! Теперь можно войти с паролем: 12345678');
+        };
       }
       
       // Запуск при загрузке страницы
