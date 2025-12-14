@@ -390,22 +390,24 @@ const UserSystem = {
         return `usr_${timestamp}_${random}`;
     },
 
-    // Хэширование пароля - ПРОСТАЯ И СТАБИЛЬНАЯ РЕАЛИЗАЦИЯ
+    // Хэширование пароля - ИСПРАВЛЕННАЯ СТАБИЛЬНАЯ РЕАЛИЗАЦИЯ
     hashPassword: function(password) {
         if (!password || typeof password !== 'string') return '';
         
-        // Простой стабильный алгоритм - строка "пароль+соль"
-        const salt = 'meetup_secure_salt_2024_v2';
-        const saltedPassword = password + salt;
+        // Стабильная и простая реализация хеширования
+        // Используем конкатенацию с солью и простой хеш
+        const salt = 'meetup_salt_v2_2024_secure';
+        const str = password + salt;
         
         let hash = 0;
-        for (let i = 0; i < saltedPassword.length; i++) {
-            const char = saltedPassword.charCodeAt(i);
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
-            hash = hash & 0xFFFFFFFF; // 32-битное целое
+            hash = Math.abs(hash); // Всегда положительное число
         }
         
-        return hash.toString(16);
+        // Возвращаем в формате hash_hex
+        return 'hash_' + hash.toString(36);
     },
 
     // Конвертация файла в base64
@@ -1625,6 +1627,18 @@ const UserSystem = {
             console.error('❌ Ошибка получения статистики:', error);
             return null;
         }
+    },
+
+    // Дополнительная функция: получить пользователя по реферальному коду
+    getUserByReferralCode: function(code) {
+        const users = this.getUsers();
+        return users.find(u => u.referralCode === code);
+    },
+
+    // Дополнительная функция: валидация реферального кода
+    validateReferralCode: function(code) {
+        if (!code || typeof code !== 'string') return false;
+        return code.startsWith('REF_') && code.length > 10;
     }
 };
 
