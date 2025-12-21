@@ -4,26 +4,34 @@ const TelegramBotAPI = {
     botToken: '8431099911:AAFGMszkfzgTzoWEBZcgn7ENvVCr7faWqL0',
     botUsername: '@MeetUPpasswordbot',
     
-    // Кэш для временного хранения кодов
-    resetCodes: new Map(),
-    
     // Инициализация
-    init: function(botToken, botUsername) {
-        if (botToken) this.botToken = botToken;
-        if (botUsername) this.botUsername = botUsername;
-        console.log('🤖 Telegram Bot API инициализирован с токеном:', this.botToken ? '***' + this.botToken.slice(-4) : 'не установлен');
+    init: function() {
+        console.log('🤖 Telegram Bot API инициализирован');
+        
+        // Проверяем токен
+        if (!this.validateToken()) {
+            console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Токен бота не настроен!');
+            console.error('⚠️ Пожалуйста, установите правильный токен в TelegramBotAPI.botToken');
+            console.error('📝 Получите токен у @BotFather в Telegram');
+            throw new Error('Токен Telegram бота не настроен');
+        }
+        
+        console.log('✅ Токен бота настроен корректно');
     },
     
     // Проверка валидности токена
     validateToken: function() {
-        return this.botToken && this.botToken !== 'ВАШ_BOT_TOKEN' && this.botToken.length > 30;
+        return this.botToken && 
+               this.botToken !== 'ВАШ_BOT_TOKEN' && 
+               this.botToken !== '8431099911:AAFGMszkfzgTzoWEBZcgn7ENvVCr7faWqL0' && // Замените на ваш
+               this.botToken.length > 30 &&
+               this.botToken.startsWith('AA');
     },
     
     // Отправка сообщения пользователю через Telegram Bot API
     sendMessage: async function(chatId, text, options = {}) {
         if (!this.validateToken()) {
-            console.warn('⚠️ Токен бота не настроен. Включен демо-режим.');
-            return this.demoSendMessage(chatId, text);
+            throw new Error('Токен бота не настроен. Получите токен у @BotFather');
         }
         
         try {
@@ -37,7 +45,7 @@ const TelegramBotAPI = {
                 ...options
             };
             
-            console.log(`📤 Отправка сообщения в Telegram: ${chatId}`);
+            console.log(`📤 Отправка сообщения в Telegram для ${chatId}`);
             
             const response = await fetch(url, {
                 method: 'POST',
@@ -51,7 +59,7 @@ const TelegramBotAPI = {
             
             if (!result.ok) {
                 console.error('❌ Ошибка Telegram API:', result.description);
-                throw new Error(result.description || 'Ошибка отправки сообщения');
+                throw new Error(`Telegram API Error: ${result.description}`);
             }
             
             console.log('✅ Сообщение успешно отправлено в Telegram');
@@ -59,24 +67,8 @@ const TelegramBotAPI = {
             
         } catch (error) {
             console.error('❌ Ошибка отправки сообщения в Telegram:', error);
-            // При ошибке переключаемся в демо-режим
-            return this.demoSendMessage(chatId, text);
+            throw new Error(`Не удалось отправить сообщение: ${error.message}`);
         }
-    },
-    
-    // Демо-режим отправки (код в консоль)
-    demoSendMessage: function(chatId, text) {
-        console.log(`📤 ДЕМО-РЕЖИМ: Сообщение для ${chatId}:`);
-        console.log(`📝 Текст: ${text}`);
-        console.log('👉 Для реальной отправки настройте токен бота в TelegramBotAPI.botToken');
-        
-        // Извлекаем код из сообщения для демо-режима
-        const codeMatch = text.match(/код[:\s]*(\d{6})/i) || text.match(/(\d{6})/);
-        if (codeMatch) {
-            console.log(`🔐 Код для демо: ${codeMatch[1]}`);
-        }
-        
-        return { ok: true, result: { message_id: Date.now(), isDemo: true } };
     },
     
     // Отправка кода верификации
@@ -114,117 +106,6 @@ const TelegramBotAPI = {
         return await this.sendMessage(`@${telegramUsername}`, message);
     },
     
-    // Генерация и сохранение кода сброса
-    generateAndStoreResetCode: function(userId, telegramUsername) {
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = Date.now() + (10 * 60 * 1000); // 10 минут
-        
-        const resetData = {
-            code: code,
-            userId: userId,
-            telegramUsername: telegramUsername,
-            expiresAt: expiresAt,
-            createdAt: Date.now(),
-            attempts: 0,
-            verified: false
-        };
-        
-        // Сохраняем код в localStorage для проверки
-        localStorage.setItem(`tg_reset_${telegramUsername}`, JSON.stringify(resetData));
-        
-        // Также сохраняем в памяти для быстрого доступа
-        this.resetCodes.set(`tg_${telegramUsername}`, resetData);
-        
-        console.log(`🔐 Сгенерирован код сброса для @${telegramUsername}: ${code}`);
-        
-        return { code, expiresAt };
-    },
-    
-    // Проверка кода сброса
-    verifyResetCode: function(telegramUsername, code) {
-        const storageKey = `tg_reset_${telegramUsername}`;
-        const storedData = localStorage.getItem(storageKey);
-        
-        if (!storedData) {
-            return { valid: false, error: 'Код не найден или истек' };
-        }
-        
-        const resetData = JSON.parse(storedData);
-        
-        // Проверяем срок действия
-        if (Date.now() > resetData.expiresAt) {
-            localStorage.removeItem(storageKey);
-            this.resetCodes.delete(`tg_${telegramUsername}`);
-            return { valid: false, error: 'Срок действия кода истек' };
-        }
-        
-        // Проверяем код
-        if (resetData.code !== code) {
-            resetData.attempts = (resetData.attempts || 0) + 1;
-            
-            // Сохраняем обновленные данные
-            localStorage.setItem(storageKey, JSON.stringify(resetData));
-            this.resetCodes.set(`tg_${telegramUsername}`, resetData);
-            
-            // Блокируем после 5 неудачных попыток
-            if (resetData.attempts >= 5) {
-                localStorage.removeItem(storageKey);
-                this.resetCodes.delete(`tg_${telegramUsername}`);
-                return { valid: false, error: 'Слишком много попыток. Запросите новый код' };
-            }
-            
-            return { valid: false, error: 'Неверный код' };
-        }
-        
-        // Код верный
-        resetData.verified = true;
-        resetData.verifiedAt = Date.now();
-        
-        localStorage.setItem(storageKey, JSON.stringify(resetData));
-        this.resetCodes.set(`tg_${telegramUsername}`, resetData);
-        
-        return { 
-            valid: true, 
-            userId: resetData.userId,
-            telegramUsername: resetData.telegramUsername 
-        };
-    },
-    
-    // Получение информации о пользователе из Telegram
-    getUserInfo: async function(telegramUsername) {
-        if (!this.validateToken()) {
-            // Демо-режим
-            return {
-                ok: true,
-                result: {
-                    username: telegramUsername.replace('@', ''),
-                    first_name: 'Пользователь',
-                    last_name: 'Telegram'
-                }
-            };
-        }
-        
-        try {
-            const url = `https://api.telegram.org/bot${this.botToken}/getChat`;
-            const params = {
-                chat_id: `@${telegramUsername}`
-            };
-            
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(params)
-            });
-            
-            return await response.json();
-        } catch (error) {
-            console.error('❌ Ошибка получения информации о пользователе:', error);
-            return { ok: false };
-        }
-    },
-    
     // Проверка доступности бота
     testConnection: async function() {
         if (!this.validateToken()) {
@@ -243,86 +124,19 @@ const TelegramBotAPI = {
         }
     },
     
-    // Очистка старых кодов
-    cleanupExpiredCodes: function() {
-        const now = Date.now();
-        const keysToRemove = [];
-        
-        // Очищаем localStorage
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('tg_reset_')) {
-                try {
-                    const data = JSON.parse(localStorage.getItem(key));
-                    if (data && data.expiresAt && now > data.expiresAt) {
-                        localStorage.removeItem(key);
-                        keysToRemove.push(key);
-                    }
-                } catch (e) {
-                    // Игнорируем ошибки парсинга
-                }
-            }
+    // Проверка существования пользователя
+    checkUserExists: async function(telegramUsername) {
+        try {
+            const result = await this.sendMessage(`@${telegramUsername}`, '🔒 Проверка аккаунта...');
+            return result.ok;
+        } catch (error) {
+            console.error('❌ Пользователь не найден или бот заблокирован:', error);
+            return false;
         }
-        
-        // Очищаем кэш в памяти
-        for (const [key, data] of this.resetCodes.entries()) {
-            if (data.expiresAt && now > data.expiresAt) {
-                this.resetCodes.delete(key);
-            }
-        }
-        
-        if (keysToRemove.length > 0) {
-            console.log(`🗑️ Очищено ${keysToRemove.length} устаревших кодов`);
-        }
-    },
-    
-    // Получение статистики
-    getStats: function() {
-        let validCodes = 0;
-        let expiredCodes = 0;
-        const now = Date.now();
-        
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('tg_reset_')) {
-                try {
-                    const data = JSON.parse(localStorage.getItem(key));
-                    if (data) {
-                        if (data.expiresAt && now < data.expiresAt) {
-                            validCodes++;
-                        } else {
-                            expiredCodes++;
-                        }
-                    }
-                } catch (e) {
-                    // Игнорируем ошибки
-                }
-            }
-        }
-        
-        return {
-            totalCodes: validCodes + expiredCodes,
-            validCodes: validCodes,
-            expiredCodes: expiredCodes,
-            memoryCacheSize: this.resetCodes.size,
-            botConfigured: this.validateToken()
-        };
     }
 };
-
-// Автоматическая очистка устаревших кодов каждые 5 минут
-setInterval(() => {
-    TelegramBotAPI.cleanupExpiredCodes();
-}, 5 * 60 * 1000);
 
 // Экспорт для использования в других файлах
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = TelegramBotAPI;
 }
-
-// Инициализация при загрузке
-document.addEventListener('DOMContentLoaded', function() {
-    TelegramBotAPI.init();
-    TelegramBotAPI.cleanupExpiredCodes();
-    console.log('🤖 Telegram Bot API готов к работе');
-});
