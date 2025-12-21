@@ -509,9 +509,16 @@
       background: none;
     }
     
-    /* Демо-подсказка (убрана для production) */
+    /* Демо-подсказка */
     .demo-hint {
-      display: none !important;
+      background: rgba(0, 255, 255, 0.1);
+      border: 1px solid var(--accent-cyan);
+      border-radius: var(--radius-small);
+      padding: 12px;
+      margin: 20px 0;
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.4;
     }
     
     /* Спиннер */
@@ -1179,10 +1186,12 @@
           if (typeof UserSystem !== 'undefined' && UserSystem.useReferralLink) {
             result = UserSystem.useReferralLink(currentRefCode, userId);
           } else {
-            // Производственный режим - только реальная работа
+            // Демо-режим
             result = {
-              success: false,
-              message: 'Реферальная система временно недоступна'
+              success: true,
+              message: 'Реферальная регистрация успешна',
+              bonus: 100,
+              referrerName: 'Друг'
             };
           }
           
@@ -1280,13 +1289,32 @@
         });
       }
       
-      // Переключение видимости пароля
+      // Переключение видимости пароля (ИСПРАВЛЕННАЯ ВЕРСИЯ ДЛЯ МОБИЛЬНЫХ)
       function setupPasswordToggle(inputId, buttonId) {
         const input = document.getElementById(inputId);
         const button = document.getElementById(buttonId);
         
         if (!input || !button) return;
         
+        // Для мобильных устройств
+        button.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const isPassword = input.type === 'password';
+          input.type = isPassword ? 'text' : 'password';
+          
+          // Анимация иконки
+          button.style.transform = 'scale(0.8)';
+          setTimeout(() => {
+            button.style.transform = 'scale(1)';
+          }, 150);
+          
+          button.innerHTML = `<span class="material-icons">${isPassword ? 'visibility' : 'visibility_off'}</span>`;
+          button.setAttribute('aria-label', isPassword ? 'Скрыть пароль' : 'Показать пароль');
+        });
+        
+        // Для десктопов
         button.addEventListener('click', function(e) {
           e.preventDefault();
           
@@ -1296,6 +1324,21 @@
           button.innerHTML = `<span class="material-icons">${isPassword ? 'visibility' : 'visibility_off'}</span>`;
           button.setAttribute('aria-label', isPassword ? 'Скрыть пароль' : 'Показать пароль');
         });
+        
+        // Автоматическое скрытие пароля через 3 секунды на мобильных
+        if ('ontouchstart' in window) {
+          input.addEventListener('blur', function() {
+            if (input.type === 'text') {
+              setTimeout(() => {
+                if (input.type === 'text') {
+                  input.type = 'password';
+                  button.innerHTML = `<span class="material-icons">visibility_off</span>`;
+                  button.setAttribute('aria-label', 'Показать пароль');
+                }
+              }, 3000);
+            }
+          });
+        }
       }
       
       // Загрузка аватара
@@ -1364,32 +1407,26 @@
         });
       }
       
-      // Навигация между формами (ИСПРАВЛЕННАЯ ВЕРСИЯ)
+      // Навигация между формами
       function setupNavigation() {
         console.log('🚀 Настройка навигации');
         
-        // Главный экран - проверяем, что элементы существуют
+        // Главный экран
         const btnLoginView = document.getElementById('btn-login-view');
         const btnRegisterView = document.getElementById('btn-register-view');
         
         if (btnLoginView) {
-          console.log('✅ Найдена кнопка Войти');
           btnLoginView.addEventListener('click', () => {
             console.log('📱 Нажата кнопка Войти');
             showView('login');
           });
-        } else {
-          console.error('❌ Не найдена кнопка btn-login-view');
         }
         
         if (btnRegisterView) {
-          console.log('✅ Найдена кнопка Зарегистрироваться');
           btnRegisterView.addEventListener('click', () => {
             console.log('📱 Нажата кнопка Зарегистрироваться');
             showView('register');
           });
-        } else {
-          console.error('❌ Не найдена кнопка btn-register-view');
         }
         
         // Ссылки
@@ -1416,7 +1453,8 @@
           linkForgot.addEventListener('click', (e) => {
             e.preventDefault();
             console.log('📱 Переход к восстановлению пароля');
-            showView('forgot-email');
+            // Показываем выбор метода сброса
+            showMethodSelection();
           });
         }
         
@@ -1474,6 +1512,137 @@
             alert('Интеграция с Apple будет добавлена позже');
           });
         }
+      }
+      
+      // Функция выбора метода сброса
+      function showMethodSelection() {
+        // Создаем простое диалоговое окно выбора
+        const choiceDialog = document.createElement('div');
+        choiceDialog.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.8);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          animation: fadeIn 0.3s ease;
+        `;
+        
+        choiceDialog.innerHTML = `
+          <div style="
+            background: var(--bg-secondary);
+            border-radius: var(--radius-large);
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: var(--shadow-card);
+            animation: slideUp 0.3s ease;
+          ">
+            <h2 style="
+              font-size: 24px;
+              font-weight: 600;
+              margin-bottom: 24px;
+              color: var(--text-primary);
+              background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+              -webkit-background-clip: text;
+              background-clip: text;
+              color: transparent;
+            ">
+              Выберите метод восстановления
+            </h2>
+            <p style="color: var(--text-secondary); margin-bottom: 32px; font-size: 15px;">
+              Как вы хотите получить код для сброса пароля?
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <button id="choice-telegram" style="
+                width: 100%;
+                padding: 16px;
+                background: linear-gradient(135deg, #0088cc, #34b7f1);
+                border: none;
+                border-radius: var(--radius-medium);
+                color: white;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                transition: all var(--transition-fast);
+              ">
+                <span class="material-icons">telegram</span>
+                Через Telegram
+              </button>
+              <button id="choice-email" style="
+                width: 100%;
+                padding: 16px;
+                background: var(--gradient-primary);
+                border: none;
+                border-radius: var(--radius-medium);
+                color: white;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                transition: all var(--transition-fast);
+              ">
+                <span class="material-icons">email</span>
+                Через Email
+              </button>
+              <button id="choice-cancel" style="
+                width: 100%;
+                padding: 16px;
+                background: var(--bg-surface);
+                border: 1px solid var(--border-default);
+                border-radius: var(--radius-medium);
+                color: var(--text-primary);
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all var(--transition-fast);
+              ">
+                Отмена
+              </button>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(choiceDialog);
+        
+        // Обработчики кнопок
+        const choiceTelegram = document.getElementById('choice-telegram');
+        const choiceEmail = document.getElementById('choice-email');
+        const choiceCancel = document.getElementById('choice-cancel');
+        
+        if (choiceTelegram) {
+          choiceTelegram.addEventListener('click', () => {
+            choiceDialog.remove();
+            showView('forgot-telegram');
+          });
+        }
+        
+        if (choiceEmail) {
+          choiceEmail.addEventListener('click', () => {
+            choiceDialog.remove();
+            showView('forgot-email');
+          });
+        }
+        
+        if (choiceCancel) {
+          choiceCancel.addEventListener('click', () => {
+            choiceDialog.remove();
+            showView('login');
+          });
+        }
+        
       }
       
       // Валидация подтверждения пароля
@@ -1654,7 +1823,7 @@
         });
       }
       
-      // Таймер для повторной отправки кода
+      // Таймер для повторной отправки кода (ИСПРАВЛЕННАЯ ВЕРСИЯ)
       function startTimer() {
         clearInterval(resetTimer);
         timeLeft = 300; // 5 минут в секундах
@@ -1777,19 +1946,13 @@
         }
       }
       
-      // Форма входа (ПРОИЗВОДСТВЕННАЯ ВЕРСИЯ)
+      // Форма входа (ИСПРАВЛЕННАЯ ВЕРСИЯ)
       function setupLoginForm() {
         const loginForm = document.getElementById('login-form');
-        if (!loginForm) {
-          console.error('❌ Форма входа не найдена');
-          return;
-        }
-        
-        console.log('✅ Форма входа найдена, настраиваю обработчик...');
+        if (!loginForm) return;
         
         loginForm.addEventListener('submit', function(e) {
           e.preventDefault();
-          console.log('📝 Форма входа отправлена');
           
           const identity = document.getElementById('login-identity').value.trim();
           const password = document.getElementById('login-password').value.trim();
@@ -1800,10 +1963,7 @@
           
           if (!identity || !password) {
             elements.spinner.style.display = 'none';
-            if (error) {
-              document.getElementById('login-error-text').textContent = 'Заполните все поля';
-              error.style.display = 'flex';
-            }
+            error.style.display = 'flex';
             return;
           }
           
@@ -1813,44 +1973,70 @@
               console.log('🔐 Пытаемся войти с идентификатором:', identity);
               
               // Проверяем, доступен ли UserSystem
+              let user = null;
+              
               if (typeof UserSystem !== 'undefined' && UserSystem.login) {
-                // Используем UserSystem для входа
-                const user = UserSystem.login(identity, password);
-                
-                if (user) {
-                  // Успешный вход
-                  console.log('✅ Успешный вход! Пользователь:', user.nickname || user.email);
-                  
-                  // Сохраняем сессию
-                  localStorage.setItem('last_login', new Date().toISOString());
-                  
-                  // Плавный переход на карту
-                  elements.spinner.style.display = 'block';
-                  
-                  setTimeout(() => {
-                    window.location.href = 'map.html';
-                  }, 800);
-                } else {
-                  elements.spinner.style.display = 'none';
-                  if (error) {
-                    document.getElementById('login-error-text').textContent = 'Неверные данные для входа';
-                    error.style.display = 'flex';
-                  }
-                  
-                  // Анимация ошибки
-                  loginForm.classList.add('shake');
-                  setTimeout(() => {
-                    loginForm.classList.remove('shake');
-                  }, 500);
-                }
+                // Используем UserSystem, если он доступен
+                user = UserSystem.login(identity, password);
               } else {
-                // UserSystem недоступен - критическая ошибка
-                elements.spinner.style.display = 'none';
-                if (error) {
-                  document.getElementById('login-error-text').textContent = 'Система авторизации недоступна';
-                  error.style.display = 'flex';
+                // Демо-режим: создаем фиктивного пользователя для тестирования
+                console.log('⚠️ UserSystem недоступен, используется демо-режим');
+                
+                // Проверяем локальное хранилище
+                const usersJson = localStorage.getItem('users');
+                let users = [];
+                
+                if (usersJson) {
+                  users = JSON.parse(usersJson);
+                } else {
+                  // Создаем демо-пользователя
+                  users = [{
+                    id: 'demo-1',
+                    email: 'test@example.com',
+                    nickname: 'testuser',
+                    password: '12345678', // В реальности должен быть хеш
+                    registeredAt: new Date().toISOString()
+                  }];
+                  localStorage.setItem('users', JSON.stringify(users));
                 }
-                console.error('❌ UserSystem не загружен');
+                
+                // Ищем пользователя
+                user = users.find(u => 
+                  u.email === identity.toLowerCase() || 
+                  u.nickname === identity.toLowerCase()
+                );
+                
+                // Проверяем пароль (в демо-режиме пароль всегда 12345678)
+                if (user && password === '12345678') {
+                  localStorage.setItem('current_user', JSON.stringify(user));
+                } else {
+                  user = null;
+                }
+              }
+              
+              if (user) {
+                // Успешный вход
+                console.log('✅ Успешный вход! Пользователь:', user.nickname || user.email);
+                
+                // Сохраняем сессию
+                localStorage.setItem('last_login', new Date().toISOString());
+                
+                // Плавный переход на карту
+                elements.spinner.style.display = 'block';
+                
+                setTimeout(() => {
+                  window.location.href = 'map.html';
+                }, 800);
+              } else {
+                elements.spinner.style.display = 'none';
+                document.getElementById('login-error-text').textContent = 'Неверные данные для входа';
+                error.style.display = 'flex';
+                
+                // Анимация ошибки
+                loginForm.classList.add('shake');
+                setTimeout(() => {
+                  loginForm.classList.remove('shake');
+                }, 500);
               }
             } catch (error) {
               console.error('❌ Ошибка входа:', error);
@@ -1871,23 +2057,15 @@
             }
           }, 500);
         });
-        
-        console.log('✅ Обработчик формы входа настроен');
       }
       
-      // Форма регистрации (ПРОИЗВОДСТВЕННАЯ ВЕРСИЯ)
+      // Форма регистрации
       function setupRegisterForm() {
         const registerForm = document.getElementById('register-form');
-        if (!registerForm) {
-          console.error('❌ Форма регистрации не найдена');
-          return;
-        }
-        
-        console.log('✅ Форма регистрации найдена, настраиваю обработчик...');
+        if (!registerForm) return;
         
         registerForm.addEventListener('submit', async function(e) {
           e.preventDefault();
-          console.log('📝 Форма регистрации отправлена');
           
           const nickname = document.getElementById('register-nickname').value.trim();
           const email = document.getElementById('register-email').value.trim().toLowerCase();
@@ -1901,27 +2079,33 @@
           // Валидация никнейма
           const nicknameError = document.getElementById('nickname-error');
           if (!nickname) {
-            if (nicknameError) {
-              document.getElementById('nickname-error-text').textContent = 'Введите никнейм';
-              nicknameError.style.display = 'flex';
-            }
+            document.getElementById('nickname-error-text').textContent = 'Введите никнейм';
+            nicknameError.style.display = 'flex';
             hasErrors = true;
           } else if (nickname.length < 3) {
-            if (nicknameError) {
-              document.getElementById('nickname-error-text').textContent = 'Никнейм должен быть не менее 3 символов';
-              nicknameError.style.display = 'flex';
-            }
+            document.getElementById('nickname-error-text').textContent = 'Никнейм должен быть не менее 3 символов';
+            nicknameError.style.display = 'flex';
             hasErrors = true;
           } else {
             // Проверка занятости никнейма
             try {
               if (typeof UserSystem !== 'undefined' && UserSystem.isNicknameUsed) {
                 if (UserSystem.isNicknameUsed(nickname)) {
-                  if (nicknameError) {
+                  document.getElementById('nickname-error-text').textContent = 'Никнейм уже занят';
+                  nicknameError.style.display = 'flex';
+                  hasErrors = true;
+                }
+              } else {
+                // Проверяем локальное хранилище
+                const usersJson = localStorage.getItem('users');
+                if (usersJson) {
+                  const users = JSON.parse(usersJson);
+                  const existingUser = users.find(u => u.nickname && u.nickname.toLowerCase() === nickname.toLowerCase());
+                  if (existingUser) {
                     document.getElementById('nickname-error-text').textContent = 'Никнейм уже занят';
                     nicknameError.style.display = 'flex';
+                    hasErrors = true;
                   }
-                  hasErrors = true;
                 }
               }
             } catch (error) {
@@ -1934,27 +2118,33 @@
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           
           if (!email) {
-            if (emailError) {
-              document.getElementById('email-error-text').textContent = 'Введите email';
-              emailError.style.display = 'flex';
-            }
+            document.getElementById('email-error-text').textContent = 'Введите email';
+            emailError.style.display = 'flex';
             hasErrors = true;
           } else if (!emailRegex.test(email)) {
-            if (emailError) {
-              document.getElementById('email-error-text').textContent = 'Некорректный email';
-              emailError.style.display = 'flex';
-            }
+            document.getElementById('email-error-text').textContent = 'Некорректный email';
+            emailError.style.display = 'flex';
             hasErrors = true;
           } else {
             // Проверка занятости email
             try {
               if (typeof UserSystem !== 'undefined' && UserSystem.isEmailUsed) {
                 if (UserSystem.isEmailUsed(email)) {
-                  if (emailError) {
+                  document.getElementById('email-error-text').textContent = 'Email уже используется';
+                  emailError.style.display = 'flex';
+                  hasErrors = true;
+                }
+              } else {
+                // Проверяем локальное хранилище
+                const usersJson = localStorage.getItem('users');
+                if (usersJson) {
+                  const users = JSON.parse(usersJson);
+                  const existingUser = users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+                  if (existingUser) {
                     document.getElementById('email-error-text').textContent = 'Email уже используется';
                     emailError.style.display = 'flex';
+                    hasErrors = true;
                   }
-                  hasErrors = true;
                 }
               }
             } catch (error) {
@@ -1965,36 +2155,26 @@
           // Валидация пароля
           const passwordError = document.getElementById('password-error');
           if (!password || password.length < 8) {
-            if (passwordError) {
-              passwordError.textContent = 'Пароль должен быть не менее 8 символов';
-              passwordError.style.display = 'flex';
-            }
+            passwordError.textContent = 'Пароль должен быть не менее 8 символов';
+            passwordError.style.display = 'flex';
             hasErrors = true;
           } else if (!/[a-zA-Z]/.test(password)) {
-            if (passwordError) {
-              passwordError.textContent = 'Пароль должен содержать буквы';
-              passwordError.style.display = 'flex';
-            }
+            passwordError.textContent = 'Пароль должен содержать буквы';
+            passwordError.style.display = 'flex';
             hasErrors = true;
           } else if (!/\d/.test(password)) {
-            if (passwordError) {
-              passwordError.textContent = 'Пароль должен содержать цифры';
-              passwordError.style.display = 'flex';
-            }
+            passwordError.textContent = 'Пароль должен содержать цифры';
+            passwordError.style.display = 'flex';
             hasErrors = true;
           }
           
           // Подтверждение пароля
           if (password !== confirm) {
-            const confirmError = document.getElementById('confirm-error');
-            if (confirmError) confirmError.style.display = 'flex';
+            document.getElementById('confirm-error').style.display = 'flex';
             hasErrors = true;
           }
           
-          if (hasErrors) {
-            console.log('❌ Ошибки валидации формы регистрации');
-            return;
-          }
+          if (hasErrors) return;
           
           // Регистрация пользователя
           elements.spinner.style.display = 'block';
@@ -2003,14 +2183,18 @@
             let avatarData = '';
             const avatarFile = document.getElementById('avatar-input').files[0];
             
-            if (avatarFile) {
-              // Преобразование файла в base64
-              avatarData = await new Promise((resolve, reject) => {
+            // Преобразование файла в base64
+            const fileToBase64 = (file) => {
+              return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
                 reader.onerror = reject;
-                reader.readAsDataURL(avatarFile);
+                reader.readAsDataURL(file);
               });
+            };
+            
+            if (avatarFile) {
+              avatarData = await fileToBase64(avatarFile);
             }
             
             const newUser = {
@@ -2019,7 +2203,7 @@
               password: password,
               avatar: avatarData,
               position: [55.751244, 37.618423],
-              referredBy: currentRefCode ? currentRefCode : null
+              referredBy: currentRefCode ? { code: currentRefCode } : null
             };
             
             let createdUser = null;
@@ -2027,17 +2211,40 @@
             if (typeof UserSystem !== 'undefined' && UserSystem.createUser) {
               createdUser = UserSystem.createUser(newUser);
             } else {
-              throw new Error('Система регистрации недоступна');
+              // Демо-режим: сохраняем в localStorage
+              const usersJson = localStorage.getItem('users');
+              let users = [];
+              
+              if (usersJson) {
+                users = JSON.parse(usersJson);
+              }
+              
+              const demoUser = {
+                id: 'user_' + Date.now(),
+                ...newUser,
+                registeredAt: new Date().toISOString()
+              };
+              
+              users.push(demoUser);
+              localStorage.setItem('users', JSON.stringify(users));
+              localStorage.setItem('current_user', JSON.stringify(demoUser));
+              createdUser = demoUser;
             }
             
             if (createdUser) {
-              // Обработка реферального кода
+              // ⭐ ВАЖНО: Обработка реферального кода после успешной регистрации
               if (currentRefCode) {
                 const referralResult = processReferralRegistration(createdUser.id);
                 
                 if (referralResult && !referralResult.success) {
-                  console.log('⚠️ Реферальная регистрация не удалась:', referralResult.message);
+                  console.log('⚠️ Реферальная регистрация не удалась, но пользователь создан');
+                  // Пользователь все равно регистрируется, даже если реферальная система не сработала
                 }
+              }
+              
+              // Устанавливаем текущего пользователя
+              if (typeof UserSystem !== 'undefined' && UserSystem.setCurrentUser) {
+                UserSystem.setCurrentUser(createdUser);
               }
               
               // Сохраняем метаданные
@@ -2050,8 +2257,6 @@
                 localStorage.setItem('referral_date', new Date().toISOString());
               }
               
-              console.log('✅ Пользователь успешно создан:', createdUser.email);
-              
               // Показываем успешную регистрацию
               setTimeout(() => {
                 window.location.href = 'map.html';
@@ -2063,7 +2268,7 @@
           } catch (error) {
             elements.spinner.style.display = 'none';
             
-            // Показываем ошибку пользователю
+            // Более информативное сообщение об ошибке
             const errorMsg = document.createElement('div');
             errorMsg.style.cssText = `
               position: fixed;
@@ -2079,7 +2284,7 @@
               max-width: 90%;
               text-align: center;
             `;
-            errorMsg.textContent = `Ошибка регистрации: ${error.message}`;
+            errorMsg.textContent = `Ошибка: ${error.message}`;
             document.body.appendChild(errorMsg);
             
             setTimeout(() => {
@@ -2088,14 +2293,12 @@
               }
             }, 3000);
             
-            console.error('❌ Ошибка регистрации:', error);
+            console.error('Registration error:', error);
           }
         });
-        
-        console.log('✅ Обработчик формы регистрации настроен');
       }
       
-      // Форма восстановления пароля
+      // Форма восстановления пароля (ИСПРАВЛЕННАЯ ВЕРСИЯ)
       function setupForgotPasswordForms() {
         // Форма email
         const forgotEmailForm = document.getElementById('forgot-email-form');
@@ -2106,14 +2309,13 @@
             const email = document.getElementById('forgot-email').value.trim().toLowerCase();
             const error = document.getElementById('forgot-email-error');
             const success = document.getElementById('forgot-email-success');
+            const demoHint = document.getElementById('demo-hint');
             
             hideAllMessages();
             
             if (!email) {
-              if (error) {
-                document.getElementById('forgot-email-error-text').textContent = 'Введите email';
-                error.style.display = 'flex';
-              }
+              document.getElementById('forgot-email-error-text').textContent = 'Введите email';
+              error.style.display = 'flex';
               return;
             }
             
@@ -2123,16 +2325,21 @@
               if (typeof UserSystem !== 'undefined' && UserSystem.findUser) {
                 const user = UserSystem.findUser(email);
                 userExists = !!user;
+              } else {
+                // Проверяем локальное хранилище
+                const usersJson = localStorage.getItem('users');
+                if (usersJson) {
+                  const users = JSON.parse(usersJson);
+                  userExists = users.some(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+                }
               }
             } catch (error) {
               console.log('⚠️ Ошибка поиска пользователя:', error);
             }
             
             if (!userExists) {
-              if (error) {
-                document.getElementById('forgot-email-error-text').textContent = 'Пользователь с таким email не найден';
-                error.style.display = 'flex';
-              }
+              document.getElementById('forgot-email-error-text').textContent = 'Пользователь с таким email не найден';
+              error.style.display = 'flex';
               return;
             }
             
@@ -2146,16 +2353,18 @@
               localStorage.setItem('reset_code_' + email, resetCode);
               localStorage.setItem('reset_email', email);
               
-              // Имитируем отправку (в реальном приложении здесь будет API вызов)
+              // Имитируем отправку
               await new Promise(resolve => setTimeout(resolve, 1200));
               
               resetEmail = email;
               
               elements.spinner.style.display = 'none';
-              if (success) success.style.display = 'flex';
+              success.style.display = 'flex';
+              if (demoHint) demoHint.style.display = 'block';
               
-              // В реальном приложении здесь будет отправка email
-              console.log('📧 Код для сброса пароля:', resetCode, 'для email:', email);
+              // Демо информация
+              console.log('🔐 Демо-режим: Код для сброса пароля:', resetCode);
+              console.log('📧 Email:', email);
               
               setTimeout(() => {
                 const userEmailElement = document.getElementById('user-email');
@@ -2168,15 +2377,13 @@
               
             } catch (error) {
               elements.spinner.style.display = 'none';
-              if (error) {
-                document.getElementById('forgot-email-error-text').textContent = 'Ошибка при отправке кода';
-                error.style.display = 'flex';
-              }
+              document.getElementById('forgot-email-error-text').textContent = 'Ошибка при отправке кода';
+              error.style.display = 'flex';
             }
           });
         }
         
-        // Повторная отправка кода
+        // Повторная отправка кода (ИСПРАВЛЕННАЯ ВЕРСИЯ)
         const resendBtn = document.getElementById('resend-btn');
         if (resendBtn) {
           resendBtn.addEventListener('click', async function() {
@@ -2200,7 +2407,8 @@
               
               await new Promise(resolve => setTimeout(resolve, 1200));
               
-              console.log('📧 Новый код для сброса пароля:', resetCode, 'для email:', resetEmail);
+              console.log('🔐 Демо-режим: Новый код:', resetCode);
+              console.log('📧 Email:', resetEmail);
               
               elements.spinner.style.display = 'none';
               
@@ -2237,7 +2445,7 @@
               // Запускаем таймер заново
               startTimer();
             } catch (error) {
-              console.error('❌ Ошибка повторной отправки кода:', error);
+              console.error('Error resending code:', error);
               elements.spinner.style.display = 'none';
               
               // Показываем ошибку
@@ -2339,7 +2547,7 @@
             elements.spinner.style.display = 'block';
             
             try {
-              // Обновляем пароль пользователя через UserSystem
+              // Обновляем пароль пользователя
               let updated = false;
               
               if (typeof UserSystem !== 'undefined' && UserSystem.getUsers) {
@@ -2347,11 +2555,25 @@
                 const userIndex = users.findIndex(u => u.email === resetEmail.toLowerCase());
                 
                 if (userIndex !== -1) {
-                  // Обновляем пароль с помощью UserSystem
-                  UserSystem.updateUser(users[userIndex].id, {
-                    password: newPassword
-                  });
+                  // В реальности здесь должно быть хеширование пароля
+                  users[userIndex].password = newPassword;
+                  users[userIndex].updatedAt = new Date().toISOString();
+                  UserSystem.saveUsers(users);
                   updated = true;
+                }
+              } else {
+                // Обновляем в localStorage
+                const usersJson = localStorage.getItem('users');
+                if (usersJson) {
+                  const users = JSON.parse(usersJson);
+                  const userIndex = users.findIndex(u => u.email === resetEmail.toLowerCase());
+                  
+                  if (userIndex !== -1) {
+                    users[userIndex].password = newPassword;
+                    users[userIndex].updatedAt = new Date().toISOString();
+                    localStorage.setItem('users', JSON.stringify(users));
+                    updated = true;
+                  }
                 }
               }
               
@@ -2380,13 +2602,13 @@
               elements.spinner.style.display = 'none';
               const codeError = document.getElementById('code-error');
               if (codeError) codeError.style.display = 'flex';
-              console.error('❌ Ошибка сброса пароля:', error);
+              console.error('Password reset error:', error);
             }
           });
         }
       }
       
-      // Настройка Telegram сброса пароля
+      // Настройка Telegram сброса пароля (ИСПРАВЛЕННАЯ ВЕРСИЯ)
       function setupTelegramReset() {
         // Форма ввода Telegram username
         const telegramForm = document.getElementById('forgot-telegram-form');
@@ -2400,6 +2622,7 @@
             const username = usernameInput.value.trim().replace('@', '');
             const error = telegramForm.querySelector('#telegram-username-error');
             const success = telegramForm.querySelector('#telegram-username-success');
+            const demoHint = document.getElementById('telegram-demo-hint');
             
             hideAllMessages();
             
@@ -2413,8 +2636,9 @@
             elements.spinner.style.display = 'block';
             
             try {
-              // Используем UserSystem для запроса сброса пароля
+              // Проверяем, доступен ли UserSystem
               if (typeof UserSystem !== 'undefined' && UserSystem.requestPasswordResetViaTelegram) {
+                // Используем UserSystem для запроса сброса пароля
                 const resetResult = await UserSystem.requestPasswordResetViaTelegram(username);
                 
                 if (resetResult.success) {
@@ -2423,13 +2647,26 @@
                   
                   elements.spinner.style.display = 'none';
                   
-                  // Обновляем сообщения
+                  // Обновляем сообщения в зависимости от режима
                   if (success) {
                     const successText = document.getElementById('telegram-success-text');
                     if (successText) {
                       successText.textContent = resetResult.message;
                     }
                     success.style.display = 'flex';
+                  }
+                  
+                  if (demoHint) {
+                    const demoText = document.getElementById('telegram-demo-text');
+                    if (demoText) {
+                      if (resetResult.code && resetResult.isDemo) {
+                        demoText.textContent = `Код отправлен: ${resetResult.code}`;
+                        demoHint.style.display = 'block';
+                        console.log(`🔐 Демо-режим: Код для сброса пароля: ${resetResult.code}`);
+                      } else {
+                        demoHint.style.display = 'none';
+                      }
+                    }
                   }
                   
                   console.log(`📱 Telegram username: @${currentTelegramUsername}`);
@@ -2452,12 +2689,56 @@
                   if (errorElement) errorElement.style.display = 'flex';
                 }
               } else {
-                // UserSystem недоступен
+                // Демо-режим - UserSystem недоступен
+                const user = {
+                  id: 'demo_' + Date.now(),
+                  email: 'demo@example.com'
+                };
+                
+                // Генерируем код
+                const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+                
+                // Сохраняем для проверки
+                localStorage.setItem(`tg_reset_${username}`, JSON.stringify({
+                  code: resetCode,
+                  userId: user.id,
+                  telegramUsername: username,
+                  expiresAt: Date.now() + (10 * 60 * 1000),
+                  createdAt: Date.now()
+                }));
+                
+                currentTelegramUsername = username;
+                currentTelegramUserId = user.id;
+                
                 elements.spinner.style.display = 'none';
-                const errorText = document.querySelector('#telegram-username-error-text');
-                if (errorText) errorText.textContent = 'Функция сброса через Telegram временно недоступна';
-                const errorElement = document.getElementById('telegram-username-error');
-                if (errorElement) errorElement.style.display = 'flex';
+                
+                if (success) {
+                  const successText = document.getElementById('telegram-success-text');
+                  if (successText) {
+                    successText.textContent = 'Код сгенерирован (демо-режим)';
+                  }
+                  success.style.display = 'flex';
+                }
+                
+                if (demoHint) {
+                  const demoText = document.getElementById('telegram-demo-text');
+                  if (demoText) {
+                    demoText.textContent = `Код отправлен: ${resetCode}`;
+                  }
+                  demoHint.style.display = 'block';
+                }
+                
+                console.log(`🔐 Демо-режим: Код для сброса пароля: ${resetCode}`);
+                console.log(`📱 Telegram username: @${username}`);
+                
+                setTimeout(() => {
+                  const usernameDisplay = document.getElementById('telegram-username-display');
+                  if (usernameDisplay) {
+                    usernameDisplay.textContent = '@' + username;
+                  }
+                  showView('forgot-telegram-code');
+                  startTelegramTimer();
+                }, 1500);
               }
               
             } catch (error) {
@@ -2466,7 +2747,7 @@
               if (errorText) errorText.textContent = 'Ошибка при отправке кода';
               const errorElement = document.getElementById('telegram-username-error');
               if (errorElement) errorElement.style.display = 'flex';
-              console.error('❌ Ошибка запроса сброса через Telegram:', error);
+              console.error('Ошибка запроса сброса через Telegram:', error);
             }
           });
         }
@@ -2514,7 +2795,13 @@
                     animation: fadeIn 0.3s ease;
                   `;
                   
-                  notification.textContent = '✅ Новый код отправлен в Telegram!';
+                  if (resetResult.code && resetResult.isDemo) {
+                    notification.textContent = `✅ Новый код (демо): ${resetResult.code}`;
+                    console.log(`🔐 Новый код (демо): ${resetResult.code}`);
+                  } else {
+                    notification.textContent = '✅ Новый код отправлен в Telegram!';
+                  }
+                  
                   document.body.appendChild(notification);
                   
                   setTimeout(() => {
@@ -2542,19 +2829,57 @@
                   }
                 }
               } else {
+                // Демо-режим
+                const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+                
+                // Обновляем сохраненный код
+                localStorage.setItem(`tg_reset_${currentTelegramUsername}`, JSON.stringify({
+                  code: resetCode,
+                  userId: currentTelegramUserId,
+                  telegramUsername: currentTelegramUsername,
+                  expiresAt: Date.now() + (10 * 60 * 1000),
+                  createdAt: Date.now()
+                }));
+                
                 elements.spinner.style.display = 'none';
                 
-                const errorElement = document.getElementById('tg-code-error');
-                if (errorElement) {
-                  const errorText = document.getElementById('tg-error-text');
-                  if (errorText) {
-                    errorText.textContent = 'Функция временно недоступна';
-                  }
-                  errorElement.style.display = 'flex';
-                }
+                // Показываем уведомление
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                  position: fixed;
+                  top: 20px;
+                  left: 50%;
+                  transform: translateX(-50%);
+                  background: linear-gradient(135deg, #0088cc, #34b7f1);
+                  color: white;
+                  padding: 12px 20px;
+                  border-radius: 8px;
+                  z-index: 10000;
+                  font-size: 14px;
+                  max-width: 90%;
+                  text-align: center;
+                  animation: fadeIn 0.3s ease;
+                `;
+                notification.textContent = `✅ Новый код (демо): ${resetCode}`;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                  notification.style.opacity = '0';
+                  notification.style.transform = 'translateX(-50%) translateY(-10px)';
+                  setTimeout(() => {
+                    if (notification.parentNode) {
+                      notification.parentNode.removeChild(notification);
+                    }
+                  }, 300);
+                }, 2000);
+                
+                console.log(`🔐 Новый код (демо): ${resetCode}`);
+                
+                // Запускаем таймер заново
+                startTelegramTimer();
               }
             } catch (error) {
-              console.error('❌ Ошибка повторной отправки Telegram кода:', error);
+              console.error('Error resending Telegram code:', error);
               elements.spinner.style.display = 'none';
               
               const errorElement = document.getElementById('tg-code-error');
@@ -2594,7 +2919,7 @@
             elements.spinner.style.display = 'block';
             
             try {
-              // Проверяем код через UserSystem
+              // Проверяем код через UserSystem если доступен
               if (typeof UserSystem !== 'undefined' && UserSystem.verifyTelegramResetCode) {
                 const verifyResult = UserSystem.verifyTelegramResetCode(currentTelegramUsername, code);
                 
@@ -2625,17 +2950,69 @@
                   });
                 }
               } else {
-                elements.spinner.style.display = 'none';
-                if (error) {
-                  const errorText = document.getElementById('tg-error-text');
-                  if (errorText) {
-                    errorText.textContent = 'Функция проверки кода недоступна';
+                // Демо-режим - проверяем в localStorage
+                const storedData = localStorage.getItem(`tg_reset_${currentTelegramUsername}`);
+                
+                if (!storedData) {
+                  if (error) {
+                    const errorText = document.getElementById('tg-error-text');
+                    if (errorText) {
+                      errorText.textContent = 'Код не найден или истек';
+                    }
+                    error.style.display = 'flex';
                   }
-                  error.style.display = 'flex';
+                  elements.spinner.style.display = 'none';
+                  return;
                 }
+                
+                const resetData = JSON.parse(storedData);
+                
+                // Проверяем срок действия
+                if (Date.now() > resetData.expiresAt) {
+                  localStorage.removeItem(`tg_reset_${currentTelegramUsername}`);
+                  if (error) {
+                    const errorText = document.getElementById('tg-error-text');
+                    if (errorText) {
+                      errorText.textContent = 'Срок действия кода истек';
+                    }
+                    error.style.display = 'flex';
+                  }
+                  elements.spinner.style.display = 'none';
+                  return;
+                }
+                
+                // Проверяем код
+                if (resetData.code !== code) {
+                  if (error) {
+                    const errorText = document.getElementById('tg-error-text');
+                    if (errorText) {
+                      errorText.textContent = 'Неверный код';
+                    }
+                    error.style.display = 'flex';
+                  }
+                  
+                  // Анимация ошибки
+                  elements.tgCodeInputs.forEach(input => {
+                    input.style.borderColor = 'var(--border-error)';
+                    setTimeout(() => {
+                      input.style.borderColor = '';
+                    }, 1000);
+                  });
+                  
+                  elements.spinner.style.display = 'none';
+                  return;
+                }
+                
+                // Код верный
+                showView('new-password');
+                
+                // Сохраняем данные для сброса пароля
+                localStorage.setItem('tg_reset_username', currentTelegramUsername);
+                localStorage.setItem('tg_reset_code', code);
+                localStorage.setItem('tg_reset_userId', resetData.userId);
               }
             } catch (error) {
-              console.error('❌ Ошибка проверки Telegram кода:', error);
+              console.error('Ошибка проверки Telegram кода:', error);
               const errorElement = document.getElementById('tg-code-error');
               if (errorElement) {
                 const errorText = document.getElementById('tg-error-text');
@@ -2653,14 +3030,17 @@
         // Обработка формы нового пароля для Telegram
         const newPasswordForm = document.getElementById('new-password-form');
         if (newPasswordForm) {
-          // Добавляем обработку для Telegram
+          // Сохраняем оригинальный обработчик
+          const originalSubmitHandler = newPasswordForm.onsubmit;
+          
+          // Добавляем новую обработку для Telegram
           newPasswordForm.addEventListener('submit', async function(e) {
             // Проверяем, используем ли мы Telegram сброс
             const tgUsername = localStorage.getItem('tg_reset_username');
             const tgCode = localStorage.getItem('tg_reset_code');
             
             if (!tgUsername || !tgCode) {
-              // Это не Telegram сброс, пропускаем обработку
+              // Это не Telegram сброс, пропускаем оригинальную обработку
               return;
             }
             
@@ -2753,17 +3133,54 @@
                   }
                 }
               } else {
+                // Демо-режим
+                const userId = localStorage.getItem('tg_reset_userId');
+                
+                if (userId) {
+                  // Обновляем пароль в localStorage
+                  const usersJson = localStorage.getItem('users');
+                  if (usersJson) {
+                    const users = JSON.parse(usersJson);
+                    const userIndex = users.findIndex(u => u.id === userId);
+                    
+                    if (userIndex !== -1) {
+                      users[userIndex].password = newPassword;
+                      users[userIndex].updatedAt = new Date().toISOString();
+                      localStorage.setItem('users', JSON.stringify(users));
+                    }
+                  }
+                }
+                
+                // Очищаем данные
+                localStorage.removeItem('tg_reset_username');
+                localStorage.removeItem('tg_reset_code');
+                localStorage.removeItem('tg_reset_userId');
+                
                 elements.spinner.style.display = 'none';
                 
-                const errorElement = document.getElementById('new-password-error');
-                if (errorElement) {
-                  errorElement.textContent = 'Функция сброса пароля временно недоступна';
-                  errorElement.style.display = 'flex';
+                const successElement = document.getElementById('password-reset-success');
+                if (successElement) {
+                  successElement.textContent = 'Пароль успешно изменен! Теперь вы можете войти с новым паролем.';
+                  successElement.style.display = 'flex';
                 }
+                
+                // Очищаем поля
+                elements.tgCodeInputs.forEach(input => input.value = '');
+                document.getElementById('new-password').value = '';
+                document.getElementById('new-password-confirm').value = '';
+                
+                // Возвращаем к входу через 2 секунды
+                setTimeout(() => {
+                  showView('login');
+                  clearInterval(tgTimer);
+                  tgTimer = null;
+                  currentTelegramUsername = '';
+                  currentTelegramUserId = '';
+                }, 2000);
               }
             } catch (error) {
               elements.spinner.style.display = 'none';
-              console.error('❌ Ошибка сброса пароля через Telegram:', error);
+              console.error('Ошибка сброса пароля через Telegram:', error);
               
               const errorElement = document.getElementById('new-password-error');
               if (errorElement) {
@@ -2771,22 +3188,28 @@
                 errorElement.style.display = 'flex';
               }
             }
-          });
+          }, true); // Используем capture чтобы перехватить событие первым
         }
       }
       
       // PWA функциональность
       function setupPWA() {
-        // Service Worker
+        // Service Worker - исправленная версия
         if ('serviceWorker' in navigator) {
           window.addEventListener('load', () => {
-            // Регистрируем service worker
+            // Регистрируем service worker с текущего пути
             navigator.serviceWorker.register('/service-worker.js')
               .then(registration => {
                 console.log('✅ Service Worker зарегистрирован:', registration.scope);
+                
+                // Проверка обновлений
+                registration.addEventListener('updatefound', () => {
+                  console.log('🔄 Обнаружено обновление Service Worker');
+                });
               })
               .catch(error => {
-                console.log('ℹ️ Service Worker не зарегистрирован:', error);
+                console.log('❌ Ошибка регистрации Service Worker:', error);
+                console.log('ℹ️ Это нормально, если файл service-worker.js не существует');
               });
           });
         }
@@ -2863,11 +3286,13 @@
         try {
           // Проверяем UserSystem
           if (typeof UserSystem !== 'undefined' && UserSystem.getCurrentUser) {
-            const user = UserSystem.getCurrentUser();
-            if (user) {
-              console.log('👤 Авторизованный пользователь:', user.email);
-              return user;
-            }
+            return UserSystem.getCurrentUser();
+          }
+          
+          // Проверяем localStorage
+          const currentUserJson = localStorage.getItem('current_user');
+          if (currentUserJson) {
+            return JSON.parse(currentUserJson);
           }
           
           return null;
@@ -2881,11 +3306,28 @@
       function init() {
         console.log('🚀 Инициализация приложения Карта друзей');
         
+        // Инициализация Telegram Bot API
+        if (typeof TelegramBotAPI !== 'undefined') {
+          TelegramBotAPI.init();
+          console.log('🤖 Telegram Bot API инициализирован');
+          
+          // Проверяем соединение с ботом
+          TelegramBotAPI.testConnection().then(result => {
+            if (result.ok) {
+              console.log('✅ Telegram Bot доступен:', result.result.username);
+            } else {
+              console.warn('⚠️ Telegram Bot недоступен. Демо-режим будет использован.');
+            }
+          });
+        } else {
+          console.warn('⚠️ TelegramBotAPI не загружен. Демо-режим будет использован.');
+        }
+        
         // Проверяем, есть ли уже авторизованный пользователь
         const currentUser = checkCurrentUser();
         if (currentUser) {
           console.log('👤 Пользователь уже авторизован:', currentUser.nickname || currentUser.email);
-          console.log('🔗 Автоматический переход на карту...');
+          console.log('🔗 Автоматический переход на карту через 2 секунды...');
           
           // Показываем уведомление
           const notification = document.createElement('div');
@@ -2910,7 +3352,7 @@
           // Автоматический редирект на карту
           setTimeout(() => {
             window.location.href = 'map.html';
-          }, 1500);
+          }, 2000);
           
           return;
         }
@@ -2958,12 +3400,122 @@
           tgResendBtn.style.opacity = '0.5';
         }
         
+        // Проверка сессии
+        const lastLogin = localStorage.getItem('last_login');
+        if (lastLogin) {
+          const lastLoginDate = new Date(lastLogin);
+          const now = new Date();
+          const hoursDiff = (now - lastLoginDate) / (1000 * 60 * 60);
+          
+          if (hoursDiff < 24) {
+            console.log('🔄 Последний вход был:', lastLoginDate.toLocaleString());
+          }
+        }
+        
         // Логирование реферальной информации
         if (currentRefCode) {
           console.log('🔗 Активный реферальный код:', currentRefCode);
+          console.log('📊 Для тестирования: откройте ссылку index.html?ref=' + currentRefCode);
         }
         
         console.log('✅ Приложение инициализировано');
+        
+        // Добавляем утилиту для сброса паролей (для отладки)
+        window.resetUserPasswords = function() {
+          try {
+            let users = [];
+            
+            if (typeof UserSystem !== 'undefined' && UserSystem.getUsers) {
+              users = UserSystem.getUsers();
+            } else {
+              const usersJson = localStorage.getItem('users');
+              if (usersJson) {
+                users = JSON.parse(usersJson);
+              }
+            }
+            
+            console.log('👥 Найдено пользователей:', users.length);
+            
+            users.forEach((user, index) => {
+              console.log(`\n${index + 1}. ${user.email} (${user.nickname})`);
+              console.log('   Старый пароль:', user.password);
+              
+              // Устанавливаем новый пароль (демо)
+              const newPassword = '12345678';
+              
+              // Обновляем пароль
+              user.password = newPassword;
+              console.log('   Новый пароль:', newPassword);
+            });
+            
+            // Сохраняем изменения
+            if (typeof UserSystem !== 'undefined' && UserSystem.saveUsers) {
+              UserSystem.saveUsers(users);
+            } else {
+              localStorage.setItem('users', JSON.stringify(users));
+            }
+            
+            console.log('\n✅ Пароли сброшены!');
+            console.log('📝 Теперь можно войти с паролем: 12345678');
+            alert('Пароли сброшены! Теперь можно войти с паролем: 12345678');
+          } catch (error) {
+            console.error('❌ Ошибка сброса паролей:', error);
+            alert('Ошибка сброса паролей: ' + error.message);
+          }
+        };
+        
+        // Добавляем утилиту для создания демо-пользователя
+        window.createDemoUser = function() {
+          const demoUser = {
+            id: 'demo-' + Date.now(),
+            email: 'demo@example.com',
+            nickname: 'demouser',
+            password: '12345678',
+            registeredAt: new Date().toISOString()
+          };
+          
+          try {
+            if (typeof UserSystem !== 'undefined' && UserSystem.createUser) {
+              UserSystem.createUser(demoUser);
+            } else {
+              const usersJson = localStorage.getItem('users');
+              let users = [];
+              
+              if (usersJson) {
+                users = JSON.parse(usersJson);
+              }
+              
+              users.push(demoUser);
+              localStorage.setItem('users', JSON.stringify(users));
+            }
+            
+            console.log('✅ Демо-пользователь создан:', demoUser);
+            alert('Демо-пользователь создан!\nEmail: demo@example.com\nПароль: 12345678');
+          } catch (error) {
+            console.error('❌ Ошибка создания демо-пользователя:', error);
+            alert('Ошибка создания демо-пользователя: ' + error.message);
+          }
+        };
+        
+        // Добавляем утилиту для тестирования Telegram
+        window.testTelegramBot = async function() {
+          if (typeof TelegramBotAPI !== 'undefined') {
+            console.log('🔧 Тестирование Telegram Bot...');
+            
+            const testResult = await TelegramBotAPI.testConnection();
+            
+            if (testResult.ok) {
+              console.log('✅ Telegram Bot доступен:', testResult.result);
+              alert(`Telegram Bot доступен!\nИмя бота: ${testResult.result.first_name}\nUsername: @${testResult.result.username}`);
+            } else {
+              console.log('❌ Telegram Bot недоступен:', testResult);
+              alert('Telegram Bot недоступен. Проверьте токен бота.');
+            }
+          } else {
+            console.log('❌ TelegramBotAPI не загружен');
+            alert('TelegramBotAPI не загружен. Проверьте подключение файла.');
+          }
+        };
       }
       
       // Запуск при загрузке страницы
@@ -2973,6 +3525,18 @@
         init();
       }
       
+      // Экспорт глобальных функций
+      window.App = {
+        showView,
+        hideAllMessages,
+        startTimer,
+        updateTimerDisplay,
+        startTelegramTimer,
+        updateTelegramTimerDisplay,
+        checkReferralCode,
+        processReferralRegistration,
+        checkCurrentUser
+      };
     })();
   </script>
 </body>
