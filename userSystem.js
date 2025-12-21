@@ -73,8 +73,8 @@ const UserSystem = {
             
             console.log('🔐 Регистрация:', {
                 email: userData.email,
-                password: userData.password,
-                hash: hashedPassword
+                nickname: userData.nickname,
+                hash: hashedPassword.substring(0, 10) + '...'
             });
 
             // Создаем полный объект пользователя
@@ -155,7 +155,7 @@ const UserSystem = {
                 'nickname', 'avatar', 'status', 'invisible',
                 'position', 'about', 'settings', 'stats',
                 'referralCode', 'referralGeneratedAt', 'referredBy',
-                'password', 'lastSeen', 'lastActive'
+                'password', 'lastSeen', 'lastActive', 'telegram'
             ];
             
             const updatedUser = { ...users[userIndex] };
@@ -324,8 +324,8 @@ const UserSystem = {
             console.log('🔐 Сравнение паролей:', {
                 identifier: identifier,
                 userEmail: user.email,
-                storedHash: user.password,
-                inputHash: hashedPassword,
+                storedHash: user.password.substring(0, 10) + '...',
+                inputHash: hashedPassword.substring(0, 10) + '...',
                 match: user.password === hashedPassword
             });
 
@@ -378,6 +378,499 @@ const UserSystem = {
         } catch (error) {
             console.error('❌ Ошибка выхода:', error);
             return false;
+        }
+    },
+
+    // ============ TELEGRAM ИНТЕГРАЦИЯ ДЛЯ СБРОСА ПАРОЛЯ ============
+    
+    // Поиск пользователя по Telegram username
+    findUserByTelegramUsername: function(username) {
+        if (!username || typeof username !== 'string') return null;
+        
+        const cleanUsername = username.replace('@', '').trim().toLowerCase();
+        const users = this.getUsers();
+        
+        return users.find(user => 
+            user.telegram && 
+            user.telegram.username && 
+            user.telegram.username.toLowerCase() === cleanUsername &&
+            user.telegram.verified === true
+        );
+    },
+
+    // Запрос сброса пароля через Telegram
+    requestPasswordResetViaTelegram: async function(username) {
+        try {
+            // Убираем @ если есть
+            const cleanUsername = username.replace('@', '').trim();
+            
+            if (!cleanUsername) {
+                return {
+                    success: false,
+                    message: 'Введите Telegram username'
+                };
+            }
+            
+            // Ищем пользователя
+            const user = this.findUserByTelegramUsername(cleanUsername);
+            
+            if (!user) {
+                return {
+                    success: false,
+                    message: 'Пользователь с таким Telegram не найден или аккаунт не подтвержден'
+                };
+            }
+            
+            // Генерируем 6-значный код
+            const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const expiresAt = Date.now() + (10 * 60 * 1000); // 10 минут
+            
+            // Сохраняем код для проверки
+            const resetData = {
+                code: resetCode,
+                userId: user.id,
+                telegramUsername: cleanUsername,
+                expiresAt: expiresAt,
+                createdAt: Date.now(),
+                attempts: 0
+            };
+            
+            // Сохраняем в localStorage
+            localStorage.setItem(`tg_reset_${cleanUsername}`, JSON.stringify(resetData));
+            
+            console.log(`🔐 Сгенерирован код сброса для @${cleanUsername}: ${resetCode}`);
+            
+            // Проверяем, есть ли Telegram Bot API
+            if (typeof TelegramBotAPI !== 'undefined' && TelegramBotAPI.validateToken()) {
+                try {
+                    // Реальный режим - отправляем через Telegram API
+                    console.log(`📤 Отправка кода сброса через Telegram Bot API для @${cleanUsername}`);
+                    const sendResult = await TelegramBotAPI.sendPasswordResetCode(cleanUsername, resetCode);
+                    
+                    if (sendResult.ok) {
+                        return {
+                            success: true,
+                            message: '✅ Код для сброса пароля отправлен в ваш Telegram',
+                            userId: user.id,
+                            username: cleanUsername,
+                            expiresAt: expiresAt
+                        };
+                    } else {
+                        // Если отправка не удалась, возвращаем ошибку
+                        console.error('❌ Ошибка отправки через Telegram API:', sendResult.description);
+                        return {
+                            success: false,
+                            message: '❌ Не удалось отправить код через Telegram. Проверьте настройки бота.'
+                        };
+                    }
+                } catch (telegramError) {
+                    console.error('❌ Ошибка Telegram API:', telegramError);
+                    // Если не удалось отправить через Telegram, показываем код для демо-режима
+                    return {
+                        success: true,
+                        message: '⚠️ Не удалось отправить через Telegram. Используйте код из консоли.',
+                        code: resetCode, // Для демо-режима
+                        userId: user.id,
+                        username: cleanUsername,
+                        expiresAt: expiresAt,
+                        isDemo: true
+                    };
+                }
+            } else {
+                // Демо-режим - показываем код в консоли
+                console.log(`📱 ДЕМО-РЕЖИМ: Код для @${cleanUsername}: ${resetCode}`);
+                console.log(`⏰ Код действителен до: ${new Date(expiresAt).toLocaleTimeString()}`);
+                console.log(`⚠️ Для реальной отправки настройте TelegramBotAPI в telegram-bot-api.js`);
+                
+                return {
+                    success: true,
+                    message: '📱 Код сгенерирован (демо-режим). Проверьте консоль браузера.',
+                    code: resetCode, // Для демо-режима
+                    userId: user.id,
+                    username: cleanUsername,
+                    expiresAt: expiresAt,
+                    isDemo: true
+                };
+            }
+            
+        } catch (error) {
+            console.error('❌ Ошибка запроса сброса пароля через Telegram:', error);
+            return {
+                success: false,
+                message: '❌ Ошибка при отправке кода: ' + error.message
+            };
+        }
+    },
+
+    // Проверка Telegram кода сброса
+    verifyTelegramResetCode: function(username, code) {
+        try {
+            const cleanUsername = username.replace('@', '').trim();
+            
+            if (!cleanUsername || !code || code.length !== 6) {
+                return {
+                    success: false,
+                    message: '❌ Введите корректный 6-значный код'
+                };
+            }
+            
+            // Получаем сохраненные данные
+            const storedData = localStorage.getItem(`tg_reset_${cleanUsername}`);
+            
+            if (!storedData) {
+                return {
+                    success: false,
+                    message: '❌ Код не найден или истек'
+                };
+            }
+            
+            const resetData = JSON.parse(storedData);
+            
+            // Проверяем срок действия
+            if (Date.now() > resetData.expiresAt) {
+                localStorage.removeItem(`tg_reset_${cleanUsername}`);
+                return {
+                    success: false,
+                    message: '❌ Срок действия кода истек'
+                };
+            }
+            
+            // Проверяем количество попыток
+            if (resetData.attempts >= 5) {
+                localStorage.removeItem(`tg_reset_${cleanUsername}`);
+                return {
+                    success: false,
+                    message: '❌ Слишком много неверных попыток. Запросите новый код'
+                };
+            }
+            
+            // Проверяем код
+            if (resetData.code !== code) {
+                // Увеличиваем счетчик попыток
+                resetData.attempts = (resetData.attempts || 0) + 1;
+                localStorage.setItem(`tg_reset_${cleanUsername}`, JSON.stringify(resetData));
+                
+                const remainingAttempts = 5 - resetData.attempts;
+                return {
+                    success: false,
+                    message: `❌ Неверный код. Осталось попыток: ${remainingAttempts}`
+                };
+            }
+            
+            // Код верный
+            // Помечаем как проверенный
+            resetData.verified = true;
+            resetData.verifiedAt = Date.now();
+            localStorage.setItem(`tg_reset_${cleanUsername}`, JSON.stringify(resetData));
+            
+            return {
+                success: true,
+                message: '✅ Код подтвержден',
+                userId: resetData.userId,
+                username: cleanUsername
+            };
+            
+        } catch (error) {
+            console.error('❌ Ошибка проверки Telegram кода:', error);
+            return {
+                success: false,
+                message: '❌ Ошибка проверки кода'
+            };
+        }
+    },
+
+    // Сброс пароля после проверки Telegram кода
+    resetPasswordWithTelegram: function(username, code, newPassword) {
+        try {
+            // Сначала проверяем код
+            const verifyResult = this.verifyTelegramResetCode(username, code);
+            
+            if (!verifyResult.success) {
+                return verifyResult;
+            }
+            
+            const userId = verifyResult.userId;
+            
+            // Валидация нового пароля
+            if (!newPassword || newPassword.length < 8) {
+                return {
+                    success: false,
+                    message: '❌ Пароль должен быть не менее 8 символов'
+                };
+            }
+            
+            // Проверяем сложность пароля
+            if (!/[a-zA-Z]/.test(newPassword)) {
+                return {
+                    success: false,
+                    message: '❌ Пароль должен содержать буквы'
+                };
+            }
+            
+            if (!/\d/.test(newPassword)) {
+                return {
+                    success: false,
+                    message: '❌ Пароль должен содержать цифры'
+                };
+            }
+            
+            // Обновляем пароль пользователя
+            const users = this.getUsers();
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex === -1) {
+                return {
+                    success: false,
+                    message: '❌ Пользователь не найден'
+                };
+            }
+            
+            // Хэшируем новый пароль
+            users[userIndex].password = this.hashPassword(newPassword);
+            users[userIndex].updatedAt = new Date().toISOString();
+            users[userIndex].lastPasswordChange = Date.now();
+            
+            // Сохраняем изменения
+            this.saveUsers(users);
+            
+            // Очищаем данные сброса
+            const cleanUsername = username.replace('@', '').trim();
+            localStorage.removeItem(`tg_reset_${cleanUsername}`);
+            
+            // Отправляем уведомление об успешном сбросе (если доступен Telegram API)
+            if (typeof TelegramBotAPI !== 'undefined' && TelegramBotAPI.validateToken()) {
+                setTimeout(async () => {
+                    try {
+                        await TelegramBotAPI.sendPasswordResetSuccess(cleanUsername);
+                    } catch (error) {
+                        console.warn('Не удалось отправить уведомление в Telegram:', error);
+                    }
+                }, 1000);
+            }
+            
+            return {
+                success: true,
+                message: '✅ Пароль успешно изменен! Теперь вы можете войти с новым паролем.'
+            };
+            
+        } catch (error) {
+            console.error('❌ Ошибка сброса пароля через Telegram:', error);
+            return {
+                success: false,
+                message: '❌ Ошибка сброса пароля: ' + error.message
+            };
+        }
+    },
+
+    // Привязка Telegram аккаунта
+    bindTelegramAccount: function(userId, telegramUsername) {
+        try {
+            const users = this.getUsers();
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex === -1) {
+                return { success: false, message: '❌ Пользователь не найден' };
+            }
+            
+            const cleanUsername = telegramUsername.replace('@', '').trim();
+            
+            // Проверяем, не привязан ли уже этот телеграм аккаунт
+            const existingBinding = users.find(u => 
+                u.telegram && 
+                u.telegram.username === cleanUsername && 
+                u.id !== userId
+            );
+            
+            if (existingBinding) {
+                return { 
+                    success: false, 
+                    message: '❌ Этот Telegram аккаунт уже привязан к другому пользователю' 
+                };
+            }
+            
+            // Привязываем аккаунт (пока не подтвержден)
+            users[userIndex].telegram = {
+                username: cleanUsername,
+                verified: false,
+                verificationCode: null,
+                codeExpires: null,
+                boundAt: null
+            };
+            
+            this.saveUsers(users);
+            this.setCurrentUser(users[userIndex]);
+            
+            return { 
+                success: true, 
+                message: '✅ Telegram аккаунт привязан. Требуется верификация.' 
+            };
+        } catch (error) {
+            console.error('❌ Ошибка привязки Telegram:', error);
+            return { success: false, message: '❌ Ошибка привязки аккаунта' };
+        }
+    },
+
+    // Верификация Telegram аккаунта
+    verifyTelegramAccount: function(userId, verificationCode) {
+        try {
+            const users = this.getUsers();
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex === -1) {
+                return { success: false, message: '❌ Пользователь не найден' };
+            }
+            
+            const user = users[userIndex];
+            
+            if (!user.telegram) {
+                return { success: false, message: '❌ Telegram аккаунт не привязан' };
+            }
+            
+            // Проверяем срок действия кода
+            if (user.telegram.codeExpires && Date.now() > user.telegram.codeExpires) {
+                return { success: false, message: '❌ Срок действия кода истек' };
+            }
+            
+            // Проверяем код
+            if (user.telegram.verificationCode !== verificationCode) {
+                return { success: false, message: '❌ Неверный код подтверждения' };
+            }
+            
+            // Верифицируем аккаунт
+            user.telegram.verified = true;
+            user.telegram.verificationCode = null;
+            user.telegram.codeExpires = null;
+            user.telegram.boundAt = new Date().toISOString();
+            
+            this.saveUsers(users);
+            this.setCurrentUser(user);
+            
+            return { success: true, message: '✅ Telegram аккаунт успешно подтвержден!' };
+        } catch (error) {
+            console.error('❌ Ошибка верификации Telegram:', error);
+            return { success: false, message: '❌ Ошибка подтверждения аккаунта' };
+        }
+    },
+
+    // Генерация кода верификации для Telegram
+    generateTelegramVerificationCode: function(userId) {
+        try {
+            const users = this.getUsers();
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex === -1) {
+                return null;
+            }
+            
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            const expires = Date.now() + (10 * 60 * 1000); // 10 минут
+            
+            users[userIndex].telegram.verificationCode = code;
+            users[userIndex].telegram.codeExpires = expires;
+            
+            this.saveUsers(users);
+            
+            return {
+                code: code,
+                expires: expires,
+                username: users[userIndex].telegram.username
+            };
+        } catch (error) {
+            console.error('❌ Ошибка генерации кода верификации:', error);
+            return null;
+        }
+    },
+
+    // Отправка кода верификации в Telegram
+    sendTelegramVerificationCode: async function(userId) {
+        try {
+            const user = this.findUser(userId);
+            
+            if (!user || !user.telegram || !user.telegram.username) {
+                return { success: false, message: '❌ Telegram аккаунт не привязан' };
+            }
+            
+            const codeData = this.generateTelegramVerificationCode(userId);
+            
+            if (!codeData) {
+                return { success: false, message: '❌ Ошибка генерации кода' };
+            }
+            
+            // Проверяем доступность Telegram Bot API
+            if (typeof TelegramBotAPI !== 'undefined' && TelegramBotAPI.validateToken()) {
+                try {
+                    // Отправляем через Telegram Bot API
+                    console.log(`📤 Отправка кода верификации через Telegram Bot API для @${codeData.username}`);
+                    const sendResult = await TelegramBotAPI.sendVerificationCode(
+                        codeData.username, 
+                        codeData.code
+                    );
+                    
+                    if (sendResult.ok) {
+                        return { 
+                            success: true, 
+                            message: '✅ Код отправлен в Telegram',
+                            username: codeData.username
+                        };
+                    } else {
+                        // Если не удалось отправить, показываем в консоли
+                        console.error('❌ Ошибка отправки через Telegram:', sendResult.description);
+                        console.log(`📱 РЕЗЕРВНЫЙ РЕЖИМ: Код верификации для @${codeData.username}: ${codeData.code}`);
+                        return { 
+                            success: true, 
+                            message: '⚠️ Не удалось отправить через Telegram. Используйте код из консоли.',
+                            code: codeData.code, // Для демо
+                            username: codeData.username,
+                            isDemo: true
+                        };
+                    }
+                } catch (telegramError) {
+                    console.error('❌ Ошибка Telegram API:', telegramError);
+                    console.log(`📱 РЕЗЕРВНЫЙ РЕЖИМ: Код верификации для @${codeData.username}: ${codeData.code}`);
+                    return { 
+                        success: true, 
+                        message: '⚠️ Ошибка Telegram API. Используйте код из консоли.',
+                        code: codeData.code,
+                        username: codeData.username,
+                        isDemo: true
+                    };
+                }
+            } else {
+                // Демо-режим
+                console.log(`📱 ДЕМО: Код верификации для @${codeData.username}: ${codeData.code}`);
+                return { 
+                    success: true, 
+                    message: '📱 Код сгенерирован (демо-режим)',
+                    code: codeData.code,
+                    username: codeData.username
+                };
+            }
+        } catch (error) {
+            console.error('❌ Ошибка отправки кода верификации:', error);
+            return { success: false, message: '❌ Ошибка отправки кода' };
+        }
+    },
+
+    // Отвязать Telegram аккаунт
+    unbindTelegramAccount: function(userId) {
+        try {
+            const users = this.getUsers();
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex === -1) {
+                return { success: false, message: '❌ Пользователь не найден' };
+            }
+            
+            // Удаляем данные Telegram
+            delete users[userIndex].telegram;
+            
+            this.saveUsers(users);
+            this.setCurrentUser(users[userIndex]);
+            
+            return { success: true, message: '✅ Telegram аккаунт успешно отвязан' };
+        } catch (error) {
+            console.error('❌ Ошибка отвязки Telegram:', error);
+            return { success: false, message: '❌ Ошибка отвязки аккаунта' };
         }
     },
 
@@ -1227,6 +1720,17 @@ const UserSystem = {
             isActive: Boolean(user.isActive ?? true)
         };
 
+        // Добавляем данные Telegram если есть
+        if (user.telegram && typeof user.telegram === 'object') {
+            validated.telegram = {
+                username: user.telegram.username || '',
+                verified: Boolean(user.telegram.verified),
+                verificationCode: user.telegram.verificationCode || null,
+                codeExpires: user.telegram.codeExpires || null,
+                boundAt: user.telegram.boundAt || null
+            };
+        }
+
         return validated;
     },
 
@@ -1328,9 +1832,41 @@ const UserSystem = {
             // Очищаем устаревшие QR-коды
             this.cleanupExpiredQRCodes();
             
+            // Очищаем устаревшие коды сброса пароля Telegram
+            this.cleanupExpiredTelegramResetCodes();
+            
             console.log('✅ Очистка данных завершена');
         } catch (error) {
             console.error('❌ Ошибка очистки данных:', error);
+        }
+    },
+
+    // Очистка устаревших кодов сброса пароля Telegram
+    cleanupExpiredTelegramResetCodes: function() {
+        try {
+            const now = Date.now();
+            const keysToRemove = [];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('tg_reset_')) {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        if (data && data.expiresAt && now > data.expiresAt) {
+                            localStorage.removeItem(key);
+                            keysToRemove.push(key);
+                        }
+                    } catch (e) {
+                        // Игнорируем ошибки парсинга
+                    }
+                }
+            }
+            
+            if (keysToRemove.length > 0) {
+                console.log(`🗑️ Очищено ${keysToRemove.length} устаревших Telegram кодов`);
+            }
+        } catch (error) {
+            console.error('❌ Ошибка очистки Telegram кодов:', error);
         }
     },
 
@@ -1606,6 +2142,18 @@ const UserSystem = {
             const qrRequests = requests.filter(req => req.metadata?.viaQR === true);
             const acceptedQRRequests = qrRequests.filter(req => req.status === 'accepted');
             
+            // Telegram статистика
+            let telegramUsers = 0;
+            let verifiedTelegramUsers = 0;
+            users.forEach(user => {
+                if (user.telegram) {
+                    telegramUsers++;
+                    if (user.telegram.verified) {
+                        verifiedTelegramUsers++;
+                    }
+                }
+            });
+            
             return {
                 totalUsers: users.length,
                 onlineUsers: users.filter(u => u.status === 'online' && !u.invisible).length,
@@ -1621,7 +2169,10 @@ const UserSystem = {
                 activeReferrers: users.filter(u => u.stats.referralsCount > 0).length,
                 qrFriendRequests: qrRequests.length,
                 qrAcceptedRequests: acceptedQRRequests.length,
-                qrSuccessRate: qrRequests.length > 0 ? (acceptedQRRequests.length / qrRequests.length * 100).toFixed(1) : 0
+                qrSuccessRate: qrRequests.length > 0 ? (acceptedQRRequests.length / qrRequests.length * 100).toFixed(1) : 0,
+                telegramUsers: telegramUsers,
+                verifiedTelegramUsers: verifiedTelegramUsers,
+                telegramVerificationRate: telegramUsers > 0 ? ((verifiedTelegramUsers / telegramUsers) * 100).toFixed(1) : 0
             };
         } catch (error) {
             console.error('❌ Ошибка получения статистики:', error);
@@ -1639,6 +2190,16 @@ const UserSystem = {
     validateReferralCode: function(code) {
         if (!code || typeof code !== 'string') return false;
         return code.startsWith('REF_') && code.length > 10;
+    },
+
+    // Дополнительная функция: инициализация Telegram бота
+    initTelegramBot: function() {
+        if (typeof TelegramBotAPI !== 'undefined') {
+            TelegramBotAPI.init();
+            console.log('🤖 Telegram Bot API инициализирован через UserSystem');
+        } else {
+            console.warn('⚠️ TelegramBotAPI не загружен. Демо-режим будет использован.');
+        }
     }
 };
 
@@ -1657,6 +2218,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Создаем резервную копию
     UserSystem.createBackup();
     
+    // Инициализация Telegram бота
+    UserSystem.initTelegramBot();
+    
     console.log('✅ UserSystem инициализирован');
     
     // Периодическая очистка (каждые 5 минут)
@@ -1669,304 +2233,3 @@ document.addEventListener('DOMContentLoaded', function() {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = UserSystem;
 }
-// Telegram integration functions
-UserSystem.bindTelegramAccount = function(userId, telegramUsername) {
-    const users = this.getUsers();
-    const userIndex = users.findIndex(u => u.id === userId);
-    
-    if (userIndex === -1) {
-        return { success: false, message: 'Пользователь не найден' };
-    }
-    
-    // Проверяем, не привязан ли уже этот телеграм аккаунт
-    const existingBinding = users.find(u => u.telegram && u.telegram.username === telegramUsername && u.id !== userId);
-    if (existingBinding) {
-        return { success: false, message: 'Этот Telegram аккаунт уже привязан к другому пользователю' };
-    }
-    
-    users[userIndex].telegram = {
-        username: telegramUsername,
-        verified: false,
-        verificationCode: null,
-        codeExpires: null,
-        boundAt: null
-    };
-    
-    this.saveUsers(users);
-    this.setCurrentUser(users[userIndex]);
-    
-    return { success: true, message: 'Telegram аккаунт привязан. Требуется верификация.' };
-};
-
-UserSystem.verifyTelegramAccount = function(userId, verificationCode) {
-    const users = this.getUsers();
-    const userIndex = users.findIndex(u => u.id === userId);
-    
-    if (userIndex === -1) {
-        return { success: false, message: 'Пользователь не найден' };
-    }
-    
-    const user = users[userIndex];
-    
-    if (!user.telegram) {
-        return { success: false, message: 'Telegram аккаунт не привязан' };
-    }
-    
-    // Проверяем срок действия кода
-    if (user.telegram.codeExpires && Date.now() > user.telegram.codeExpires) {
-        return { success: false, message: 'Срок действия кода истек' };
-    }
-    
-    // Проверяем код
-    if (user.telegram.verificationCode !== verificationCode) {
-        return { success: false, message: 'Неверный код подтверждения' };
-    }
-    
-    // Верифицируем аккаунт
-    user.telegram.verified = true;
-    user.telegram.verificationCode = null;
-    user.telegram.codeExpires = null;
-    user.telegram.boundAt = new Date().toISOString();
-    
-    this.saveUsers(users);
-    this.setCurrentUser(user);
-    
-    return { success: true, message: 'Telegram аккаунт успешно подтвержден!' };
-};
-
-UserSystem.generateTelegramVerificationCode = function(userId) {
-    const users = this.getUsers();
-    const userIndex = users.findIndex(u => u.id === userId);
-    
-    if (userIndex === -1) {
-        return null;
-    }
-    
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Date.now() + (10 * 60 * 1000); // 10 минут
-    
-    users[userIndex].telegram.verificationCode = code;
-    users[userIndex].telegram.codeExpires = expires;
-    
-    this.saveUsers(users);
-    
-    return {
-        code: code,
-        expires: expires,
-        username: users[userIndex].telegram.username
-    };
-};
-
-UserSystem.sendTelegramVerificationCode = function(userId) {
-    const user = this.findUserById(userId);
-    
-    if (!user || !user.telegram || !user.telegram.username) {
-        return { success: false, message: 'Telegram аккаунт не привязан' };
-    }
-    
-    const codeData = this.generateTelegramVerificationCode(userId);
-    if (!codeData) {
-        return { success: false, message: 'Ошибка генерации кода' };
-    }
-    
-    // Здесь будет интеграция с Telegram Bot API
-    // Временная заглушка - код будет в консоли
-    console.log(`📱 Telegram код для @${codeData.username}: ${codeData.code}`);
-    console.log(`⏰ Срок действия: до ${new Date(codeData.expires).toLocaleTimeString()}`);
-    
-    return { 
-        success: true, 
-        message: 'Код отправлен в Telegram',
-        code: codeData.code, // Для демо-режима
-        username: codeData.username
-    };
-};
-
-UserSystem.requestPasswordResetViaTelegram = function(telegramUsername) {
-    const users = this.getUsers();
-    const user = users.find(u => 
-        u.telegram && 
-        u.telegram.username === telegramUsername && 
-        u.telegram.verified === true
-    );
-    
-    if (!user) {
-        return { success: false, message: 'Telegram аккаунт не найден или не подтвержден' };
-    }
-    
-    // Генерируем код для сброса пароля
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Date.now() + (10 * 60 * 1000); // 10 минут
-    
-    // Сохраняем код
-    const resetKey = `tg_reset_${user.id}`;
-    localStorage.setItem(resetKey, JSON.stringify({
-        code: resetCode,
-        expires: expires,
-        telegramUsername: telegramUsername,
-        userId: user.id
-    }));
-    
-    // Здесь будет интеграция с Telegram Bot API
-    console.log(`🔐 Telegram сброс пароля для @${telegramUsername}: ${resetCode}`);
-    console.log(`⏰ Срок действия: до ${new Date(expires).toLocaleTimeString()}`);
-    
-    return { 
-        success: true, 
-        message: 'Код для сброса пароля отправлен в Telegram',
-        code: resetCode, // Для демо-режима
-        userId: user.id
-    };
-};
-
-UserSystem.verifyTelegramResetCode = function(telegramUsername, code) {
-    const users = this.getUsers();
-    const user = users.find(u => 
-        u.telegram && 
-        u.telegram.username === telegramUsername && 
-        u.telegram.verified === true
-    );
-    
-    if (!user) {
-        return { success: false, message: 'Telegram аккаунт не найден' };
-    }
-    
-    const resetKey = `tg_reset_${user.id}`;
-    const resetData = JSON.parse(localStorage.getItem(resetKey) || '{}');
-    
-    // Проверяем срок действия
-    if (!resetData.code || Date.now() > resetData.expires) {
-        localStorage.removeItem(resetKey);
-        return { success: false, message: 'Срок действия кода истек' };
-    }
-    
-    // Проверяем код
-    if (resetData.code !== code) {
-        return { success: false, message: 'Неверный код' };
-    }
-    
-    // Код верный
-    return { 
-        success: true, 
-        message: 'Код подтвержден',
-        userId: user.id,
-        resetToken: btoa(JSON.stringify({ userId: user.id, timestamp: Date.now() }))
-    };
-};
-
-UserSystem.resetPasswordWithTelegramToken = function(token, newPassword) {
-    try {
-        const data = JSON.parse(atob(token));
-        const userId = data.userId;
-        
-        // Проверяем, что токен не старше 15 минут
-        if (Date.now() - data.timestamp > 15 * 60 * 1000) {
-            return { success: false, message: 'Срок действия токена истек' };
-        }
-        
-        const users = this.getUsers();
-        const userIndex = users.findIndex(u => u.id === userId);
-        
-        if (userIndex === -1) {
-            return { success: false, message: 'Пользователь не найден' };
-        }
-        
-        // Устанавливаем новый пароль
-        users[userIndex].password = this.hashPassword(newPassword);
-        users[userIndex].updatedAt = new Date().toISOString();
-        
-        // Очищаем данные сброса
-        localStorage.removeItem(`tg_reset_${userId}`);
-        
-        this.saveUsers(users);
-        
-        return { success: true, message: 'Пароль успешно изменен!' };
-        
-    } catch (error) {
-        return { success: false, message: 'Неверный токен' };
-    }
-};
-
-// Добавьте эти функции для поиска пользователя
-UserSystem.getUserByTelegramUsername = function(username) {
-    const users = this.getUsers();
-    return users.find(u => u.telegram && u.telegram.username === username);
-};
-
-UserSystem.findUserById = function(userId) {
-    const users = this.getUsers();
-    return users.find(u => u.id === userId);
-};
-// Поиск пользователя по Telegram username
-findUserByTelegramUsername: function(username) {
-    const users = this.getUsers();
-    return users.find(user => 
-      user.telegram && user.telegram.username && 
-      user.telegram.username.toLowerCase() === username.toLowerCase()
-    );
-  },
-  
-  // Запрос сброса пароля через Telegram (демо-версия)
-  requestPasswordResetViaTelegram: function(username) {
-    const user = this.findUserByTelegramUsername(username);
-    
-    if (!user) {
-      return {
-        success: false,
-        message: 'Пользователь с таким Telegram не найден'
-      };
-    }
-    
-    // Генерируем 6-значный код
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Сохраняем код в localStorage (в реальном приложении отправляем в Telegram)
-    localStorage.setItem(`tg_reset_code_${username}`, resetCode);
-    localStorage.setItem(`tg_reset_user_id_${username}`, user.id);
-    
-    // В демо-режиме просто возвращаем код
-    return {
-      success: true,
-      message: 'Код отправлен в Telegram',
-      code: resetCode, // Только для демо-режима
-      userId: user.id
-    };
-  },
-  
-  // Проверка Telegram кода
-  verifyTelegramResetCode: function(username, code) {
-    const savedCode = localStorage.getItem(`tg_reset_code_${username}`);
-    const userId = localStorage.getItem(`tg_reset_user_id_${username}`);
-    
-    if (savedCode === code && userId) {
-      return {
-        success: true,
-        userId: userId
-      };
-    }
-    
-    return {
-      success: false,
-      message: 'Неверный код'
-    };
-  },
-  
-  // Получить реферальную ссылку пользователя
-  getReferralLink: function(userId) {
-    const user = this.findUser(userId);
-    if (!user) return null;
-    
-    // Генерируем реферальный код если его нет
-    if (!user.referralCode) {
-      user.referralCode = 'REF_' + Math.random().toString(36).substring(2, 10).toUpperCase();
-      const users = this.getUsers();
-      const userIndex = users.findIndex(u => u.id === userId);
-      if (userIndex !== -1) {
-        users[userIndex] = user;
-        this.saveUsers(users);
-      }
-    }
-    
-    const baseUrl = window.location.origin + window.location.pathname;
-    return `${baseUrl}?ref=${user.referralCode}`;
-  };
