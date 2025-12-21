@@ -7,9 +7,7 @@
   <!-- Material Icons (Google Fonts) -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <!-- QR Code Library -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <!-- Instascan for QR scanning -->
-  <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- User System -->
   <script src="userSystem.js"></script>
   <link rel="icon" href="meetup-logo.png" type="image/x-icon"> 
@@ -33,6 +31,8 @@
       --stat-gap: 20px;
       --shadow: 0 4px 12px rgba(0,0,0,0.40);
       --avatar-size: 120px;
+      --telegram-color: #0088cc;
+      --telegram-gradient: linear-gradient(135deg, #0088cc, #34b7f1);
     }
     html, body {
       height: 100%;
@@ -73,7 +73,7 @@
       animation: profile-fadein 0.7s;
     }
 
-    /* Стрелка назад - ИСПРАВЛЕНА (убрана фиолетовая полоска) */
+    /* Стрелка назад */
     .back-arrow {
       position: fixed;
       top: 24px;
@@ -91,7 +91,7 @@
       cursor: pointer;
       transition: filter 0.15s, background 0.17s, transform .14s;
       outline: none;
-      text-decoration: none; /* Убираем подчеркивание ссылки */
+      text-decoration: none;
     }
     .back-arrow:active {
       filter: brightness(0.92);
@@ -105,49 +105,6 @@
     }
     .back-arrow:hover, .back-arrow:focus-visible {
       background: #2a2a2a;
-    }
-
-    /* Кнопка сканирования QR-кода справа */
-    .scan-qr-btn {
-      position: fixed;
-      top: 24px;
-      right: 24px;
-      z-index: 9999;
-      background: rgba(36,36,36,0.88);
-      border-radius: 50%;
-      width: 46px;
-      height: 46px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2.5px 12px rgba(0,0,0,0.4);
-      border: none;
-      cursor: pointer;
-      transition: filter 0.15s, background 0.17s, transform .14s;
-      outline: none;
-    }
-    .scan-qr-btn:active {
-      filter: brightness(0.92);
-      transform: scale(0.96);
-    }
-    .scan-qr-btn .material-icons {
-      font-size: 27px;
-      color: var(--status-online);
-      opacity: 0.92;
-      transition: color 0.17s;
-    }
-    .scan-qr-btn:hover, .scan-qr-btn:focus-visible {
-      background: #2a2a2a;
-      box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
-    }
-    .scan-qr-btn.active {
-      background: rgba(0, 255, 255, 0.2);
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.4); }
-      70% { box-shadow: 0 0 0 15px rgba(0, 255, 255, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0); }
     }
 
     @media (max-width: 768px) {
@@ -192,19 +149,13 @@
         bottom: 10px;
         padding: 1px 7px;
       }
-      .back-arrow, .scan-qr-btn {
+      .back-arrow {
         top: 14px;
         width: 40px;
         height: 40px;
-      }
-      .back-arrow {
         left: 10px;
       }
-      .scan-qr-btn {
-        right: 10px;
-      }
-      .back-arrow .material-icons,
-      .scan-qr-btn .material-icons {
+      .back-arrow .material-icons {
         font-size: 23px;
       }
     }
@@ -248,13 +199,13 @@
       margin: auto;
     }
 
-    /* Контейнер для аватара с hover эффектом */
+    /* Контейнер для аватара */
     .profile-avatar-wrap {
       position: relative;
       margin-bottom: 20px;
     }
     
-    /* Кнопка удалить фото - УЛУЧШЕНА (появляется при наведении и при фокусе) */
+    /* Кнопка удалить фото */
     .btn-remove-avatar {
       position: absolute;
       right: -5px;
@@ -287,14 +238,12 @@
       font-size: 16px;
     }
 
-    /* Показываем кнопку удаления только если есть фото */
     .profile-avatar-wrap.has-avatar .btn-remove-avatar {
       display: flex;
       opacity: 1;
       transform: scale(1);
     }
     
-    /* Эффект при наведении на аватар */
     .profile-avatar-wrap:hover .profile-avatar {
       box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
     }
@@ -373,7 +322,7 @@
       padding: 12px 15px;
       font-size: 14px;
       color: #efefef;
-      resize: none; /* Отключаем растягивание пользователем */
+      resize: none;
       margin-bottom: 6px;
       transition: border 0.18s, box-shadow 0.18s;
       font-family: inherit;
@@ -522,6 +471,25 @@
       filter:brightness(0.87);
       transform:scale(0.96);
     }
+    
+    /* Telegram кнопка */
+    .btn-telegram {
+      background: var(--telegram-gradient);
+      color: #fff;
+      box-shadow: none;
+    }
+    .btn-telegram .material-icons {
+      color: #fff;
+      transition: color 0.14s;
+    }
+    .btn-telegram:hover, .btn-telegram:focus-visible {
+      filter: brightness(1.11);
+      box-shadow: 0 2px 8px rgba(0, 136, 204, 0.30);
+    }
+    .btn-telegram:active {
+      filter:brightness(0.86);
+      transform:scale(0.96);
+    }
 
     /* Divider */
     .profile-divider {
@@ -628,16 +596,52 @@
       line-height: 1.4;
     }
     
-    /* QR код */
+    /* Telegram статус */
+    .telegram-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0;
+      padding: 8px 12px;
+      background: rgba(0, 136, 204, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(0, 136, 204, 0.2);
+    }
+    
+    .telegram-status.connected {
+      background: rgba(0, 200, 83, 0.1);
+      border-color: rgba(0, 200, 83, 0.2);
+    }
+    
+    .telegram-status .material-icons {
+      color: var(--telegram-color);
+      font-size: 20px;
+    }
+    
+    .telegram-status.connected .material-icons {
+      color: #00C853;
+    }
+    
+    .telegram-status-text {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    
+    .telegram-username {
+      font-weight: 600;
+      color: var(--telegram-color);
+    }
+    
+    /* QR код модальное окно */
     .qr-modal {
-      display: none;
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.95);
       z-index: 10000;
+      display: none;
       align-items: center;
       justify-content: center;
       animation: fadeIn 0.3s;
@@ -712,342 +716,6 @@
       transform: translateY(-1px);
     }
     
-    /* Модальное окно сканера QR-кода */
-    .scanner-modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.95);
-      z-index: 10001;
-      align-items: center;
-      justify-content: center;
-      animation: fadeIn 0.3s;
-    }
-    
-    .scanner-content {
-      background: var(--card-bg);
-      border-radius: 16px;
-      padding: 24px;
-      max-width: 400px;
-      width: 90%;
-      text-align: center;
-      animation: slideUp 0.3s;
-    }
-    
-    .scanner-title {
-      color: #00FFFF;
-      margin-bottom: 16px;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-    
-    #scanner-container {
-      width: 100%;
-      height: 300px;
-      background: #000;
-      border-radius: 8px;
-      overflow: hidden;
-      position: relative;
-      margin: 16px 0;
-    }
-    
-    #scanner-video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    
-    .scanner-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      border: 2px solid #00FFFF;
-      box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .scanner-frame {
-      width: 250px;
-      height: 250px;
-      border: 3px solid #00FFFF;
-      border-radius: 12px;
-      position: relative;
-    }
-    
-    .scanner-frame::before,
-    .scanner-frame::after {
-      content: '';
-      position: absolute;
-      width: 30px;
-      height: 30px;
-      border: 3px solid #00FFFF;
-    }
-    
-    .scanner-frame::before {
-      top: -3px;
-      left: -3px;
-      border-right: none;
-      border-bottom: none;
-      border-radius: 8px 0 0 0;
-    }
-    
-    .scanner-frame::after {
-      bottom: -3px;
-      right: -3px;
-      border-left: none;
-      border-top: none;
-      border-radius: 0 0 8px 0;
-    }
-    
-    .scanner-frame .corner {
-      position: absolute;
-      width: 30px;
-      height: 30px;
-      border: 3px solid #00FFFF;
-    }
-    
-    .corner.tr {
-      top: -3px;
-      right: -3px;
-      border-left: none;
-      border-bottom: none;
-      border-radius: 0 8px 0 0;
-    }
-    
-    .corner.bl {
-      bottom: -3px;
-      left: -3px;
-      border-right: none;
-      border-top: none;
-      border-radius: 0 0 0 8px;
-    }
-    
-    .scanner-instructions {
-      font-size: 14px;
-      color: rgba(255, 255, 255, 0.8);
-      margin-top: 16px;
-      padding: 0 10px;
-      line-height: 1.4;
-    }
-    
-    .scanner-actions {
-      margin-top: 20px;
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-    }
-    
-    .scanner-btn {
-      padding: 10px 20px;
-      border-radius: 8px;
-      border: none;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      min-width: 120px;
-    }
-    
-    .scanner-btn.close {
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
-    }
-    
-    .scanner-btn.torch {
-      background: linear-gradient(90deg, #FF9800, #FF5722);
-      color: white;
-    }
-    
-    .scanner-btn:hover {
-      transform: translateY(-1px);
-    }
-    
-    /* Результат сканирования */
-    .scan-result {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.95);
-      z-index: 10002;
-      align-items: center;
-      justify-content: center;
-      animation: fadeIn 0.3s;
-    }
-    
-    .result-content {
-      background: var(--card-bg);
-      border-radius: 16px;
-      padding: 24px;
-      max-width: 350px;
-      width: 90%;
-      text-align: center;
-      animation: slideUp 0.3s;
-    }
-    
-    .result-icon {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 16px;
-      font-size: 40px;
-    }
-    
-    .result-icon.success {
-      background: rgba(0, 200, 83, 0.2);
-      color: #00C853;
-    }
-    
-    .result-icon.error {
-      background: rgba(244, 67, 54, 0.2);
-      color: #F44336;
-    }
-    
-    .result-icon.info {
-      background: rgba(33, 150, 243, 0.2);
-      color: #2196F3;
-    }
-    
-    .result-title {
-      color: #00FFFF;
-      margin-bottom: 10px;
-      font-size: 20px;
-    }
-    
-    .result-message {
-      color: rgba(255, 255, 255, 0.9);
-      margin-bottom: 20px;
-      font-size: 16px;
-      line-height: 1.4;
-    }
-    
-    .result-user-info {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 12px;
-      padding: 16px;
-      margin: 16px 0;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .result-user-avatar {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      overflow: hidden;
-      border: 2px solid #00FFFF;
-    }
-    
-    .result-user-avatar img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-    
-    .result-user-details {
-      flex: 1;
-      text-align: left;
-    }
-    
-    .result-user-name {
-      font-size: 16px;
-      font-weight: 600;
-      color: white;
-      margin-bottom: 4px;
-    }
-    
-    .result-user-status {
-      font-size: 12px;
-      color: #888;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    
-    .result-status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-    
-    .status-online { background: #00C853; }
-    .status-offline { background: #888; }
-    
-    .result-actions {
-      margin-top: 20px;
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-    }
-    
-    .result-btn {
-      padding: 12px 24px;
-      border-radius: 8px;
-      border: none;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      min-width: 140px;
-    }
-    
-    .result-btn.close {
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
-    }
-    
-    .result-btn.primary {
-      background: linear-gradient(90deg, #00FFFF, #9400D3);
-      color: white;
-    }
-    
-    .result-btn:hover {
-      transform: translateY(-1px);
-    }
-    
-    /* Адаптивность */
-    @media (max-width: 768px) {
-      .referral-link-container {
-        flex-direction: column;
-      }
-      
-      .qr-content,
-      .scanner-content,
-      .result-content {
-        padding: 16px;
-        width: 95%;
-      }
-      
-      #scanner-container {
-        height: 250px;
-      }
-      
-      .scanner-frame {
-        width: 200px;
-        height: 200px;
-      }
-      
-      .result-btn {
-        min-width: 120px;
-        padding: 10px 16px;
-      }
-    }
-    
     /* Стиль для альтернативного отображения QR-кода */
     .qr-alternative {
       text-align: center;
@@ -1079,11 +747,6 @@
     <span class="material-icons">arrow_back</span>
   </a>
   
-  <!-- Кнопка сканирования QR-кода -->
-  <button class="scan-qr-btn" id="scan-qr-btn" title="Сканировать QR-код">
-    <span class="material-icons">qr_code_scanner</span>
-  </button>
-  
   <div class="profile-card">
     <div class="profile-avatar-wrap" id="profile-avatar-wrap">
       <div class="profile-avatar" id="profile-avatar">
@@ -1106,6 +769,15 @@
     <!-- Ник + ID + статус -->
     <div class="profile-nick" id="nickname">Загрузка...</div>
     <div class="profile-user-id" id="user-id">ID: ...</div>
+    
+    <!-- Telegram статус -->
+    <div class="telegram-status" id="telegram-status" style="display: none;">
+      <span class="material-icons">telegram</span>
+      <span class="telegram-status-text">
+        Telegram: <span class="telegram-username" id="telegram-username-display">Не подключен</span>
+      </span>
+    </div>
+    
     <div class="profile-status-row">
       <span class="profile-status-indicator status-online" id="status-indicator"></span>
       <span class="profile-status-text" id="status-text">Загрузка...</span>
@@ -1163,7 +835,7 @@
       </div>
       
       <div class="referral-info">
-        Отправьте эту ссылку или QR-код друзьям. При регистрации по ссылке или сканировании QR-кода они автоматически добавятся к вам в друзья.
+        Отправьте эту ссылку или QR-код друзьям. При регистрации по ссылке они автоматически добавятся к вам в друзья.
       </div>
     </div>
     
@@ -1178,6 +850,15 @@
         Настройки профиля
       </button>
     </div>
+    
+    <!-- Кнопка Telegram -->
+    <div class="profile-actions-wrap" style="margin-top: 10px;">
+      <button class="btn-action btn-telegram" id="btn-telegram-settings">
+        <span class="material-icons" style="font-size:20px;vertical-align:-3px;">telegram</span>
+        Telegram
+      </button>
+    </div>
+    
     <!-- Разделитель -->
     <div class="profile-divider"></div>
     <!-- Доп. сведения -->
@@ -1225,1162 +906,754 @@
     </div>
   </div>
   
-  <!-- Модальное окно сканера QR-кода -->
-  <div class="scanner-modal" id="scanner-modal">
-    <div class="scanner-content">
-      <div class="scanner-title">
-        <span class="material-icons">qr_code_scanner</span>
-        Сканировать QR-код
-      </div>
-      <div id="scanner-container">
-        <video id="scanner-video" playsinline></video>
-        <div class="scanner-overlay">
-          <div class="scanner-frame">
-            <div class="corner tr"></div>
-            <div class="corner bl"></div>
-          </div>
-        </div>
-      </div>
-      <div class="scanner-instructions">
-        Наведите камеру на QR-код друга, чтобы отправить запрос на добавление в друзья
-      </div>
-      <div class="scanner-actions">
-        <button class="scanner-btn close" id="close-scanner">Отмена</button>
-        <button class="scanner-btn torch" id="toggle-torch" style="display: none;">
-          <span class="material-icons" style="vertical-align: -4px; font-size: 16px;">flashlight_on</span>
-          Фонарик
-        </button>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Окно результата сканирования -->
-  <div class="scan-result" id="scan-result">
-    <div class="result-content">
-      <div class="result-icon success" id="result-icon">
-        <span class="material-icons">check_circle</span>
-      </div>
-      <div class="result-title" id="result-title">Успешно!</div>
-      <div class="result-message" id="result-message"></div>
-      <div class="result-user-info" id="result-user-info" style="display: none;">
-        <div class="result-user-avatar">
-          <img id="result-user-avatar" src="" alt="Аватар">
-        </div>
-        <div class="result-user-details">
-          <div class="result-user-name" id="result-user-name"></div>
-          <div class="result-user-status">
-            <span class="result-status-dot" id="result-user-status-dot"></span>
-            <span id="result-user-status-text"></span>
-          </div>
-        </div>
-      </div>
-      <div class="result-actions">
-        <button class="result-btn close" id="close-result">Закрыть</button>
-        <button class="result-btn primary" id="result-primary-btn" style="display: none;">
-          <span class="material-icons" style="vertical-align: -4px; font-size: 16px;">person_add</span>
-          Добавить в друзья
-        </button>
-      </div>
-    </div>
-  </div>
-  
   <script>
-    // Функция для проверки загрузки библиотеки QRCode
-    function checkQRCodeLibrary() {
-      if (typeof QRCode === 'undefined') {
-        console.error('QRCode библиотека не загружена');
-        return false;
-      }
-      return true;
-    }
-    
-    // Функции для работы с профилем
-    function updateStatus(status) {
-      let ind = document.getElementById('status-indicator');
-      let txt = document.getElementById('status-text');
-      ind.classList.remove("status-online","status-offline","status-invisible");
-      let t = "";
-      switch(status) {
-        case "online": 
-          ind.classList.add("status-online"); 
-          t="В сети"; 
-          break;
-        case "offline": 
-          ind.classList.add("status-offline"); 
-          t="Не в сети"; 
-          break;
-        case "invisible": 
-          ind.classList.add("status-invisible"); 
-          t="Скрыт"; 
-          break;
-      }
-      txt.textContent = t;
-    }
-
-    function updateAboutPlaceholderAndCounter() {
-      const aboutText = document.getElementById('about-text');
-      const aboutPlaceholder = document.getElementById('about-placeholder');
-      const aboutCounter = document.getElementById('about-counter');
-      const maxAboutLen = 140;
-
-      if (!aboutText.value || aboutText.value.trim() === '') {
-        aboutPlaceholder.style.display = 'block';
-        aboutPlaceholder.style.opacity = '0.72';
-        aboutCounter.style.display = 'none';
-      } else {
-        aboutPlaceholder.style.display = 'none';
-        aboutCounter.style.display = 'block';
-      }
-      aboutCounter.textContent = aboutText.value.length + '/' + maxAboutLen;
-    }
-
-    function autoResizeTextarea(elem) {
-      elem.style.height = 'auto';
-      elem.style.height = Math.max(elem.scrollHeight, 68) + 'px';
-    }
-
-    function aboutInputHandler() {
-      const aboutText = document.getElementById('about-text');
-      const maxAboutLen = 140;
-      
-      if (aboutText.value.length > maxAboutLen) {
-        aboutText.value = aboutText.value.slice(0, maxAboutLen);
-      }
-      autoResizeTextarea(aboutText);
-      updateAboutPlaceholderAndCounter();
-      
-      // Сохраняем изменения в реальном времени
-      saveAboutText();
-    }
-
-    // Функция для сохранения текста "О себе"
-    function saveAboutText() {
-      const aboutText = document.getElementById('about-text');
-      const currentUser = UserSystem.getCurrentUser();
-      
-      if (!currentUser) return;
-      
-      const users = UserSystem.getUsers();
-      const userIndex = users.findIndex(u => u.id === currentUser.id);
-      
-      if (userIndex !== -1) {
-        users[userIndex].about = aboutText.value;
-        UserSystem.saveUsers(users);
-        
-        // Обновляем текущего пользователя в localStorage
-        UserSystem.setCurrentUser(users[userIndex]);
-        
-        console.log('Описание профиля сохранено:', aboutText.value);
-      }
-    }
-
-    // Функция для удаления аватара
-    function removeAvatar() {
-      const avatarImg = document.getElementById('avatar-img');
-      const avatarPlaceholder = document.querySelector('.avatar-placeholder-svg');
-      const avatar = document.getElementById('profile-avatar');
-      const btnRemove = document.getElementById('btn-remove-avatar');
-      const avatarUpload = document.getElementById('avatar-upload');
-      const avatarWrap = document.getElementById('profile-avatar-wrap');
-      
-      // Сбрасываем загруженное изображение
-      avatarImg.src = '';
-      avatarImg.style.display = "none";
-      avatarPlaceholder.style.display = "block";
-      avatar.classList.remove("has-photo");
-      avatarWrap.classList.remove("has-avatar");
-      avatarUpload.value = '';
-
-      // Удаляем аватар из профиля в базе данных
-      const users = UserSystem.getUsers();
-      const currentUser = UserSystem.getCurrentUser();
-      const userIndex = users.findIndex(u => u.id === currentUser.id);
-      
-      if (userIndex !== -1) {
-        users[userIndex].avatar = "";
-        UserSystem.saveUsers(users);
-        UserSystem.setCurrentUser(users[userIndex]);
-        console.log('Аватар удален');
-      }
-      
-      // Показываем сообщение об успешном удалении
-      showTempMessage('Аватар удален');
-    }
-
-    // Функция для показа временных сообщений
-    function showTempMessage(message, duration = 3000) {
-      // Удаляем существующее сообщение
-      const existingMessage = document.querySelector('.temp-message');
-      if (existingMessage) {
-        existingMessage.remove();
-      }
-
-      const messageEl = document.createElement('div');
-      messageEl.className = 'temp-message';
-      messageEl.textContent = message;
-      messageEl.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 15px 20px;
-        border-radius: 12px;
-        font-size: 14px;
-        z-index: 1000;
-        backdrop-filter: blur(10px);
-        text-align: center;
-        max-width: 80%;
-      `;
-      
-      document.body.appendChild(messageEl);
-      
-      setTimeout(() => {
-        if (messageEl.parentNode) {
-          messageEl.remove();
-        }
-      }, duration);
-    }
-
-    // Расчет реальной статистики
-    function calculateRealStats(user) {
-      const stats = {
-        friendsCount: 0,
-        kmThisWeek: 0,
-        onlineHours: 0
-      };
-
-      // Реальное количество друзей
-      const allUsers = UserSystem.getUsers();
-      const friendRequests = JSON.parse(localStorage.getItem('meetup_friend_requests') || '[]');
-      
-      // Считаем подтвержденных друзей
-      const userFriends = friendRequests.filter(req => 
-        (req.fromUserId === user.id || req.toUserId === user.id) && 
-        req.status === 'accepted'
-      ).length;
-      
-      stats.friendsCount = userFriends;
-
-      // Реальное пройденное расстояние (симуляция на основе активности)
-      const userActivity = JSON.parse(localStorage.getItem(`user_activity_${user.id}`) || '{}');
-      const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
-      
-      let totalDistance = 0;
-      if (userActivity.positions) {
-        userActivity.positions.forEach(pos => {
-          if (pos.timestamp > weekAgo) {
-            totalDistance += (pos.distance || 0);
-          }
-        });
-      }
-      
-      // Если нет данных, генерируем реалистичные на основе регистрации
-      if (totalDistance === 0) {
-        const regDate = new Date(user.registeredAt);
-        const daysSinceReg = Math.max(1, Math.floor((Date.now() - regDate.getTime()) / (24 * 60 * 60 * 1000)));
-        totalDistance = Math.min(50, Math.floor(daysSinceReg * 1.5 + Math.random() * 10));
-      }
-      
-      stats.kmThisWeek = Math.round(totalDistance);
-
-      // Реальное время в сети (симуляция)
-      const onlineData = JSON.parse(localStorage.getItem(`user_online_${user.id}`) || '{}');
-      let totalOnlineHours = onlineData.totalHours || 0;
-      
-      // Если нет данных, генерируем на основе активности
-      if (totalOnlineHours === 0) {
-        const regDate = new Date(user.registeredAt);
-        const hoursSinceReg = Math.max(1, Math.floor((Date.now() - regDate.getTime()) / (60 * 60 * 1000)));
-        totalOnlineHours = Math.min(168, Math.floor(hoursSinceReg * 0.1 + Math.random() * 24));
-      }
-      
-      stats.onlineHours = Math.round(totalOnlineHours);
-
-      return stats;
-    }
-
-    // Сохранение статистики
-    function saveUserStats(userId, stats) {
-      const users = UserSystem.getUsers();
-      const userIndex = users.findIndex(u => u.id === userId);
-      
-      if (userIndex !== -1) {
-        users[userIndex].stats = stats;
-        UserSystem.saveUsers(users);
-        
-        // Обновляем текущего пользователя
-        const currentUser = UserSystem.getCurrentUser();
-        if (currentUser && currentUser.id === userId) {
-          UserSystem.setCurrentUser(users[userIndex]);
-        }
-      }
-    }
-
-    // Обновление активности пользователя
-    function updateUserActivity(user) {
-      const activityKey = `user_activity_${user.id}`;
-      let activity = JSON.parse(localStorage.getItem(activityKey) || '{}');
-      
-      if (!activity.positions) {
-        activity.positions = [];
-      }
-      
-      // Добавляем текущую позицию (если есть)
-      if (user.position) {
-        activity.positions.push({
-          timestamp: Date.now(),
-          position: user.position,
-          distance: Math.random() * 2 // случайное расстояние 0-2 км
-        });
-        
-        // Ограничиваем историю последними 100 записями
-        if (activity.positions.length > 100) {
-          activity.positions = activity.positions.slice(-100);
-        }
-      }
-      
-      // Обновляем онлайн-статистику
-      const onlineKey = `user_online_${user.id}`;
-      let onlineData = JSON.parse(localStorage.getItem(onlineKey) || '{}');
-      
-      if (!onlineData.sessions) {
-        onlineData.sessions = [];
-      }
-      
-      // Добавляем текущую сессию
-      onlineData.sessions.push({
-        start: Date.now(),
-        end: null // сессия еще активна
-      });
-      
-      // Закрываем предыдущую незавершенную сессию
-      onlineData.sessions.forEach(session => {
-        if (!session.end) {
-          session.end = Date.now();
-        }
-      });
-      
-      // Пересчитываем общее время
-      let totalMs = 0;
-      onlineData.sessions.forEach(session => {
-        if (session.end) {
-          totalMs += (session.end - session.start);
-        }
-      });
-      
-      onlineData.totalHours = Math.floor(totalMs / (60 * 60 * 1000));
-      
-      // Сохраняем данные
-      localStorage.setItem(activityKey, JSON.stringify(activity));
-      localStorage.setItem(onlineKey, JSON.stringify(onlineData));
-    }
-
-    // Генерация QR кода для добавления в друзья
-    function generateFriendQRCode(userId, nickname) {
-      const qrContainer = document.getElementById('qr-code');
-      qrContainer.innerHTML = '';
-      
-      // Создаем специальный формат для QR-кода добавления в друзья
-      const qrData = `meetup://add-friend/${userId}/${encodeURIComponent(nickname || 'Пользователь')}`;
-      
-      // Проверяем загружена ли библиотека QRCode
-      if (typeof QRCode !== 'undefined') {
-        try {
-          // Используем QRCode.js
-          new QRCode(qrContainer, {
-            text: qrData,
-            width: 200,
-            height: 200,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-          });
-          console.log('QR-код успешно создан');
-        } catch (error) {
-          console.error('Ошибка при создании QR-кода:', error);
-          qrContainer.innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-              <div style="color: #FF4444; margin-bottom: 10px;">
-                <span class="material-icons">error</span>
-              </div>
-              <div style="color: white;">Не удалось создать QR-код</div>
-              <div style="color: #888; font-size: 12px; margin-top: 10px;">${error.message}</div>
-            </div>
-          `;
-        }
-      } else {
-        // Альтернативный способ если библиотека не загружена
-        console.warn('Библиотека QRCode не загружена, используем альтернативный метод');
-        qrContainer.innerHTML = `
-          <div class="qr-alternative">
-            <div class="qr-alternative-code">
-              <div style="font-family: monospace; font-size: 16px; color: black; margin-bottom: 10px; font-weight: bold;">
-                ${nickname || 'Добавить в друзья'}
-              </div>
-              <div style="font-family: monospace; font-size: 12px; color: #666; word-break: break-all;">
-                ID: ${userId}
-              </div>
-              <div style="margin-top: 10px; font-size: 10px; color: #999;">
-                Отсканируйте этот текст
-              </div>
-            </div>
-            <div class="qr-warning">
-              <span class="material-icons" style="font-size: 16px;">warning</span>
-              Используйте альтернативный метод для добавления в друзья
-            </div>
-          </div>
-        `;
-      }
-      
-      // Обновляем заголовок с именем пользователя
-      const currentUser = UserSystem.getCurrentUser();
-      if (currentUser) {
-        document.querySelector('.qr-title').textContent = `Добавить ${currentUser.nickname} в друзья`;
-      }
-    }
-
-    // Функции для работы с реферальными ссылками
-    function initReferralSection() {
-      const currentUser = UserSystem.getCurrentUser();
-      if (!currentUser) return;
-      
-      // Генерируем и показываем реферальную ссылку
-      const referralLink = UserSystem.getReferralLink(currentUser.id);
-      const referralInput = document.getElementById('referral-link');
-      const copyBtn = document.getElementById('copy-btn');
-      const qrBtn = document.getElementById('qr-btn');
-      const qrModal = document.getElementById('qr-modal');
-      const closeQrBtn = document.getElementById('close-qr');
-      const shareQrBtn = document.getElementById('share-qr');
-      
-      if (referralLink) {
-        referralInput.value = referralLink;
-        
-        // Копирование ссылки
-        copyBtn.onclick = async function() {
-          try {
-            await navigator.clipboard.writeText(referralLink);
-            copyBtn.textContent = 'Скопировано!';
-            copyBtn.classList.add('copied');
-            
-            // Показываем временное сообщение
-            showTempMessage('Ссылка скопирована в буфер обмена');
-            
-            setTimeout(() => {
-              copyBtn.textContent = 'Копировать';
-              copyBtn.classList.remove('copied');
-            }, 2000);
-          } catch (err) {
-            // Fallback для старых браузеров
-            referralInput.select();
-            document.execCommand('copy');
-            showTempMessage('Ссылка скопирована');
-          }
-        };
-        
-        // Открытие QR кода для добавления в друзья
-        qrBtn.onclick = function() {
-          // Проверяем загружена ли библиотека QRCode
-          if (typeof QRCode === 'undefined') {
-            showTempMessage('Библиотека QR-кода не загружена. Обновите страницу или проверьте подключение к интернету.', 5000);
-            // Показываем альтернативный контент
-            const qrContainer = document.getElementById('qr-code');
-            qrContainer.innerHTML = `
-              <div class="qr-alternative">
-                <div class="qr-alternative-code">
-                  <div style="font-family: monospace; font-size: 16px; color: black; margin-bottom: 10px; font-weight: bold;">
-                    ${currentUser.nickname || 'Пользователь'}
-                  </div>
-                  <div style="font-family: monospace; font-size: 12px; color: #666; word-break: break-all;">
-                    Ссылка: ${referralLink}
-                  </div>
-                </div>
-                <div class="qr-warning">
-                  <span class="material-icons" style="font-size: 16px;">error</span>
-                  QR-код временно недоступен
-                </div>
-              </div>
-            `;
-            qrModal.style.display = 'flex';
-            return;
-          }
-          
-          // Генерируем персональный QR-код для добавления в друзья
-          generateFriendQRCode(currentUser.id, currentUser.nickname);
-          qrModal.style.display = 'flex';
-        };
-        
-        // Закрытие QR модального окна
-        closeQrBtn.onclick = function() {
-          qrModal.style.display = 'none';
-        };
-        
-        // Поделиться QR кодом
-        shareQrBtn.onclick = async function() {
-          try {
-            const qrCanvas = document.querySelector('#qr-code canvas');
-            if (qrCanvas) {
-              qrCanvas.toBlob(async function(blob) {
-                const file = new File([blob], 'meetup-friend-qr.png', { type: 'image/png' });
-                
-                if (navigator.share && navigator.canShare({ files: [file] })) {
-                  await navigator.share({
-                    files: [file],
-                    title: 'Добавь меня в друзья в MeetUP!',
-                    text: 'Отсканируй этот QR-код, чтобы добавить меня в друзья в приложении MeetUP.'
-                  });
-                } else {
-                  // Fallback: скачивание
-                  const link = document.createElement('a');
-                  link.download = 'meetup-friend-qr.png';
-                  link.href = qrCanvas.toDataURL();
-                  link.click();
-                  showTempMessage('QR код сохранен');
-                }
-              });
-            } else {
-              // Если нет canvas, предлагаем поделиться ссылкой
-              if (navigator.share) {
-                await navigator.share({
-                  title: 'Добавь меня в друзья в MeetUP!',
-                  text: `Добавь меня в друзья: ${referralLink}`,
-                  url: referralLink
-                });
-              } else {
-                await navigator.clipboard.writeText(referralLink);
-                showTempMessage('Ссылка скопирована в буфер обмена');
-              }
-            }
-          } catch (error) {
-            console.log('Ошибка при совместном использовании:', error);
-            // Копируем ссылку в буфер обмена как запасной вариант
-            await navigator.clipboard.writeText(referralLink);
-            showTempMessage('Ссылка скопирована в буфер обмена');
-          }
-        };
-        
-        // Закрытие по клику вне окна
-        qrModal.onclick = function(e) {
-          if (e.target === qrModal) {
-            qrModal.style.display = 'none';
-          }
-        };
-      }
-    }
-
-    // Функции для работы со сканером QR-кода
-    function initQRScanner() {
-      const scanBtn = document.getElementById('scan-qr-btn');
-      const scannerModal = document.getElementById('scanner-modal');
-      const closeScannerBtn = document.getElementById('close-scanner');
-      const scannerVideo = document.getElementById('scanner-video');
-      const toggleTorchBtn = document.getElementById('toggle-torch');
-      const scanResultModal = document.getElementById('scan-result');
-      const closeResultBtn = document.getElementById('close-result');
-      const resultPrimaryBtn = document.getElementById('result-primary-btn');
-      
-      let scanner = null;
-      let activeStream = null;
-      let torchEnabled = false;
-      
-      // Проверяем доступность камеры
-      function checkCameraPermission() {
-        return new Promise((resolve) => {
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            resolve(false);
-            return;
-          }
-          
-          navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-              // Останавливаем поток сразу после проверки
-              stream.getTracks().forEach(track => track.stop());
-              resolve(true);
-            })
-            .catch(() => {
-              resolve(false);
-            });
-        });
-      }
-      
-      // Запрос доступа к камере
-      async function requestCameraAccess() {
-        try {
-          const hasPermission = await checkCameraPermission();
-          if (!hasPermission) {
-            // Запрашиваем разрешение
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-              video: { facingMode: 'environment' } 
-            });
-            stream.getTracks().forEach(track => track.stop());
-          }
-          return true;
-        } catch (error) {
-          console.error('Ошибка доступа к камере:', error);
-          return false;
-        }
-      }
-      
-      // Начало сканирования
-      scanBtn.onclick = async function() {
-        const hasAccess = await requestCameraAccess();
-        if (!hasAccess) {
-          showTempMessage('Доступ к камере запрещен. Проверьте настройки браузера.');
-          return;
-        }
-        
-        // Активируем кнопку сканирования
-        scanBtn.classList.add('active');
-        
-        // Показываем модальное окно сканера
-        scannerModal.style.display = 'flex';
-        
-        // Инициализируем сканер
-        initScanner();
-      };
-      
-      // Инициализация сканера
-      function initScanner() {
-        if (!Instascan) {
-          showTempMessage('Библиотека сканирования не загружена');
-          scannerModal.style.display = 'none';
-          return;
-        }
-        
-        scanner = new Instascan.Scanner({ 
-          video: scannerVideo,
-          mirror: false,
-          backgroundScan: false,
-          refractoryPeriod: 1000,
-          scanPeriod: 1
-        });
-        
-        // Обработка отсканированного кода
-        scanner.addListener('scan', function(content) {
-          console.log('Отсканирован QR-код:', content);
-          processScannedQRCode(content);
-        });
-        
-        // Запуск сканера
-        Instascan.Camera.getCameras().then(function(cameras) {
-          if (cameras.length > 0) {
-            // Используем заднюю камеру если доступна
-            let selectedCamera = cameras[0];
-            for (let camera of cameras) {
-              if (camera.name.toLowerCase().includes('back') || 
-                  camera.name.toLowerCase().includes('rear')) {
-                selectedCamera = camera;
-                break;
-              }
-            }
-            
-            scanner.start(selectedCamera).then(function() {
-              activeStream = scanner._activeStream;
-              
-              // Проверяем доступность фонарика
-              if (activeStream) {
-                const videoTrack = activeStream.getVideoTracks()[0];
-                if (videoTrack && videoTrack.getCapabilities && 
-                    videoTrack.getCapabilities().torch) {
-                  toggleTorchBtn.style.display = 'block';
-                }
-              }
-            }).catch(function(error) {
-              console.error('Ошибка запуска камеры:', error);
-              showResult('error', 'Ошибка запуска камеры', 'Не удалось запустить камеру. Попробуйте еще раз.');
-            });
-          } else {
-            showResult('error', 'Камера не найдена', 'На устройстве не обнаружена камера.');
-          }
-        }).catch(function(error) {
-          console.error('Ошибка получения камер:', error);
-          showResult('error', 'Ошибка доступа к камере', 'Не удалось получить доступ к камере.');
-        });
-      }
-      
-      // Обработка отсканированного QR-кода
-      function processScannedQRCode(qrContent) {
-        const currentUser = UserSystem.getCurrentUser();
-        if (!currentUser) return;
-        
-        // Останавливаем сканер
-        if (scanner) {
-          scanner.stop();
-        }
-        
-        // Скрываем модальное окно сканера
-        scannerModal.style.display = 'none';
-        
-        // Парсим QR-код
-        try {
-          // Пробуем обработать как URL схемы meetup://
-          if (qrContent.startsWith('meetup://')) {
-            handleMeetupQRCode(qrContent);
-          }
-          // Пробуем обработать как URL
-          else if (qrContent.startsWith('http')) {
-            const url = new URL(qrContent);
-            const params = new URLSearchParams(url.search);
-            const qrCode = params.get('scan') || params.get('ref');
-            
-            if (qrCode) {
-              handleQRCode(qrCode);
-            } else {
-              showResult('error', 'Неверный QR-код', 'QR-код не содержит информацию для добавления в друзья.');
-            }
-          } else {
-            // Если не URL, пробуем обработать напрямую
-            if (qrContent.startsWith('FRIEND_') || qrContent.startsWith('PROFILE_') || qrContent.startsWith('REF_')) {
-              handleQRCode(qrContent);
-            } else {
-              showResult('error', 'Неверный QR-код', 'QR-код не содержит информацию для добавления в друзья.');
-            }
-          }
-        } catch (error) {
-          console.error('Ошибка обработки QR-кода:', error);
-          showResult('error', 'Ошибка', 'Не удалось обработать QR-код. Попробуйте еще раз.');
-        }
-      }
-      
-      // Обработка QR-кода схемы meetup://
-      function handleMeetupQRCode(qrContent) {
-        const currentUser = UserSystem.getCurrentUser();
-        
-        // Парсим URL схемы meetup://
-        const match = qrContent.match(/meetup:\/\/add-friend\/([^\/]+)\/(.+)/);
-        if (match) {
-          const userId = match[1];
-          const nickname = decodeURIComponent(match[2]);
-          
-          // Проверяем, не сканируем ли мы свой собственный QR-код
-          if (userId === currentUser.id) {
-            showResult('info', 'Это ваш QR-код', 'Вы не можете добавить себя в друзья.');
-            return;
-          }
-          
-          // Ищем пользователя
-          const user = UserSystem.findUser(userId);
-          if (user) {
-            showUserProfileResult(user);
-          } else {
-            // Если пользователь не найден в локальной базе, создаем временный объект
-            const tempUser = {
-              id: userId,
-              nickname: nickname,
-              avatar: '',
-              status: 'offline'
-            };
-            showUserProfileResult(tempUser);
-          }
-        } else {
-          showResult('error', 'Неверный формат QR-кода', 'QR-код не соответствует формату добавления в друзья.');
-        }
-      }
-      
-      // Обработка QR-кода через UserSystem
-      function handleQRCode(qrCode) {
-        const currentUser = UserSystem.getCurrentUser();
-        const result = UserSystem.processScannedQRCode(qrCode, currentUser.id);
-        
-        if (result.success) {
-          if (result.action === 'view_profile') {
-            // Показываем информацию о пользователе
-            const user = UserSystem.findUser(result.userId);
-            if (user) {
-              showUserProfileResult(user);
-            } else {
-              showResult('error', 'Пользователь не найден', 'Не удалось найти пользователя по QR-коду.');
-            }
-          } else {
-            // Показываем успешный результат
-            showResult('success', 'Запрос отправлен', result.message);
-          }
-        } else {
-          showResult('error', 'Ошибка', result.message);
-        }
-      }
-      
-      // Показ информации о пользователе
-      function showUserProfileResult(user) {
-        const resultIcon = document.getElementById('result-icon');
-        const resultTitle = document.getElementById('result-title');
-        const resultMessage = document.getElementById('result-message');
-        const userInfo = document.getElementById('result-user-info');
-        const userAvatar = document.getElementById('result-user-avatar');
-        const userName = document.getElementById('result-user-name');
-        const userStatusDot = document.getElementById('result-user-status-dot');
-        const userStatusText = document.getElementById('result-user-status-text');
-        const primaryBtn = document.getElementById('result-primary-btn');
-        
-        // Настраиваем иконку и заголовок
-        resultIcon.className = 'result-icon info';
-        resultIcon.innerHTML = '<span class="material-icons">person</span>';
-        resultTitle.textContent = 'Найден пользователь';
-        resultMessage.textContent = 'Хотите добавить этого пользователя в друзья?';
-        
-        // Заполняем информацию о пользователе
-        userAvatar.src = user.avatar || '';
-        userName.textContent = user.nickname || 'Пользователь';
-        
-        if (user.status === 'online') {
-          userStatusDot.className = 'result-status-dot status-online';
-          userStatusText.textContent = 'В сети';
-        } else {
-          userStatusDot.className = 'result-status-dot status-offline';
-          userStatusText.textContent = 'Не в сети';
-        }
-        
-        userInfo.style.display = 'flex';
-        
-        // Настраиваем кнопки
-        primaryBtn.style.display = 'block';
-        primaryBtn.onclick = function() {
-          try {
-            const currentUser = UserSystem.getCurrentUser();
-            UserSystem.sendFriendRequest(currentUser.id, user.id);
-            showResult('success', 'Запрос отправлен', 'Запрос в друзья успешно отправлен!');
-          } catch (error) {
-            showResult('error', 'Ошибка', error.message);
-          }
-        };
-        
-        // Показываем результат
-        scanResultModal.style.display = 'flex';
-      }
-      
-      // Показ результата сканирования
-      function showResult(type, title, message) {
-        const resultIcon = document.getElementById('result-icon');
-        const resultTitle = document.getElementById('result-title');
-        const resultMessage = document.getElementById('result-message');
-        const userInfo = document.getElementById('result-user-info');
-        const primaryBtn = document.getElementById('result-primary-btn');
-        
-        // Скрываем элементы пользователя
-        userInfo.style.display = 'none';
-        primaryBtn.style.display = 'none';
-        
-        // Настраиваем стиль в зависимости от типа
-        if (type === 'success') {
-          resultIcon.className = 'result-icon success';
-          resultIcon.innerHTML = '<span class="material-icons">check_circle</span>';
-        } else if (type === 'error') {
-          resultIcon.className = 'result-icon error';
-          resultIcon.innerHTML = '<span class="material-icons">error</span>';
-        } else {
-          resultIcon.className = 'result-icon info';
-          resultIcon.innerHTML = '<span class="material-icons">info</span>';
-        }
-        
-        resultTitle.textContent = title;
-        resultMessage.textContent = message;
-        
-        // Показываем модальное окно
-        scanResultModal.style.display = 'flex';
-        
-        // Деактивируем кнопку сканирования
-        scanBtn.classList.remove('active');
-      }
-      
-      // Закрытие сканера
-      closeScannerBtn.onclick = function() {
-        stopScanner();
-        scannerModal.style.display = 'none';
-        scanBtn.classList.remove('active');
-      };
-      
-      // Закрытие по клику вне окна
-      scannerModal.onclick = function(e) {
-        if (e.target === scannerModal) {
-          stopScanner();
-          scannerModal.style.display = 'none';
-          scanBtn.classList.remove('active');
-        }
-      };
-      
-      // Переключение фонарика
-      toggleTorchBtn.onclick = function() {
-        if (!activeStream) return;
-        
-        const videoTrack = activeStream.getVideoTracks()[0];
-        if (videoTrack && videoTrack.getCapabilities().torch) {
-          torchEnabled = !torchEnabled;
-          videoTrack.applyConstraints({
-            advanced: [{ torch: torchEnabled }]
-          }).then(() => {
-            toggleTorchBtn.innerHTML = torchEnabled ? 
-              '<span class="material-icons" style="vertical-align: -4px; font-size: 16px;">flashlight_off</span>Фонарик' :
-              '<span class="material-icons" style="vertical-align: -4px; font-size: 16px;">flashlight_on</span>Фонарик';
-          });
-        }
-      };
-      
-      // Закрытие результата
-      closeResultBtn.onclick = function() {
-        scanResultModal.style.display = 'none';
-      };
-      
-      closeResultBtn.onclick = function(e) {
-        if (e.target === scanResultModal) {
-          scanResultModal.style.display = 'none';
-        }
-      };
-      
-      // Остановка сканера
-      function stopScanner() {
-        if (scanner) {
-          scanner.stop();
-          scanner = null;
-        }
-        
-        if (activeStream) {
-          activeStream.getTracks().forEach(track => track.stop());
-          activeStream = null;
-        }
-        
-        torchEnabled = false;
-        toggleTorchBtn.style.display = 'none';
-        toggleTorchBtn.innerHTML = '<span class="material-icons" style="vertical-align: -4px; font-size: 16px;">flashlight_on</span>Фонарик';
-      }
-      
-      // Обработка закрытия страницы
-      window.addEventListener('beforeunload', function() {
-        stopScanner();
-      });
-    }
-
-    // Основная инициализация профиля
     document.addEventListener('DOMContentLoaded', function() {
+      // Проверяем авторизацию
       const currentUser = UserSystem.getCurrentUser();
       
       if (!currentUser) {
-        // Если пользователь не авторизован, перенаправляем на регистрацию
         window.location.href = 'index.html';
         return;
       }
 
       // Проверяем загрузку QRCode библиотеки
-      setTimeout(() => {
-        if (typeof QRCode === 'undefined') {
-          console.warn('QRCode библиотека не загрузилась');
-          // Показываем предупреждение пользователю
-          const qrBtn = document.getElementById('qr-btn');
-          if (qrBtn) {
-            qrBtn.innerHTML = '<span class="material-icons">warning</span> QR (ошибка)';
-            qrBtn.style.background = 'linear-gradient(90deg, #FF4444, #992222)';
-            qrBtn.title = 'Библиотека QR-кода не загружена. Обновите страницу.';
-          }
+      if (typeof QRCode === 'undefined') {
+        console.warn('QRCode библиотека не загрузилась');
+        const qrBtn = document.getElementById('qr-btn');
+        if (qrBtn) {
+          qrBtn.innerHTML = '<span class="material-icons">warning</span> QR (ошибка)';
+          qrBtn.style.background = 'linear-gradient(90deg, #FF4444, #992222)';
+          qrBtn.title = 'Библиотека QR-кода не загружена. Обновите страницу.';
         }
-      }, 3000);
-
-      // Обновляем активность пользователя
-      updateUserActivity(currentUser);
-
-      // Рассчитываем и обновляем статистику
-      const realStats = calculateRealStats(currentUser);
-      saveUserStats(currentUser.id, realStats);
-
-      // Заполняем данные профиля
-      document.getElementById('nickname').textContent = currentUser.nickname || 'Пользователь';
-      document.getElementById('user-id').textContent = `ID: ${currentUser.id.substring(0, 8)}...`;
-      
-      // Аватар
-      const avatarImg = document.getElementById('avatar-img');
-      const avatarPlaceholder = document.querySelector('.avatar-placeholder-svg');
-      const btnRemove = document.getElementById('btn-remove-avatar');
-      const avatarWrap = document.getElementById('profile-avatar-wrap');
-      const avatar = document.getElementById('profile-avatar');
-      
-      if (currentUser.avatar && currentUser.avatar.length > 0) {
-        avatarImg.src = currentUser.avatar;
-        avatarImg.style.display = "block";
-        avatarPlaceholder.style.display = "none";
-        avatar.classList.add('has-photo');
-        avatarWrap.classList.add('has-avatar'); // Добавляем класс для показа кнопки удаления
-      } else {
-        avatarWrap.classList.remove('has-avatar'); // Убираем класс для скрытия кнопки удаления
       }
 
-      // Статус
-      updateStatus(currentUser.invisible ? 'invisible' : (currentUser.status || 'online'));
-
-      // О себе - ВАЖНО: правильно загружаем данные
-      const aboutText = document.getElementById('about-text');
-      aboutText.value = currentUser.about || '';
-      
-      // Настраиваем обработчики событий
-      aboutText.addEventListener('input', aboutInputHandler);
-      aboutText.addEventListener('focus', updateAboutPlaceholderAndCounter);
-      aboutText.addEventListener('blur', function() {
-        updateAboutPlaceholderAndCounter();
-        saveAboutText(); // Сохраняем при потере фокуса
-      });
-      
-      // Инициализируем отображение
-      autoResizeTextarea(aboutText);
-      updateAboutPlaceholderAndCounter();
-
-      // Статистика (реальная)
-      document.getElementById('friends-count').textContent = realStats.friendsCount;
-      document.getElementById('km-this-week').textContent = realStats.kmThisWeek;
-      document.getElementById('online-hours').textContent = realStats.onlineHours;
-
-      // Дата регистрации
-      if (currentUser.registeredAt) {
-        const regDate = new Date(currentUser.registeredAt);
-        document.getElementById('registered-at').textContent = 
-          `Дата регистрации: ${regDate.toLocaleDateString('ru-RU')}`;
+      // Функция обновления статуса
+      function updateStatus(status) {
+        let ind = document.getElementById('status-indicator');
+        let txt = document.getElementById('status-text');
+        ind.classList.remove("status-online","status-offline","status-invisible");
+        let t = "";
+        switch(status) {
+          case "online": 
+            ind.classList.add("status-online"); 
+            t="В сети"; 
+            break;
+          case "offline": 
+            ind.classList.add("status-offline"); 
+            t="Не в сети"; 
+            break;
+          case "invisible": 
+            ind.classList.add("status-invisible"); 
+            t="Скрыт"; 
+            break;
+        }
+        txt.textContent = t;
       }
 
-      // Последний вход
-      if (currentUser.lastSeen) {
-        const lastSeen = new Date(currentUser.lastSeen);
-        const now = new Date();
-        const diffMinutes = Math.floor((now - lastSeen) / (1000 * 60));
+      // Функция обновления Telegram статуса
+      function updateTelegramStatus() {
+        const telegramStatusEl = document.getElementById('telegram-status');
+        const telegramUsernameEl = document.getElementById('telegram-username-display');
         
-        let lastSeenText = "Только что";
-        if (diffMinutes >= 1) {
-          lastSeenText = `${diffMinutes} мин назад`;
+        if (currentUser && currentUser.telegram) {
+          telegramStatusEl.style.display = 'flex';
+          telegramUsernameEl.textContent = '@' + currentUser.telegram.username;
+          telegramStatusEl.classList.add('connected');
+        } else {
+          telegramStatusEl.style.display = 'none';
         }
-        if (diffMinutes >= 60) {
-          const hours = Math.floor(diffMinutes / 60);
-          lastSeenText = `${hours} ч назад`;
+      }
+
+      // Функция авто-ресайза textarea
+      function autoResizeTextarea(elem) {
+        elem.style.height = 'auto';
+        elem.style.height = Math.max(elem.scrollHeight, 68) + 'px';
+      }
+
+      // Функция обновления плейсхолдера и счетчика текста "О себе"
+      function updateAboutPlaceholderAndCounter() {
+        const aboutText = document.getElementById('about-text');
+        const aboutPlaceholder = document.getElementById('about-placeholder');
+        const aboutCounter = document.getElementById('about-counter');
+        const maxAboutLen = 140;
+
+        if (!aboutText.value || aboutText.value.trim() === '') {
+          aboutPlaceholder.style.display = 'block';
+          aboutPlaceholder.style.opacity = '0.72';
+          aboutCounter.style.display = 'none';
+        } else {
+          aboutPlaceholder.style.display = 'none';
+          aboutCounter.style.display = 'block';
         }
-        if (diffMinutes >= 1440) {
-          const days = Math.floor(diffMinutes / 1440);
-          lastSeenText = `${days} д назад`;
-        }
+        aboutCounter.textContent = aboutText.value.length + '/' + maxAboutLen;
+      }
+
+      // Функция для сохранения текста "О себе"
+      function saveAboutText() {
+        const aboutText = document.getElementById('about-text');
+        const currentUser = UserSystem.getCurrentUser();
         
-        document.getElementById('last-seen').textContent = `Последний вход: ${lastSeenText}`;
+        if (!currentUser) return;
+        
+        const users = UserSystem.getUsers();
+        const userIndex = users.findIndex(u => u.id === currentUser.id);
+        
+        if (userIndex !== -1) {
+          users[userIndex].about = aboutText.value;
+          UserSystem.saveUsers(users);
+          
+          // Обновляем текущего пользователя в localStorage
+          UserSystem.setCurrentUser(users[userIndex]);
+          
+          console.log('Описание профиля сохранено:', aboutText.value);
+        }
       }
 
-      // Email
-      if (currentUser.email) {
-        document.getElementById('user-email').textContent = `Email: ${currentUser.email}`;
-      }
+      // Функция для удаления аватара
+      function removeAvatar() {
+        const avatarImg = document.getElementById('avatar-img');
+        const avatarPlaceholder = document.querySelector('.avatar-placeholder-svg');
+        const avatar = document.getElementById('profile-avatar');
+        const avatarWrap = document.getElementById('profile-avatar-wrap');
+        
+        // Сбрасываем загруженное изображение
+        avatarImg.src = '';
+        avatarImg.style.display = "none";
+        avatarPlaceholder.style.display = "block";
+        avatar.classList.remove("has-photo");
+        avatarWrap.classList.remove("has-avatar");
 
-      // Инициализируем реферальную секцию
-      initReferralSection();
-      
-      // Инициализируем сканер QR-кода
-      initQRScanner();
-
-      // Обработчик кнопки "Скрыть местоположение"
-      const invisibleBtn = document.getElementById('btn-invisible');
-      if (currentUser.invisible) {
-        invisibleBtn.innerHTML = '<span class="material-icons">visibility</span>Показать местоположение';
-      }
-
-      invisibleBtn.onclick = function(){
+        // Удаляем аватар из профиля в базе данных
         const users = UserSystem.getUsers();
         const currentUser = UserSystem.getCurrentUser();
         const userIndex = users.findIndex(u => u.id === currentUser.id);
         
         if (userIndex !== -1) {
-          users[userIndex].invisible = !users[userIndex].invisible;
+          users[userIndex].avatar = "";
+          UserSystem.saveUsers(users);
+          UserSystem.setCurrentUser(users[userIndex]);
+          console.log('Аватар удален');
+        }
+        
+        // Показываем сообщение об успешном удалении
+        showTempMessage('Аватар удален');
+      }
+
+      // Функция для показа временных сообщений
+      function showTempMessage(message, duration = 3000) {
+        // Удаляем существующее сообщение
+        const existingMessage = document.querySelector('.temp-message');
+        if (existingMessage) {
+          existingMessage.remove();
+        }
+
+        const messageEl = document.createElement('div');
+        messageEl.className = 'temp-message';
+        messageEl.textContent = message;
+        messageEl.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(0,0,0,0.8);
+          color: white;
+          padding: 15px 20px;
+          border-radius: 12px;
+          font-size: 14px;
+          z-index: 1000;
+          backdrop-filter: blur(10px);
+          text-align: center;
+          max-width: 80%;
+        `;
+        
+        document.body.appendChild(messageEl);
+        
+        setTimeout(() => {
+          if (messageEl.parentNode) {
+            messageEl.remove();
+          }
+        }, duration);
+      }
+
+      // Расчет реальной статистики
+      function calculateRealStats(user) {
+        const stats = {
+          friendsCount: 0,
+          kmThisWeek: 0,
+          onlineHours: 0
+        };
+
+        // Реальное количество друзей
+        const allUsers = UserSystem.getUsers();
+        const friendRequests = JSON.parse(localStorage.getItem('meetup_friend_requests') || '[]');
+        
+        // Считаем подтвержденных друзей
+        const userFriends = friendRequests.filter(req => 
+          (req.fromUserId === user.id || req.toUserId === user.id) && 
+          req.status === 'accepted'
+        ).length;
+        
+        stats.friendsCount = userFriends;
+
+        // Реальное пройденное расстояние (симуляция на основе активности)
+        const userActivity = JSON.parse(localStorage.getItem(`user_activity_${user.id}`) || '{}');
+        const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+        
+        let totalDistance = 0;
+        if (userActivity.positions) {
+          userActivity.positions.forEach(pos => {
+            if (pos.timestamp > weekAgo) {
+              totalDistance += (pos.distance || 0);
+            }
+          });
+        }
+        
+        // Если нет данных, генерируем реалистичные на основе регистрации
+        if (totalDistance === 0) {
+          const regDate = new Date(user.registeredAt);
+          const daysSinceReg = Math.max(1, Math.floor((Date.now() - regDate.getTime()) / (24 * 60 * 60 * 1000)));
+          totalDistance = Math.min(50, Math.floor(daysSinceReg * 1.5 + Math.random() * 10));
+        }
+        
+        stats.kmThisWeek = Math.round(totalDistance);
+
+        // Реальное время в сети (симуляция)
+        const onlineData = JSON.parse(localStorage.getItem(`user_online_${user.id}`) || '{}');
+        let totalOnlineHours = onlineData.totalHours || 0;
+        
+        // Если нет данных, генерируем на основе активности
+        if (totalOnlineHours === 0) {
+          const regDate = new Date(user.registeredAt);
+          const hoursSinceReg = Math.max(1, Math.floor((Date.now() - regDate.getTime()) / (60 * 60 * 1000)));
+          totalOnlineHours = Math.min(168, Math.floor(hoursSinceReg * 0.1 + Math.random() * 24));
+        }
+        
+        stats.onlineHours = Math.round(totalOnlineHours);
+
+        return stats;
+      }
+
+      // Сохранение статистики
+      function saveUserStats(userId, stats) {
+        const users = UserSystem.getUsers();
+        const userIndex = users.findIndex(u => u.id === userId);
+        
+        if (userIndex !== -1) {
+          users[userIndex].stats = stats;
           UserSystem.saveUsers(users);
           
           // Обновляем текущего пользователя
-          const updatedUser = users[userIndex];
-          UserSystem.setCurrentUser(updatedUser);
-          
-          // Обновляем статус
-          updateStatus(updatedUser.invisible ? 'invisible' : updatedUser.status);
-          
-          // Обновляем текст кнопки
-          this.innerHTML = updatedUser.invisible ? 
-            '<span class="material-icons">visibility</span>Показать местоположение' :
-            '<span class="material-icons">visibility_off</span>Скрыть местоположение';
-        }
-      };
-
-      // Кнопка "Настройки профиля"
-      document.getElementById('btn-settings').onclick = function() {
-        window.location.href = 'settingsProfile.html';
-      };
-
-      // Удаление аккаунта
-      document.getElementById('btn-delete-account').onclick = function() {
-        if (confirm('Вы уверены, что хотите удалить аккаунт? Все данные будут удалены через 30 дней.')) {
-          // Помечаем аккаунт для удаления
-          const users = UserSystem.getUsers();
           const currentUser = UserSystem.getCurrentUser();
-          const userIndex = users.findIndex(u => u.id === currentUser.id);
-          
-          if (userIndex !== -1) {
-            users[userIndex].scheduledForDeletion = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 дней
-            UserSystem.saveUsers(users);
+          if (currentUser && currentUser.id === userId) {
+            UserSystem.setCurrentUser(users[userIndex]);
           }
-          
-          UserSystem.logout();
-          window.location.href = 'index.html';
         }
-      };
+      }
 
-      // Аватар логика
-      const avatarUpload = document.getElementById('avatar-upload');
-      const avatarContainer = document.getElementById('profile-avatar-wrap');
-
-      avatarContainer.onclick = (e) => {
-        if (e.target !== btnRemove) {
-          avatarUpload.click();
-        }
-      };
-      
-      avatarUpload.onchange = async function(){
-        let file = avatarUpload.files && avatarUpload.files[0];
-        if(!file) return;
-        if(!file.type.startsWith('image/')) {
-          alert('Можно загрузить только изображение');
-          return;
+      // Обновление активности пользователя
+      function updateUserActivity(user) {
+        const activityKey = `user_activity_${user.id}`;
+        let activity = JSON.parse(localStorage.getItem(activityKey) || '{}');
+        
+        if (!activity.positions) {
+          activity.positions = [];
         }
         
-        try {
-          let url = await UserSystem.fileToBase64(file);
-          avatarImg.src = url;
+        // Добавляем текущую позицию (если есть)
+        if (user.position) {
+          activity.positions.push({
+            timestamp: Date.now(),
+            position: user.position,
+            distance: Math.random() * 2 // случайное расстояние 0-2 км
+          });
+          
+          // Ограничиваем историю последними 100 записями
+          if (activity.positions.length > 100) {
+            activity.positions = activity.positions.slice(-100);
+          }
+        }
+        
+        // Обновляем онлайн-статистику
+        const onlineKey = `user_online_${user.id}`;
+        let onlineData = JSON.parse(localStorage.getItem(onlineKey) || '{}');
+        
+        if (!onlineData.sessions) {
+          onlineData.sessions = [];
+        }
+        
+        // Добавляем текущую сессию
+        onlineData.sessions.push({
+          start: Date.now(),
+          end: null // сессия еще активна
+        });
+        
+        // Закрываем предыдущую незавершенную сессию
+        onlineData.sessions.forEach(session => {
+          if (!session.end) {
+            session.end = Date.now();
+          }
+        });
+        
+        // Пересчитываем общее время
+        let totalMs = 0;
+        onlineData.sessions.forEach(session => {
+          if (session.end) {
+            totalMs += (session.end - session.start);
+          }
+        });
+        
+        onlineData.totalHours = Math.floor(totalMs / (60 * 60 * 1000));
+        
+        // Сохраняем данные
+        localStorage.setItem(activityKey, JSON.stringify(activity));
+        localStorage.setItem(onlineKey, JSON.stringify(onlineData));
+      }
+
+      // Генерация QR кода для добавления в друзья
+      function generateFriendQRCode(userId, nickname) {
+        const qrContainer = document.getElementById('qr-code');
+        qrContainer.innerHTML = '';
+        
+        // Создаем специальный формат для QR-кода добавления в друзья
+        const qrData = `meetup://add-friend/${userId}/${encodeURIComponent(nickname || 'Пользователь')}`;
+        
+        // Проверяем загружена ли библиотека QRCode
+        if (typeof QRCode !== 'undefined') {
+          try {
+            // Используем QRCode.js
+            new QRCode(qrContainer, {
+              text: qrData,
+              width: 200,
+              height: 200,
+              colorDark: "#000000",
+              colorLight: "#ffffff",
+              correctLevel: QRCode.CorrectLevel.H
+            });
+            console.log('QR-код успешно создан');
+          } catch (error) {
+            console.error('Ошибка при создании QR-кода:', error);
+            qrContainer.innerHTML = `
+              <div style="text-align: center; padding: 20px;">
+                <div style="color: #FF4444; margin-bottom: 10px;">
+                  <span class="material-icons">error</span>
+                </div>
+                <div style="color: white;">Не удалось создать QR-код</div>
+                <div style="color: #888; font-size: 12px; margin-top: 10px;">${error.message}</div>
+              </div>
+            `;
+          }
+        } else {
+          // Альтернативный способ если библиотека не загружена
+          console.warn('Библиотека QRCode не загружена, используем альтернативный метод');
+          qrContainer.innerHTML = `
+            <div class="qr-alternative">
+              <div class="qr-alternative-code">
+                <div style="font-family: monospace; font-size: 16px; color: black; margin-bottom: 10px; font-weight: bold;">
+                  ${nickname || 'Добавить в друзья'}
+                </div>
+                <div style="font-family: monospace; font-size: 12px; color: #666; word-break: break-all;">
+                  ID: ${userId}
+                </div>
+                <div style="margin-top: 10px; font-size: 10px; color: #999;">
+                  Отсканируйте этот текст
+                </div>
+              </div>
+              <div class="qr-warning">
+                <span class="material-icons" style="font-size: 16px;">warning</span>
+                Используйте альтернативный метод для добавления в друзья
+              </div>
+            </div>
+          `;
+        }
+        
+        // Обновляем заголовок с именем пользователя
+        const currentUser = UserSystem.getCurrentUser();
+        if (currentUser) {
+          document.querySelector('.qr-title').textContent = `Добавить ${currentUser.nickname} в друзья`;
+        }
+      }
+
+      // Функции для работы с реферальными ссылками
+      function initReferralSection() {
+        const currentUser = UserSystem.getCurrentUser();
+        if (!currentUser) return;
+        
+        // Генерируем и показываем реферальную ссылку
+        const referralLink = UserSystem.getReferralLink(currentUser.id);
+        const referralInput = document.getElementById('referral-link');
+        const copyBtn = document.getElementById('copy-btn');
+        const qrBtn = document.getElementById('qr-btn');
+        const qrModal = document.getElementById('qr-modal');
+        const closeQrBtn = document.getElementById('close-qr');
+        const shareQrBtn = document.getElementById('share-qr');
+        
+        if (referralLink) {
+          referralInput.value = referralLink;
+          
+          // Копирование ссылки
+          copyBtn.onclick = async function() {
+            try {
+              await navigator.clipboard.writeText(referralLink);
+              copyBtn.textContent = 'Скопировано!';
+              copyBtn.classList.add('copied');
+              
+              // Показываем временное сообщение
+              showTempMessage('Ссылка скопирована в буфер обмена');
+              
+              setTimeout(() => {
+                copyBtn.textContent = 'Копировать';
+                copyBtn.classList.remove('copied');
+              }, 2000);
+            } catch (err) {
+              // Fallback для старых браузеров
+              referralInput.select();
+              document.execCommand('copy');
+              showTempMessage('Ссылка скопирована');
+            }
+          };
+          
+          // Открытие QR кода для добавления в друзья
+          qrBtn.onclick = function() {
+            // Проверяем загружена ли библиотека QRCode
+            if (typeof QRCode === 'undefined') {
+              showTempMessage('Библиотека QR-кода не загружена. Обновите страницу или проверьте подключение к интернету.', 5000);
+              // Показываем альтернативный контент
+              const qrContainer = document.getElementById('qr-code');
+              qrContainer.innerHTML = `
+                <div class="qr-alternative">
+                  <div class="qr-alternative-code">
+                    <div style="font-family: monospace; font-size: 16px; color: black; margin-bottom: 10px; font-weight: bold;">
+                      ${currentUser.nickname || 'Пользователь'}
+                    </div>
+                    <div style="font-family: monospace; font-size: 12px; color: #666; word-break: break-all;">
+                      Ссылка: ${referralLink}
+                    </div>
+                  </div>
+                  <div class="qr-warning">
+                    <span class="material-icons" style="font-size: 16px;">error</span>
+                    QR-код временно недоступен
+                  </div>
+                </div>
+              `;
+              qrModal.style.display = 'flex';
+              return;
+            }
+            
+            // Генерируем персональный QR-код для добавления в друзья
+            generateFriendQRCode(currentUser.id, currentUser.nickname);
+            qrModal.style.display = 'flex';
+          };
+          
+          // Закрытие QR модального окна
+          closeQrBtn.onclick = function() {
+            qrModal.style.display = 'none';
+          };
+          
+          // Поделиться QR кодом
+          shareQrBtn.onclick = async function() {
+            try {
+              const qrCanvas = document.querySelector('#qr-code canvas');
+              if (qrCanvas) {
+                qrCanvas.toBlob(async function(blob) {
+                  const file = new File([blob], 'meetup-friend-qr.png', { type: 'image/png' });
+                  
+                  if (navigator.share && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                      files: [file],
+                      title: 'Добавь меня в друзья в MeetUP!',
+                      text: 'Отсканируй этот QR-код, чтобы добавить меня в друзья в приложении MeetUP.'
+                    });
+                  } else {
+                    // Fallback: скачивание
+                    const link = document.createElement('a');
+                    link.download = 'meetup-friend-qr.png';
+                    link.href = qrCanvas.toDataURL();
+                    link.click();
+                    showTempMessage('QR код сохранен');
+                  }
+                });
+              } else {
+                // Если нет canvas, предлагаем поделиться ссылкой
+                if (navigator.share) {
+                  await navigator.share({
+                    title: 'Добавь меня в друзья в MeetUP!',
+                    text: `Добавь меня в друзья: ${referralLink}`,
+                    url: referralLink
+                  });
+                } else {
+                  await navigator.clipboard.writeText(referralLink);
+                  showTempMessage('Ссылка скопирована в буфер обмена');
+                }
+              }
+            } catch (error) {
+              console.log('Ошибка при совместном использовании:', error);
+              // Копируем ссылку в буфер обмена как запасной вариант
+              await navigator.clipboard.writeText(referralLink);
+              showTempMessage('Ссылка скопирована в буфер обмена');
+            }
+          };
+          
+          // Закрытие по клику вне окна
+          qrModal.onclick = function(e) {
+            if (e.target === qrModal) {
+              qrModal.style.display = 'none';
+            }
+          };
+        }
+      }
+
+      // Основная инициализация профиля
+      function initProfile() {
+        const currentUser = UserSystem.getCurrentUser();
+        
+        if (!currentUser) {
+          // Если пользователь не авторизован, перенаправляем на регистрацию
+          window.location.href = 'index.html';
+          return;
+        }
+
+        // Проверяем загрузку QRCode библиотеки
+        setTimeout(() => {
+          if (typeof QRCode === 'undefined') {
+            console.warn('QRCode библиотека не загрузилась');
+            // Показываем предупреждение пользователю
+            const qrBtn = document.getElementById('qr-btn');
+            if (qrBtn) {
+              qrBtn.innerHTML = '<span class="material-icons">warning</span> QR (ошибка)';
+              qrBtn.style.background = 'linear-gradient(90deg, #FF4444, #992222)';
+              qrBtn.title = 'Библиотека QR-кода не загружена. Обновите страницу.';
+            }
+          }
+        }, 3000);
+
+        // Обновляем активность пользователя
+        updateUserActivity(currentUser);
+
+        // Рассчитываем и обновляем статистику
+        const realStats = calculateRealStats(currentUser);
+        saveUserStats(currentUser.id, realStats);
+
+        // Заполняем данные профиля
+        document.getElementById('nickname').textContent = currentUser.nickname || 'Пользователь';
+        document.getElementById('user-id').textContent = `ID: ${currentUser.id.substring(0, 8)}...`;
+        
+        // Обновляем статус Telegram
+        updateTelegramStatus();
+        
+        // Аватар
+        const avatarImg = document.getElementById('avatar-img');
+        const avatarPlaceholder = document.querySelector('.avatar-placeholder-svg');
+        const btnRemove = document.getElementById('btn-remove-avatar');
+        const avatarWrap = document.getElementById('profile-avatar-wrap');
+        const avatar = document.getElementById('profile-avatar');
+        
+        if (currentUser.avatar && currentUser.avatar.length > 0) {
+          avatarImg.src = currentUser.avatar;
           avatarImg.style.display = "block";
           avatarPlaceholder.style.display = "none";
-          avatar.classList.add("has-photo");
-          avatarWrap.classList.add("has-avatar"); // Добавляем класс для показа кнопки удаления
+          avatar.classList.add('has-photo');
+          avatarWrap.classList.add('has-avatar'); // Добавляем класс для показа кнопки удаления
+        } else {
+          avatarWrap.classList.remove('has-avatar'); // Убираем класс для скрытия кнопки удаления
+        }
 
-          // Сохраняем аватар в профиль
+        // Статус
+        updateStatus(currentUser.invisible ? 'invisible' : (currentUser.status || 'online'));
+
+        // О себе
+        const aboutText = document.getElementById('about-text');
+        aboutText.value = currentUser.about || '';
+        
+        // Настраиваем обработчики событий
+        function aboutInputHandler() {
+          const maxAboutLen = 140;
+          
+          if (aboutText.value.length > maxAboutLen) {
+            aboutText.value = aboutText.value.slice(0, maxAboutLen);
+          }
+          autoResizeTextarea(aboutText);
+          updateAboutPlaceholderAndCounter();
+        
+          // Сохраняем изменения в реальном времени
+          saveAboutText();
+        }
+        
+        aboutText.addEventListener('input', aboutInputHandler);
+        aboutText.addEventListener('focus', updateAboutPlaceholderAndCounter);
+        aboutText.addEventListener('blur', function() {
+          updateAboutPlaceholderAndCounter();
+          saveAboutText(); // Сохраняем при потере фокуса
+        });
+        
+        // Инициализируем отображение
+        autoResizeTextarea(aboutText);
+        updateAboutPlaceholderAndCounter();
+
+        // Статистика (реальная)
+        document.getElementById('friends-count').textContent = realStats.friendsCount;
+        document.getElementById('km-this-week').textContent = realStats.kmThisWeek;
+        document.getElementById('online-hours').textContent = realStats.onlineHours;
+
+        // Дата регистрации
+        if (currentUser.registeredAt) {
+          const regDate = new Date(currentUser.registeredAt);
+          document.getElementById('registered-at').textContent = 
+            `Дата регистрации: ${regDate.toLocaleDateString('ru-RU')}`;
+        }
+
+        // Последний вход
+        if (currentUser.lastSeen) {
+          const lastSeen = new Date(currentUser.lastSeen);
+          const now = new Date();
+          const diffMinutes = Math.floor((now - lastSeen) / (1000 * 60));
+          
+          let lastSeenText = "Только что";
+          if (diffMinutes >= 1) {
+            lastSeenText = `${diffMinutes} мин назад`;
+          }
+          if (diffMinutes >= 60) {
+            const hours = Math.floor(diffMinutes / 60);
+            lastSeenText = `${hours} ч назад`;
+          }
+          if (diffMinutes >= 1440) {
+            const days = Math.floor(diffMinutes / 1440);
+            lastSeenText = `${days} д назад`;
+          }
+          
+          document.getElementById('last-seen').textContent = `Последний вход: ${lastSeenText}`;
+        }
+
+        // Email
+        if (currentUser.email) {
+          document.getElementById('user-email').textContent = `Email: ${currentUser.email}`;
+        }
+
+        // Инициализируем реферальную секцию
+        initReferralSection();
+        
+        // Кнопка Telegram
+        document.getElementById('btn-telegram-settings').onclick = function() {
+          window.location.href = 'telegram-settings.html';
+        };
+
+        // Обработчик кнопки "Скрыть местоположение"
+        const invisibleBtn = document.getElementById('btn-invisible');
+        if (currentUser.invisible) {
+          invisibleBtn.innerHTML = '<span class="material-icons">visibility</span>Показать местоположение';
+        }
+
+        invisibleBtn.onclick = function(){
           const users = UserSystem.getUsers();
           const currentUser = UserSystem.getCurrentUser();
           const userIndex = users.findIndex(u => u.id === currentUser.id);
           
           if (userIndex !== -1) {
-            users[userIndex].avatar = url;
+            users[userIndex].invisible = !users[userIndex].invisible;
             UserSystem.saveUsers(users);
-            UserSystem.setCurrentUser(users[userIndex]);
-            console.log('Аватар сохранен');
+            
+            // Обновляем текущего пользователя
+            const updatedUser = users[userIndex];
+            UserSystem.setCurrentUser(updatedUser);
+            
+            // Обновляем статус
+            updateStatus(updatedUser.invisible ? 'invisible' : updatedUser.status);
+            
+            // Обновляем текст кнопки
+            this.innerHTML = updatedUser.invisible ? 
+              '<span class="material-icons">visibility</span>Показать местоположение' :
+              '<span class="material-icons">visibility_off</span>Скрыть местоположение';
+          }
+        };
+
+        // Кнопка "Настройки профиля"
+        document.getElementById('btn-settings').onclick = function() {
+          window.location.href = 'settingsProfile.html';
+        };
+
+        // Удаление аккаунта
+        document.getElementById('btn-delete-account').onclick = function() {
+          if (confirm('Вы уверены, что хотите удалить аккаунт? Все данные будут удалены через 30 дней.')) {
+            // Помечаем аккаунт для удаления
+            const users = UserSystem.getUsers();
+            const currentUser = UserSystem.getCurrentUser();
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+            
+            if (userIndex !== -1) {
+              users[userIndex].scheduledForDeletion = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 дней
+              UserSystem.saveUsers(users);
+            }
+            
+            UserSystem.logout();
+            window.location.href = 'index.html';
+          }
+        };
+
+        // Аватар логика
+        const avatarUpload = document.getElementById('avatar-upload');
+        const avatarContainer = document.getElementById('profile-avatar-wrap');
+
+        avatarContainer.onclick = (e) => {
+          if (e.target !== btnRemove) {
+            avatarUpload.click();
+          }
+        };
+        
+        avatarUpload.onchange = async function(){
+          let file = avatarUpload.files && avatarUpload.files[0];
+          if(!file) return;
+          if(!file.type.startsWith('image/')) {
+            alert('Можно загрузить только изображение');
+            return;
           }
           
-          showTempMessage('Аватар сохранен');
-        } catch (error) {
-          alert('Ошибка при загрузке изображения: ' + error.message);
-        }
-      };
-      
-      // Обработчик удаления аватара
-      btnRemove.onclick = function(e){
-        e.stopPropagation();
-        if (confirm('Удалить фото профиля?')) {
-          removeAvatar();
-        }
-      };
-      
-      // Обработчик нажатия клавиши Enter на кнопке удаления
-      btnRemove.onkeydown = function(e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
+          try {
+            let url = await UserSystem.fileToBase64(file);
+            avatarImg.src = url;
+            avatarImg.style.display = "block";
+            avatarPlaceholder.style.display = "none";
+            avatar.classList.add("has-photo");
+            avatarWrap.classList.add("has-avatar"); // Добавляем класс для показа кнопки удаления
+
+            // Сохраняем аватар в профиль
+            const users = UserSystem.getUsers();
+            const currentUser = UserSystem.getCurrentUser();
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+            
+            if (userIndex !== -1) {
+              users[userIndex].avatar = url;
+              UserSystem.saveUsers(users);
+              UserSystem.setCurrentUser(users[userIndex]);
+              console.log('Аватар сохранен');
+            }
+            
+            showTempMessage('Аватар сохранен');
+          } catch (error) {
+            alert('Ошибка при загрузке изображения: ' + error.message);
+          }
+        };
+        
+        // Обработчик удаления аватара
+        btnRemove.onclick = function(e){
           e.stopPropagation();
           if (confirm('Удалить фото профиля?')) {
             removeAvatar();
           }
-        }
-      };
+        };
+        
+        // Обработчик нажатия клавиши Enter на кнопке удаления
+        btnRemove.onkeydown = function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (confirm('Удалить фото профиля?')) {
+              removeAvatar();
+            }
+          }
+        };
+      }
+
+      // Инициализируем профиль
+      initProfile();
     });
   </script>
 </body>
