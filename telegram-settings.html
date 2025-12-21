@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Привязка Telegram — MeetUP</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="userSystem.js"></script>
+    <script src="telegram-bot-api.js"></script>
+    <style>
+        :root {
+            --bg-main: #121212;
+            --card-bg: rgba(30,30,30,0.95);
+            --border: #333;
+            --border-active: #00FFFF;
+            --text-main: #FFF;
+            --text-muted: #888;
+            --gradient-primary: linear-gradient(135deg, #00FFFF, #9400D3);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 480px;
+        }
+        
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(36,36,36,0.9);
+            border: none;
+            border-radius: 50%;
+            width: 46px;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.2s;
+        }
+        
+        .back-btn:hover {
+            background: #2a2a2a;
+            transform: translateY(-2px);
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 16px;
+        }
+        
+        .telegram-icon {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .telegram-icon .material-icons {
+            font-size: 64px;
+            color: #0088cc;
+            background: rgba(0, 136, 204, 0.1);
+            padding: 20px;
+            border-radius: 50%;
+        }
+        
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        .input-wrapper {
+            position: relative;
+        }
+        
+        .input-prefix {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 18px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 16px 16px 16px 44px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--border-active);
+            box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.1);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 255, 255, 0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin: 16px 0;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            animation: fadeIn 0.3s;
+        }
+        
+        .status-message.success {
+            background: rgba(0, 200, 83, 0.1);
+            border-left: 4px solid #00C853;
+            color: #00C853;
+        }
+        
+        .status-message.error {
+            background: rgba(255, 68, 68, 0.1);
+            border-left: 4px solid #FF4444;
+            color: #FF4444;
+        }
+        
+        .status-message.info {
+            background: rgba(0, 136, 204, 0.1);
+            border-left: 4px solid #0088cc;
+            color: #0088cc;
+        }
+        
+        .timer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            margin: 16px 0;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .code-inputs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 24px 0;
+        }
+        
+        .code-input {
+            width: 50px;
+            height: 60px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+        }
+        
+        .code-input:focus {
+            border-color: var(--border-active);
+            outline: none;
+        }
+        
+        .user-info {
+            background: rgba(0, 136, 204, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            background: #0088cc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: white;
+        }
+        
+        .user-details {
+            flex: 1;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .user-username {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        
+        .verified-badge {
+            background: #00C853;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @media (max-width: 480px) {
+            .card {
+                padding: 24px;
+            }
+            
+            .title {
+                font-size: 24px;
+            }
+            
+            .code-input {
+                width: 44px;
+                height: 56px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="back-btn" onclick="window.location.href='profile.html'">
+        <span class="material-icons">arrow_back</span>
+    </button>
+    
+    <div class="container">
+        <div class="card">
+            <div class="telegram-icon">
+                <span class="material-icons">telegram</span>
+            </div>
+            
+            <h1 class="title">Привязка Telegram</h1>
+            <p class="subtitle">Получайте коды подтверждения и сбрасывайте пароль через Telegram</p>
+            
+            <!-- Шаг 1: Ввод Telegram username -->
+            <div id="step-username">
+                <div class="form-group">
+                    <label style="display: block; margin-bottom: 8px; color: var(--text-muted);">
+                        Ваш Telegram username
+                    </label>
+                    <div class="input-wrapper">
+                        <span class="input-prefix">@</span>
+                        <input type="text" id="telegram-username" placeholder="username" maxlength="32">
+                    </div>
+                    <small style="color: var(--text-muted); display: block; margin-top: 8px; font-size: 13px;">
+                        Убедитесь, что у вас есть username в настройках Telegram
+                    </small>
+                </div>
+                
+                <button class="btn btn-primary" id="btn-check-username">
+                    <span class="material-icons">search</span>
+                    Проверить и продолжить
+                </button>
+            </div>
+            
+            <!-- Шаг 2: Подтверждение кода -->
+            <div id="step-verification" style="display: none;">
+                <div class="user-info" id="telegram-user-info">
+                    <!-- Информация о пользователе будет загружена динамически -->
+                </div>
+                
+                <p style="text-align: center; margin: 20px 0; color: var(--text-muted);">
+                    Мы отправили код подтверждения в Telegram. Введите его ниже:
+                </p>
+                
+                <div class="code-inputs">
+                    <input type="text" class="code-input" id="code-1" maxlength="1" inputmode="numeric">
+                    <input type="text" class="code-input" id="code-2" maxlength="1" inputmode="numeric">
+                    <input type="text" class="code-input" id="code-3" maxlength="1" inputmode="numeric">
+                    <input type="text" class="code-input" id="code-4" maxlength="1" inputmode="numeric">
+                    <input type="text" class="code-input" id="code-5" maxlength="1" inputmode="numeric">
+                    <input type="text" class="code-input" id="code-6" maxlength="1" inputmode="numeric">
+                </div>
+                
+                <div class="timer" id="verification-timer">
+                    Код действителен: <span id="timer-display">10:00</span>
+                </div>
+                
+                <button class="btn btn-primary" id="btn-verify-code">
+                    <span class="material-icons">check_circle</span>
+                    Подтвердить
+                </button>
+                
+                <button class="btn btn-secondary" id="btn-resend-code">
+                    <span class="material-icons">refresh</span>
+                    Отправить код повторно
+                </button>
+            </div>
+            
+            <!-- Шаг 3: Успешная привязка -->
+            <div id="step-success" style="display: none;">
+                <div style="text-align: center; margin: 32px 0;">
+                    <div style="width: 80px; height: 80px; background: #00C853; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+                        <span class="material-icons" style="font-size: 40px; color: white;">check</span>
+                    </div>
+                    <h2 style="margin-bottom: 12px; color: #00C853;">Telegram успешно привязан!</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 32px;">
+                        Теперь вы можете использовать Telegram для сброса пароля и получения уведомлений
+                    </p>
+                </div>
+                
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <span class="material-icons">telegram</span>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="bound-telegram-name"></div>
+                        <div class="user-username" id="bound-telegram-username"></div>
+                        <div style="margin-top: 8px;">
+                            <span class="verified-badge">
+                                <span class="material-icons" style="font-size: 14px;">verified</span>
+                                Подтверждено
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 32px;">
+                    <button class="btn btn-primary" onclick="window.location.href='profile.html'">
+                        <span class="material-icons">arrow_back</span>
+                        Вернуться в профиль
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Сообщения об ошибках/успехе -->
+            <div class="status-message" id="status-message"></div>
+            
+            <!-- Информация об уже привязанном аккаунте -->
+            <div id="already-bound" style="display: none;">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <span class="material-icons">telegram</span>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name">Telegram уже привязан</div>
+                        <div class="user-username" id="existing-telegram-username"></div>
+                        <div style="margin-top: 8px;">
+                            <span class="verified-badge" id="existing-verified-badge">
+                                <span class="material-icons" style="font-size: 14px;">verified</span>
+                                Подтверждено
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 24px;">
+                    <button class="btn btn-secondary" id="btn-unbind-telegram">
+                        <span class="material-icons">link_off</span>
+                        Отвязать Telegram
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Инициализация Telegram Bot API (демо-режим)
+        TelegramBotAPI.init();
+        
+        // Глобальные переменные
+        let currentStep = 'username';
+        let verificationTimer = null;
+        let timeLeft = 600; // 10 минут в секундах
+        let telegramUsername = '';
+        
+        // DOM элементы
+        const elements = {
+            stepUsername: document.getElementById('step-username'),
+            stepVerification: document.getElementById('step-verification'),
+            stepSuccess: document.getElementById('step-success'),
+            alreadyBound: document.getElementById('already-bound'),
+            statusMessage: document.getElementById('status-message'),
+            telegramUsernameInput: document.getElementById('telegram-username'),
+            telegramUserInfo: document.getElementById('telegram-user-info'),
+            codeInputs: [
+                document.getElementById('code-1'),
+                document.getElementById('code-2'),
+                document.getElementById('code-3'),
+                document.getElementById('code-4'),
+                document.getElementById('code-5'),
+                document.getElementById('code-6')
+            ],
+            timerDisplay: document.getElementById('timer-display'),
+            boundTelegramName: document.getElementById('bound-telegram-name'),
+            boundTelegramUsername: document.getElementById('bound-telegram-username'),
+            existingTelegramUsername: document.getElementById('existing-telegram-username'),
+            existingVerifiedBadge: document.getElementById('existing-verified-badge')
+        };
+        
+        // Функции для работы с UI
+        function showStatus(type, message) {
+            elements.statusMessage.className = `status-message ${type}`;
+            elements.statusMessage.innerHTML = `
+                <span class="material-icons">${type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info'}</span>
+                <span>${message}</span>
+            `;
+            elements.statusMessage.style.display = 'flex';
+            
+            // Автоматическое скрытие через 5 секунд
+            if (type !== 'error') {
+                setTimeout(() => {
+                    elements.statusMessage.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        function showStep(stepName) {
+            currentStep = stepName;
+            
+            // Скрываем все шаги
+            elements.stepUsername.style.display = 'none';
+            elements.stepVerification.style.display = 'none';
+            elements.stepSuccess.style.display = 'none';
+            elements.alreadyBound.style.display = 'none';
+            
+            // Показываем нужный шаг
+            switch(stepName) {
+                case 'username':
+                    elements.stepUsername.style.display = 'block';
+                    break;
+                case 'verification':
+                    elements.stepVerification.style.display = 'block';
+                    break;
+                case 'success':
+                    elements.stepSuccess.style.display = 'block';
+                    break;
+                case 'alreadyBound':
+                    elements.alreadyBound.style.display = 'block';
+                    break;
+            }
+        }
+        
+        // Таймер для кода подтверждения
+        function startVerificationTimer() {
+            clearInterval(verificationTimer);
+            timeLeft = 600; // 10 минут
+            
+            updateTimerDisplay();
+            
+            verificationTimer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(verificationTimer);
+                    showStatus('error', 'Срок действия кода истек. Запросите новый код.');
+                }
+            }, 1000);
+        }
+        
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            elements.timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (timeLeft < 60) {
+                elements.timerDisplay.style.color = '#FF4444';
+            }
+        }
+        
+        // Обработка ввода кода
+        function setupCodeInputs() {
+            elements.codeInputs.forEach((input, index) => {
+                if (!input) return;
+                
+                input.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    
+                    // Очищаем нецифровые символы
+                    if (value && !/^\d$/.test(value)) {
+                        e.target.value = '';
+                        return;
+                    }
+                    
+                    // Автопереход к следующему полю
+                    if (value.length === 1 && index < elements.codeInputs.length - 1) {
+                        elements.codeInputs[index + 1].focus();
+                    }
+                });
+                
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && e.target.value.length === 0 && index > 0) {
+                        elements.codeInputs[index - 1].focus();
+                    }
+                });
+            });
+        }
+        
+        // Проверка существующей привязки
+        function checkExistingBinding() {
+            const currentUser = UserSystem.getCurrentUser();
+            if (!currentUser) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            if (currentUser.telegram) {
+                elements.existingTelegramUsername.textContent = `@${currentUser.telegram.username}`;
+                
+                if (currentUser.telegram.verified) {
+                    elements.existingVerifiedBadge.innerHTML = `
+                        <span class="material-icons" style="font-size: 14px;">verified</span>
+                        Подтверждено
+                    `;
+                } else {
+                    elements.existingVerifiedBadge.innerHTML = `
+                        <span class="material-icons" style="font-size: 14px;">schedule</span>
+                        Ожидает подтверждения
+                    `;
+                    elements.existingVerifiedBadge.style.background = '#FF9800';
+                }
+                
+                showStep('alreadyBound');
+            } else {
+                showStep('username');
+            }
+        }
+        
+        // Основные обработчики событий
+        document.getElementById('btn-check-username').addEventListener('click', async function() {
+            telegramUsername = elements.telegramUsernameInput.value.trim().replace('@', '');
+            
+            if (!telegramUsername) {
+                showStatus('error', 'Введите Telegram username');
+                return;
+            }
+            
+            if (!/^[a-zA-Z0-9_]{5,32}$/.test(telegramUsername)) {
+                showStatus('error', 'Некорректный Telegram username');
+                return;
+            }
+            
+            this.disabled = true;
+            this.innerHTML = '<span class="material-icons">hourglass_empty</span> Проверка...';
+            
+            try {
+                // Проверяем существование пользователя (в демо-режиме всегда успешно)
+                const userInfo = await TelegramBotAPI.getUserInfo(telegramUsername);
+                
+                if (userInfo.ok) {
+                    // Отображаем информацию о пользователе
+                    elements.telegramUserInfo.innerHTML = `
+                        <div class="user-avatar">
+                            <span class="material-icons">person</span>
+                        </div>
+                        <div class="user-details">
+                            <div class="user-name">${userInfo.result.first_name || ''} ${userInfo.result.last_name || ''}</div>
+                            <div class="user-username">@${telegramUsername}</div>
+                        </div>
+                    `;
+                    
+                    // Привязываем аккаунт
+                    const bindResult = UserSystem.bindTelegramAccount(
+                        UserSystem.getCurrentUser().id,
+                        telegramUsername
+                    );
+                    
+                    if (bindResult.success) {
+                        showStep('verification');
+                        startVerificationTimer();
+                        
+                        // Отправляем код верификации
+                        const sendResult = UserSystem.sendTelegramVerificationCode(
+                            UserSystem.getCurrentUser().id
+                        );
+                        
+                        if (sendResult.success) {
+                            showStatus('info', `Код отправлен в Telegram. Для демо-режима код: ${sendResult.code}`);
+                        } else {
+                            showStatus('error', sendResult.message);
+                        }
+                    } else {
+                        showStatus('error', bindResult.message);
+                    }
+                } else {
+                    showStatus('error', 'Не удалось найти пользователя в Telegram');
+                }
+            } catch (error) {
+                showStatus('error', 'Ошибка проверки пользователя');
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '<span class="material-icons">search</span> Проверить и продолжить';
+            }
+        });
+        
+        document.getElementById('btn-verify-code').addEventListener('click', function() {
+            const code = elements.codeInputs.map(input => input.value).join('');
+            
+            if (code.length !== 6) {
+                showStatus('error', 'Введите полный код из 6 цифр');
+                return;
+            }
+            
+            this.disabled = true;
+            this.innerHTML = '<span class="material-icons">hourglass_empty</span> Проверка...';
+            
+            const currentUser = UserSystem.getCurrentUser();
+            const verifyResult = UserSystem.verifyTelegramAccount(currentUser.id, code);
+            
+            if (verifyResult.success) {
+                clearInterval(verificationTimer);
+                
+                elements.boundTelegramName.textContent = currentUser.telegram?.username || telegramUsername;
+                elements.boundTelegramUsername.textContent = `@${telegramUsername}`;
+                
+                showStep('success');
+            } else {
+                showStatus('error', verifyResult.message);
+            }
+            
+            this.disabled = false;
+            this.innerHTML = '<span class="material-icons">check_circle</span> Подтвердить';
+        });
+        
+        document.getElementById('btn-resend-code').addEventListener('click', function() {
+            const currentUser = UserSystem.getCurrentUser();
+            const sendResult = UserSystem.sendTelegramVerificationCode(currentUser.id);
+            
+            if (sendResult.success) {
+                startVerificationTimer();
+                showStatus('info', `Новый код отправлен. Для демо-режима код: ${sendResult.code}`);
+            } else {
+                showStatus('error', sendResult.message);
+            }
+        });
+        
+        document.getElementById('btn-unbind-telegram').addEventListener('click', function() {
+            if (confirm('Отвязать Telegram аккаунт?')) {
+                const users = UserSystem.getUsers();
+                const currentUser = UserSystem.getCurrentUser();
+                const userIndex = users.findIndex(u => u.id === currentUser.id);
+                
+                if (userIndex !== -1) {
+                    delete users[userIndex].telegram;
+                    UserSystem.saveUsers(users);
+                    UserSystem.setCurrentUser(users[userIndex]);
+                    
+                    showStatus('success', 'Telegram аккаунт отвязан');
+                    setTimeout(() => {
+                        checkExistingBinding();
+                    }, 1000);
+                }
+            }
+        });
+        
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            // Проверяем авторизацию
+            const currentUser = UserSystem.getCurrentUser();
+            if (!currentUser) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            setupCodeInputs();
+            checkExistingBinding();
+            
+            // Автофокус на поле ввода
+            elements.telegramUsernameInput.focus();
+        });
+    </script>
+</body>
+</html>
