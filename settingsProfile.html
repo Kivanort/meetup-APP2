@@ -8,6 +8,8 @@
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <!-- User System -->
   <script src="userSystem.js"></script>
+  <!-- Telegram Bot API -->
+  <script src="telegram-bot-api.js"></script>
   <link rel="icon" href="meetup-logo.png" type="image/x-icon"> 
   <style>
     :root {
@@ -30,6 +32,7 @@
       --card-bg: rgba(35, 35, 45, 0.95);
       --border-color: rgba(255, 255, 255, 0.08);
       --hover-bg: rgba(255, 255, 255, 0.05);
+      --telegram-color: #0088cc;
     }
     
     body {
@@ -272,6 +275,218 @@
       font-size: 15px;
       color: #E0E0E0;
       font-weight: 500;
+    }
+    
+    /* Telegram Section Styles */
+    .telegram-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 10px;
+      background: rgba(0, 136, 204, 0.1);
+      border: 1px solid rgba(0, 136, 204, 0.2);
+      margin-top: 10px;
+    }
+    
+    .telegram-status.verified {
+      background: rgba(46, 213, 115, 0.1);
+      border: 1px solid rgba(46, 213, 115, 0.2);
+    }
+    
+    .telegram-status.pending {
+      background: rgba(255, 165, 0, 0.1);
+      border: 1px solid rgba(255, 165, 0, 0.2);
+    }
+    
+    .telegram-icon {
+      color: var(--telegram-color);
+      font-size: 24px;
+    }
+    
+    .telegram-verified-icon {
+      color: var(--green);
+      font-size: 20px;
+    }
+    
+    .telegram-info {
+      flex: 1;
+    }
+    
+    .telegram-username {
+      font-weight: 600;
+      color: #fff;
+    }
+    
+    .telegram-status-text {
+      font-size: 13px;
+      color: var(--grey);
+    }
+    
+    .telegram-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-telegram {
+      background: rgba(0, 136, 204, 0.2);
+      color: #fff;
+      border: 1px solid rgba(0, 136, 204, 0.3);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .btn-telegram:hover {
+      background: rgba(0, 136, 204, 0.3);
+      transform: translateY(-1px);
+    }
+    
+    .btn-telegram.unbind {
+      background: rgba(255, 71, 87, 0.2);
+      border: 1px solid rgba(255, 71, 87, 0.3);
+    }
+    
+    .btn-telegram.unbind:hover {
+      background: rgba(255, 71, 87, 0.3);
+    }
+    
+    .btn-telegram.verify {
+      background: rgba(46, 213, 115, 0.2);
+      border: 1px solid rgba(46, 213, 115, 0.3);
+    }
+    
+    .btn-telegram.verify:hover {
+      background: rgba(46, 213, 115, 0.3);
+    }
+    
+    .telegram-form {
+      display: none;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 15px;
+      padding: 20px;
+      background: rgba(0, 136, 204, 0.1);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 136, 204, 0.3);
+    }
+    
+    .telegram-form.active {
+      display: flex;
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    .telegram-form.hidden {
+      display: none;
+    }
+    
+    .telegram-form-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 5px;
+    }
+    
+    .telegram-form-hint {
+      font-size: 13px;
+      color: var(--grey);
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    
+    .telegram-form-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .btn-telegram-bind {
+      background: linear-gradient(135deg, var(--telegram-color), #24A1DE);
+      color: #fff;
+      border: none;
+      border-radius: var(--btn-radius);
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(0, 136, 204, 0.25);
+    }
+    
+    .btn-telegram-bind:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 136, 204, 0.35);
+    }
+    
+    .verification-form {
+      display: none;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 15px;
+      padding: 20px;
+      background: rgba(255, 165, 0, 0.1);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 165, 0, 0.3);
+    }
+    
+    .verification-form.active {
+      display: flex;
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    .verification-code-input {
+      font-family: monospace;
+      font-size: 18px;
+      letter-spacing: 3px;
+      text-align: center;
+    }
+    
+    .verification-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .btn-verify {
+      background: linear-gradient(135deg, #FFA500, #FFD700);
+      color: #000;
+      border: none;
+      border-radius: var(--btn-radius);
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-verify:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(255, 165, 0, 0.35);
+    }
+    
+    .btn-resend-code {
+      background: rgba(0, 136, 204, 0.2);
+      color: #fff;
+      border: 1px solid rgba(0, 136, 204, 0.3);
+      border-radius: var(--btn-radius);
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    
+    .btn-resend-code:hover {
+      background: rgba(0, 136, 204, 0.3);
+      transform: translateY(-2px);
     }
     
     /* Стили для кнопки выхода */
@@ -658,6 +873,78 @@
       transform: translateY(-2px);
     }
     
+    /* Telegram Modal Styles */
+    .telegram-modal {
+      width: 400px;
+    }
+    
+    .telegram-modal-title {
+      color: var(--telegram-color);
+      font-size: 22px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    
+    .telegram-modal-info {
+      background: rgba(0, 136, 204, 0.1);
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      border: 1px solid rgba(0, 136, 204, 0.2);
+    }
+    
+    .telegram-modal-info h4 {
+      color: #fff;
+      margin: 0 0 10px 0;
+      font-size: 16px;
+    }
+    
+    .telegram-modal-info ul {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--grey);
+    }
+    
+    .telegram-modal-info li {
+      margin-bottom: 5px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    
+    .telegram-code-display {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      margin: 15px 0;
+      border: 1px solid var(--border-color);
+    }
+    
+    .telegram-code {
+      font-family: monospace;
+      font-size: 28px;
+      font-weight: bold;
+      letter-spacing: 3px;
+      color: var(--cyan);
+      background: rgba(0, 0, 0, 0.5);
+      padding: 15px;
+      border-radius: 8px;
+      display: inline-block;
+      margin: 10px 0;
+      border: 2px solid rgba(0, 255, 255, 0.3);
+    }
+    
+    .telegram-code-hint {
+      color: var(--grey);
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    
     /* Анимации */
     @keyframes settings-fadein {
       from { 
@@ -741,6 +1028,78 @@
     <div class="settings-title">Настройки профиля</div>
     
     <div class="settings-options">
+      <!-- Telegram Integration -->
+      <div class="settings-section">
+        <div class="section-label">
+          <span class="material-icons" style="color: var(--telegram-color);">telegram</span>
+          Telegram интеграция
+        </div>
+        
+        <div id="telegram-status-container">
+          <!-- Telegram status will be loaded here -->
+        </div>
+        
+        <!-- Форма привязки Telegram -->
+        <div class="telegram-form" id="telegram-form">
+          <div class="telegram-form-title">Привязка Telegram аккаунта</div>
+          <div class="telegram-form-hint">
+            Введите ваш Telegram username (без @) для привязки аккаунта.
+            После отправки кода подтверждения вы получите 6-значный код в Telegram для завершения привязки.
+          </div>
+          <div class="form-field">
+            <label class="form-label">
+              <span class="material-icons" style="color: var(--telegram-color);">person</span>
+              Telegram username
+            </label>
+            <input type="text" class="form-input" id="telegram-username" 
+                   placeholder="например, username" maxlength="32">
+            <div class="form-hint">Без символа @ в начале</div>
+            <div class="form-error" id="telegram-username-error">
+              <span class="material-icons" style="font-size:14px;">error</span>
+              Введите корректный Telegram username
+            </div>
+          </div>
+          <div class="telegram-form-actions">
+            <button class="btn-telegram-bind" id="btn-bind-telegram">
+              <span class="material-icons">link</span>
+              Привязать Telegram
+            </button>
+            <button class="btn-cancel-password" id="btn-cancel-telegram">Отменить</button>
+          </div>
+        </div>
+        
+        <!-- Форма верификации кода -->
+        <div class="verification-form" id="verification-form">
+          <div class="telegram-form-title">Подтверждение Telegram</div>
+          <div class="telegram-form-hint">
+            Введите 6-значный код, который был отправлен вам в Telegram.
+            Код действителен 10 минут.
+          </div>
+          <div class="form-field">
+            <label class="form-label">
+              <span class="material-icons" style="color: #FFA500;">vpn_key</span>
+              Код подтверждения
+            </label>
+            <input type="text" class="form-input verification-code-input" id="verification-code" 
+                   placeholder="000000" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+            <div class="form-error" id="verification-code-error">
+              <span class="material-icons" style="font-size:14px;">error</span>
+              Неверный код подтверждения
+            </div>
+          </div>
+          <div class="verification-actions">
+            <button class="btn-verify" id="btn-verify-code">
+              <span class="material-icons">check_circle</span>
+              Подтвердить
+            </button>
+            <button class="btn-resend-code" id="btn-resend-code">
+              <span class="material-icons">refresh</span>
+              Отправить код повторно
+            </button>
+          </div>
+        </div>
+      </div>
+      
       <!-- Смена пароля -->
       <div class="settings-section">
         <div class="section-label">
@@ -830,7 +1189,7 @@
         </div>
       </div>
       
-      <!-- Выход из аккаунта (НОВАЯ СЕКЦИЯ) -->
+      <!-- Выход из аккаунта -->
       <div class="settings-section">
         <div class="section-label">
           <span class="material-icons">exit_to_app</span>
@@ -901,8 +1260,58 @@
     </div>
   </div>
 
+  <!-- Модальное окно отправки кода Telegram -->
+  <div class="modal-backdrop" id="modal-telegram-backdrop" tabindex="-1" aria-hidden="true"></div>
+  <div class="modal-dialog telegram-modal" id="modal-telegram-dialog" role="dialog" aria-modal="true" aria-labelledby="telegram-modal-title">
+    <div class="modal-content" id="telegram-modal-content">
+      <div class="telegram-modal-title">
+        <span class="material-icons" style="color: var(--telegram-color);">telegram</span>
+        Код отправлен в Telegram
+      </div>
+      <div class="telegram-modal-info">
+        <h4>Что делать дальше:</h4>
+        <ul>
+          <li>Откройте Telegram и найдите сообщение от бота @MeetUPpasswordbot</li>
+          <li>В сообщении будет 6-значный код подтверждения</li>
+          <li>Вернитесь на эту страницу и введите код в поле подтверждения</li>
+          <li>Если код не пришел, проверьте:
+            <ul>
+              <li>Правильность username (без @)</li>
+              <li>Бот не заблокирован вами</li>
+              <li>Проверьте раздел "Сообщения" в Telegram</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="telegram-code-display" id="telegram-code-display">
+        <div>Ваш код подтверждения:</div>
+        <div class="telegram-code" id="telegram-code">123456</div>
+        <div class="telegram-code-hint" id="telegram-code-hint">
+          ⚠️ Этот код виден только в демо-режиме.<br>
+          В реальном режиме код будет отправлен в Telegram.
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancel" id="btn-telegram-modal-close">Закрыть</button>
+      </div>
+    </div>
+    
+    <!-- Спиннер отправки -->
+    <div id="telegram-modal-spinner-block" style="display:none;">
+      <div class="modal-spinner-wrap">
+        <div class="modal-spinner" role="status" aria-label="Загрузка"></div>
+      </div>
+    </div>
+    
+    <!-- Блок ошибки Telegram -->
+    <div id="telegram-modal-error-block" style="display:none;">
+      <div class="modal-error" id="telegram-error-text"></div>
+      <button type="button" class="btn-retry-delete" id="btn-retry-telegram">Повторить</button>
+    </div>
+  </div>
+
   <script>
-    // Переменные элементов
+    // ====================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ======================
     const btnDelete = document.getElementById('btn-delete-account');
     const modalBackdrop = document.getElementById('modal-delete-backdrop');
     const modalDialog = document.getElementById('modal-delete-dialog');
@@ -926,67 +1335,373 @@
     const newPasswordInput = document.getElementById('new-password');
     const confirmPasswordInput = document.getElementById('confirm-password');
 
-    // Элемент для кнопки выхода (НОВЫЙ)
+    // Элементы для Telegram интеграции
+    const telegramStatusContainer = document.getElementById('telegram-status-container');
+    const telegramForm = document.getElementById('telegram-form');
+    const verificationForm = document.getElementById('verification-form');
+    const btnCancelTelegram = document.getElementById('btn-cancel-telegram');
+    const btnBindTelegram = document.getElementById('btn-bind-telegram');
+    const telegramUsernameInput = document.getElementById('telegram-username');
+    const btnVerifyCode = document.getElementById('btn-verify-code');
+    const btnResendCode = document.getElementById('btn-resend-code');
+    const verificationCodeInput = document.getElementById('verification-code');
+    const telegramUsernameError = document.getElementById('telegram-username-error');
+    const verificationCodeError = document.getElementById('verification-code-error');
+
+    // Элементы для Telegram модального окна
+    const telegramModalBackdrop = document.getElementById('modal-telegram-backdrop');
+    const telegramModalDialog = document.getElementById('modal-telegram-dialog');
+    const telegramModalContent = document.getElementById('telegram-modal-content');
+    const telegramCodeDisplay = document.getElementById('telegram-code-display');
+    const telegramCodeElement = document.getElementById('telegram-code');
+    const telegramCodeHint = document.getElementById('telegram-code-hint');
+    const btnTelegramModalClose = document.getElementById('btn-telegram-modal-close');
+    const telegramModalSpinnerBlock = document.getElementById('telegram-modal-spinner-block');
+    const telegramModalErrorBlock = document.getElementById('telegram-modal-error-block');
+    const telegramErrorText = document.getElementById('telegram-error-text');
+    const btnRetryTelegram = document.getElementById('btn-retry-telegram');
+
+    // Элемент для кнопки выхода
     const btnLogout = document.getElementById('btn-logout');
 
     let modalPreviouslyFocused = null;
     let modalOpen = false;
     let errorTimeout = null;
     let timerInterval = null;
+    let currentVerificationCode = null;
+    let currentTelegramUsername = null;
+
+    // ====================== ТЕЛЕГРАМ ФУНКЦИИ ======================
+
+    // Функция для отображения статуса Telegram
+    function renderTelegramStatus() {
+      const currentUser = UserSystem.getCurrentUser();
+      if (!currentUser) return;
+
+      let statusHtml = '';
+      
+      if (currentUser.telegram) {
+        const { username, verified } = currentUser.telegram;
+        const statusClass = verified ? 'verified' : 'pending';
+        const statusIcon = verified ? 'check_circle' : 'schedule';
+        const statusText = verified ? 'Подтвержден' : 'Ожидает подтверждения';
+        const statusColor = verified ? 'var(--green)' : '#FFA500';
+
+        statusHtml = `
+          <div class="telegram-status ${statusClass}">
+            <span class="material-icons telegram-icon">telegram</span>
+            <div class="telegram-info">
+              <div class="telegram-username">@${username}</div>
+              <div class="telegram-status-text" style="color: ${statusColor}">
+                <span class="material-icons" style="font-size:14px; vertical-align:middle;">${statusIcon}</span>
+                ${statusText}
+              </div>
+            </div>
+            <div class="telegram-actions">
+              ${!verified ? `
+                <button class="btn-telegram verify" id="btn-send-verification">
+                  <span class="material-icons" style="font-size:16px;">mail</span>
+                  Отправить код
+                </button>
+              ` : ''}
+              <button class="btn-telegram unbind" id="btn-unbind-telegram">
+                <span class="material-icons" style="font-size:16px;">link_off</span>
+                Отвязать
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        statusHtml = `
+          <button class="btn-telegram-bind" id="btn-show-telegram-form" style="width:100%;">
+            <span class="material-icons">link</span>
+            Привязать Telegram аккаунт
+          </button>
+          <div class="telegram-form-hint" style="margin-top:10px; font-size:13px;">
+            Привяжите Telegram для восстановления пароля и получения уведомлений
+          </div>
+        `;
+      }
+
+      telegramStatusContainer.innerHTML = statusHtml;
+
+      // Добавляем обработчики событий
+      const btnShowTelegramForm = document.getElementById('btn-show-telegram-form');
+      if (btnShowTelegramForm) {
+        btnShowTelegramForm.addEventListener('click', showTelegramForm);
+      }
+
+      const btnUnbindTelegram = document.getElementById('btn-unbind-telegram');
+      if (btnUnbindTelegram) {
+        btnUnbindTelegram.addEventListener('click', unbindTelegramAccount);
+      }
+
+      const btnSendVerification = document.getElementById('btn-send-verification');
+      if (btnSendVerification) {
+        btnSendVerification.addEventListener('click', sendVerificationCode);
+      }
+    }
+
+    // Показать форму привязки Telegram
+    function showTelegramForm() {
+      telegramForm.classList.add('active');
+      telegramForm.classList.remove('hidden');
+      verificationForm.classList.remove('active');
+      telegramUsernameInput.focus();
+      resetTelegramErrors();
+    }
+
+    // Скрыть форму привязки Telegram
+    function hideTelegramForm() {
+      telegramForm.classList.remove('active');
+      telegramForm.classList.add('hidden');
+      verificationForm.classList.remove('active');
+      telegramUsernameInput.value = '';
+      resetTelegramErrors();
+    }
+
+    // Сбросить ошибки Telegram
+    function resetTelegramErrors() {
+      telegramUsernameError.classList.remove('active');
+      verificationCodeError.classList.remove('active');
+      telegramUsernameInput.classList.remove('error');
+      verificationCodeInput.classList.remove('error');
+    }
+
+    // Привязать Telegram аккаунт
+    async function bindTelegramAccount() {
+      const username = telegramUsernameInput.value.trim();
+      
+      // Валидация
+      if (!username || username.length < 5) {
+        showTelegramError('telegram-username-error', 'Введите корректный Telegram username');
+        telegramUsernameInput.classList.add('error');
+        return;
+      }
+
+      const currentUser = UserSystem.getCurrentUser();
+      if (!currentUser) return;
+
+      // Проверяем, не привязан ли уже этот username
+      const users = UserSystem.getUsers();
+      const existingUser = users.find(u => 
+        u.telegram && 
+        u.telegram.username === username && 
+        u.id !== currentUser.id
+      );
+
+      if (existingUser) {
+        showTelegramError('telegram-username-error', 'Этот Telegram уже привязан к другому аккаунту');
+        telegramUsernameInput.classList.add('error');
+        return;
+      }
+
+      // Показываем спиннер
+      telegramModalSpinnerBlock.style.display = 'block';
+      telegramModalContent.style.display = 'none';
+      telegramModalErrorBlock.style.display = 'none';
+      openTelegramModal();
+
+      try {
+        // Привязываем аккаунт (без подтверждения)
+        const bindResult = UserSystem.bindTelegramAccount(currentUser.id, username);
+        
+        if (bindResult.success) {
+          // Сохраняем username для отправки кода
+          currentTelegramUsername = username;
+          
+          // Обновляем статус
+          renderTelegramStatus();
+          
+          // Отправляем код верификации
+          await sendVerificationCode();
+        } else {
+          showTelegramModalError(bindResult.message);
+        }
+      } catch (error) {
+        showTelegramModalError(error.message);
+      }
+    }
+
+    // Отправить код верификации
+    async function sendVerificationCode() {
+      const currentUser = UserSystem.getCurrentUser();
+      if (!currentUser) return;
+
+      // Если username не сохранен, используем из профиля
+      if (!currentTelegramUsername && currentUser.telegram) {
+        currentTelegramUsername = currentUser.telegram.username;
+      }
+
+      if (!currentTelegramUsername) {
+        showTelegramModalError('Telegram username не указан');
+        return;
+      }
+
+      telegramModalSpinnerBlock.style.display = 'block';
+      telegramModalContent.style.display = 'none';
+      telegramModalErrorBlock.style.display = 'none';
+
+      try {
+        const result = await UserSystem.sendTelegramVerificationCode(currentUser.id);
+        
+        if (result.success) {
+          // Показываем модальное окно с кодом
+          if (result.code) {
+            // Демо-режим - показываем код
+            telegramCodeElement.textContent = result.code;
+            telegramCodeHint.innerHTML = `
+              ⚠️ Это демо-режим. Код для @${result.username}: <strong>${result.code}</strong><br>
+              В реальном режиме код будет отправлен в Telegram.
+            `;
+            telegramCodeDisplay.style.display = 'block';
+          } else {
+            telegramCodeDisplay.style.display = 'none';
+          }
+
+          // Показываем форму ввода кода
+          telegramForm.classList.remove('active');
+          telegramForm.classList.add('hidden');
+          verificationForm.classList.add('active');
+          verificationCodeInput.focus();
+
+          // Сохраняем код для проверки
+          currentVerificationCode = result.code;
+
+          telegramModalSpinnerBlock.style.display = 'none';
+          telegramModalContent.style.display = 'block';
+          openTelegramModal();
+        } else {
+          showTelegramModalError(result.message);
+        }
+      } catch (error) {
+        showTelegramModalError('Ошибка отправки кода: ' + error.message);
+      }
+    }
+
+    // Проверить код верификации
+    async function verifyTelegramCode() {
+      const code = verificationCodeInput.value.trim();
+      
+      if (!code || code.length !== 6 || !/^\d+$/.test(code)) {
+        showTelegramError('verification-code-error', 'Введите корректный 6-значный код');
+        verificationCodeInput.classList.add('error');
+        return;
+      }
+
+      const currentUser = UserSystem.getCurrentUser();
+      if (!currentUser) return;
+
+      try {
+        const result = UserSystem.verifyTelegramAccount(currentUser.id, code);
+        
+        if (result.success) {
+          // Успешная верификация
+          alert('✅ Telegram аккаунт успешно подтвержден!');
+          
+          // Закрываем формы
+          hideTelegramForm();
+          closeTelegramModal();
+          
+          // Обновляем статус
+          renderTelegramStatus();
+          
+          // Сбрасываем код
+          verificationCodeInput.value = '';
+          currentVerificationCode = null;
+          currentTelegramUsername = null;
+        } else {
+          showTelegramError('verification-code-error', result.message);
+          verificationCodeInput.classList.add('error');
+        }
+      } catch (error) {
+        showTelegramError('verification-code-error', error.message);
+        verificationCodeInput.classList.add('error');
+      }
+    }
+
+    // Отвязать Telegram аккаунт
+    function unbindTelegramAccount() {
+      if (!confirm('Вы уверены, что хотите отвязать Telegram аккаунт? Вы больше не сможете восстанавливать пароль через Telegram.')) {
+        return;
+      }
+
+      const currentUser = UserSystem.getCurrentUser();
+      if (!currentUser) return;
+
+      const result = UserSystem.unbindTelegramAccount(currentUser.id);
+      
+      if (result.success) {
+        alert('✅ Telegram аккаунт отвязан');
+        renderTelegramStatus();
+        currentTelegramUsername = null;
+        currentVerificationCode = null;
+      } else {
+        alert('❌ Ошибка: ' + result.message);
+      }
+    }
+
+    // Показать ошибку Telegram
+    function showTelegramError(elementId, message) {
+      const errorElement = document.getElementById(elementId);
+      errorElement.innerHTML = `<span class="material-icons" style="font-size:14px;">error</span> ${message}`;
+      errorElement.classList.add('active');
+    }
+
+    // Показать ошибку в Telegram модальном окне
+    function showTelegramModalError(message) {
+      telegramModalSpinnerBlock.style.display = 'none';
+      telegramModalErrorBlock.style.display = 'block';
+      telegramErrorText.textContent = message;
+    }
+
+    // Открыть Telegram модальное окно
+    function openTelegramModal() {
+      telegramModalBackdrop.classList.add('active');
+      telegramModalDialog.classList.add('active');
+      modalOpen = true;
+      document.body.style.overflow = 'hidden';
+      modalPreviouslyFocused = document.activeElement;
+    }
+
+    // Закрыть Telegram модальное окно
+    function closeTelegramModal() {
+      telegramModalDialog.classList.add('hide');
+      setTimeout(() => {
+        telegramModalBackdrop.classList.remove('active');
+        telegramModalDialog.classList.remove('active', 'hide');
+        document.body.style.overflow = '';
+        modalOpen = false;
+        if (modalPreviouslyFocused && typeof modalPreviouslyFocused.focus === "function") {
+          setTimeout(() => modalPreviouslyFocused.focus(), 120);
+        }
+      }, 220);
+    }
+
+    // ====================== ОСТАЛЬНЫЕ ФУНКЦИИ ======================
 
     // Функция для проверки статуса удаления аккаунта
     function checkDeletionStatus() {
       const currentUser = UserSystem.getCurrentUser();
       if (!currentUser) return;
 
-      // Проверяем, помечен ли аккаунт на удаление
       if (currentUser.scheduledForDeletion) {
         const deletionTime = currentUser.scheduledForDeletion;
         const now = Date.now();
         
         if (now >= deletionTime) {
-          // Время удаления наступило - удаляем аккаунт
           deleteUserAccount(currentUser.id);
           UserSystem.logout();
-          // Перенаправляем на страницу входа с сообщением
           showDeletionCompleteMessage();
           return;
         }
         
-        // Показываем информацию об отложенном удалении
         showDeletionInfo(deletionTime);
         btnDelete.style.display = 'none';
       } else {
-        // Аккаунт не помечен на удаление
         deletionInfo.classList.remove('active');
         btnDelete.style.display = 'flex';
       }
-    }
-
-    // Функция для показа сообщения о завершении удаления
-    function showDeletionCompleteMessage() {
-      // Создаем модальное окно с сообщением
-      const messageModal = document.createElement('div');
-      messageModal.innerHTML = `
-        <div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999;">
-          <div style="background:var(--card-bg); padding:30px; border-radius:12px; text-align:center; max-width:400px;">
-            <div style="color:var(--red); font-size:20px; margin-bottom:15px;">
-              <span class="material-icons" style="font-size:40px;">delete</span>
-            </div>
-            <div style="color:#fff; font-size:18px; margin-bottom:10px;">Аккаунт удален</div>
-            <div style="color:var(--grey); margin-bottom:20px;">Ваш аккаунт был полностью удален из системы.</div>
-            <button onclick="redirectToRegistration()" style="background:var(--btn-delete-bg); color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">
-              Перейти к регистрации
-            </button>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(messageModal);
-    }
-
-    // Функция для перенаправления на регистрацию
-    function redirectToRegistration() {
-      window.location.href = 'index.html?deleted=true';
     }
 
     // Функция для показа информации об отложенном удалении
@@ -1011,7 +1726,7 @@
       }
       
       updateTimer();
-      timerInterval = setInterval(updateTimer, 60000); // Обновляем каждую минуту
+      timerInterval = setInterval(updateTimer, 60000);
     }
 
     // Функция для пометки аккаунта на удаление
@@ -1020,9 +1735,7 @@
       const userIndex = users.findIndex(u => u.id === userId);
       
       if (userIndex !== -1) {
-        // Помечаем аккаунт на удаление через 30 дней
         users[userIndex].scheduledForDeletion = Date.now() + (30 * 24 * 60 * 60 * 1000);
-        // Деактивируем аккаунт
         users[userIndex].active = false;
         users[userIndex].status = 'deactivated';
         UserSystem.saveUsers(users);
@@ -1037,14 +1750,11 @@
       const userIndex = users.findIndex(u => u.id === userId);
       
       if (userIndex !== -1) {
-        // Убираем пометку на удаление
         delete users[userIndex].scheduledForDeletion;
-        // Активируем аккаунт
         users[userIndex].active = true;
         users[userIndex].status = 'online';
         UserSystem.saveUsers(users);
         
-        // Обновляем текущего пользователя
         UserSystem.setCurrentUser(users[userIndex]);
         return true;
       }
@@ -1057,14 +1767,12 @@
       const updatedUsers = users.filter(u => u.id !== userId);
       UserSystem.saveUsers(updatedUsers);
       
-      // Также удаляем связанные данные
       const requests = JSON.parse(localStorage.getItem('meetup_friend_requests') || '[]');
       const updatedRequests = requests.filter(req => 
         req.fromUserId !== userId && req.toUserId !== userId
       );
       localStorage.setItem('meetup_friend_requests', JSON.stringify(updatedRequests));
       
-      // Удаляем активность пользователя
       localStorage.removeItem(`user_activity_${userId}`);
       localStorage.removeItem(`user_online_${userId}`);
     }
@@ -1078,26 +1786,22 @@
       const newPassword = newPasswordInput.value;
       const confirmPassword = confirmPasswordInput.value;
 
-      // Сбрасываем ошибки
       resetPasswordErrors();
 
       let hasErrors = false;
 
-      // Проверка текущего пароля
       if (UserSystem.hashPassword(currentPassword) !== currentUser.password) {
         showPasswordError('current-password-error', 'Неверный текущий пароль');
         currentPasswordInput.classList.add('error');
         hasErrors = true;
       }
 
-      // Проверка нового пароля
       if (!/^.{8,}$/.test(newPassword) || !/[a-zа-я]/i.test(newPassword) || !/\d/.test(newPassword)) {
         showPasswordError('new-password-error', 'Пароль должен содержать минимум 8 символов, буквы и цифры');
         newPasswordInput.classList.add('error');
         hasErrors = true;
       }
 
-      // Проверка подтверждения пароля
       if (newPassword !== confirmPassword) {
         showPasswordError('confirm-password-error', 'Пароли не совпадают');
         confirmPasswordInput.classList.add('error');
@@ -1106,7 +1810,6 @@
 
       if (hasErrors) return false;
 
-      // Обновляем пароль
       const users = UserSystem.getUsers();
       const userIndex = users.findIndex(u => u.id === currentUser.id);
       
@@ -1114,7 +1817,6 @@
         users[userIndex].password = UserSystem.hashPassword(newPassword);
         UserSystem.saveUsers(users);
         
-        // Обновляем текущего пользователя
         UserSystem.setCurrentUser(users[userIndex]);
         return true;
       }
@@ -1151,7 +1853,8 @@
       passwordForm.classList.remove('active');
     }
 
-    // Инициализация при загрузке страницы
+    // ====================== ИНИЦИАЛИЗАЦИЯ ======================
+
     document.addEventListener('DOMContentLoaded', function() {
       const currentUser = UserSystem.getCurrentUser();
       
@@ -1160,8 +1863,20 @@
         return;
       }
       
+      // Инициализация Telegram статуса
+      renderTelegramStatus();
+      
       // Проверяем статус удаления
       checkDeletionStatus();
+
+      // Обработчики для Telegram
+      btnBindTelegram.addEventListener('click', bindTelegramAccount);
+      btnCancelTelegram.addEventListener('click', hideTelegramForm);
+      btnVerifyCode.addEventListener('click', verifyTelegramCode);
+      btnResendCode.addEventListener('click', sendVerificationCode);
+      btnTelegramModalClose.addEventListener('click', closeTelegramModal);
+      telegramModalBackdrop.addEventListener('click', closeTelegramModal);
+      btnRetryTelegram.addEventListener('click', sendVerificationCode);
 
       // Обработчики для смены пароля
       btnChangePassword.addEventListener('click', function() {
@@ -1180,7 +1895,6 @@
         }
       });
 
-      // Обработчики Enter в полях пароля
       [currentPasswordInput, newPasswordInput, confirmPasswordInput].forEach(input => {
         input.addEventListener('keypress', function(e) {
           if (e.key === 'Enter') {
@@ -1192,14 +1906,11 @@
         });
       });
 
-      // Обработчик для кнопки выхода (НОВЫЙ)
+      // Обработчик для кнопки выхода
       if (btnLogout) {
         btnLogout.addEventListener('click', function() {
-          // Подтверждение выхода
           if (confirm('Вы уверены, что хотите выйти из аккаунта?')) {
-            // Выход из системы
             UserSystem.logout();
-            // Перенаправление на страницу входа
             window.location.href = 'index.html';
           }
         });
@@ -1213,16 +1924,12 @@
         deletionInfo.classList.remove('active');
         btnDelete.style.display = 'flex';
         clearInterval(timerInterval);
-        showMsg('Удаление аккаунта отменено');
+        alert('Удаление аккаунта отменено');
       }
     };
 
-    function showMsg(message) {
-      // Простая реализация показа сообщения
-      alert(message);
-    }
+    // ====================== МОДАЛЬНОЕ ОКНО УДАЛЕНИЯ ======================
 
-    // Модальное окно удаления
     function openDeleteModal() {
       modalBackdrop.classList.add('active');
       modalDialog.classList.add('active');
@@ -1290,33 +1997,12 @@
       
       const currentUser = UserSystem.getCurrentUser();
       if (currentUser && scheduleAccountDeletion(currentUser.id)) {
-        // Успешно помечен на удаление
         setTimeout(() => {
           spinnerBlock.style.display = 'none';
           closeDeleteModal();
-          // Сначала выходим из системы
           UserSystem.logout();
-          // Показываем сообщение о успешном удалении
           setTimeout(() => {
-            const message = document.createElement('div');
-            message.innerHTML = `
-              <div style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; z-index:9999;">
-                <div style="background:var(--card-bg); padding:30px; border-radius:12px; text-align:center; max-width:400px;">
-                  <div style="color:var(--red); font-size:20px; margin-bottom:15px;">
-                    <span class="material-icons" style="font-size:40px;">warning</span>
-                  </div>
-                  <div style="color:#fff; font-size:18px; margin-bottom:10px;">Аккаунт деактивирован</div>
-                  <div style="color:var(--grey); margin-bottom:20px;">
-                    Ваш аккаунт помечен на удаление. Полное удаление произойдет через 30 дней.<br><br>
-                    В течение этого времени вы можете отменить удаление, войдя в систему.
-                  </div>
-                  <button onclick="window.location.href='index.html'" style="background:var(--btn-delete-bg); color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-size:14px;">
-                    Перейти к регистрации
-                  </button>
-                </div>
-              </div>
-            `;
-            document.body.appendChild(message);
+            window.location.href = 'index.html?deletion_scheduled=true';
           }, 100);
         }, 1500);
       } else {
@@ -1353,44 +2039,6 @@
       btnModalCancel.tabIndex = 0;
       modalContent.style.display = '';
     }
-
-    function clearDeleteError() {
-      if (errorTimeout) {
-        clearTimeout(errorTimeout);
-        errorTimeout = null;
-      }
-      errorBlock.style.display = 'none';
-    }
-
-    // Фокусировка/доступность
-    modalDialog.addEventListener('animationend', function(ev){
-      if (modalOpen && modalDialog.classList.contains('active')) {
-        btnModalDelete.focus();
-      }
-    });
-
-    // Перехват Esc/tab фокусов на модалке
-    modalDialog.addEventListener('keydown', function(e){
-      if (!modalOpen) return;
-      if (e.key === "Tab") {
-        const focusable = modalDialog.querySelectorAll('button,[tabindex="0"]');
-        const arr = Array.prototype.slice.call(focusable);
-        if (!arr.length) return;
-        const first = arr[0], last = arr[arr.length-1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    });
-
-    // Сброс всего состояния при закрытии
-    modalBackdrop.addEventListener('transitionend', function() {
-      if (!modalBackdrop.classList.contains('active')) clearDeleteError();
-    });
   </script>
 </body>
 </html>
