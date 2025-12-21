@@ -1669,3 +1669,304 @@ document.addEventListener('DOMContentLoaded', function() {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = UserSystem;
 }
+// Telegram integration functions
+UserSystem.bindTelegramAccount = function(userId, telegramUsername) {
+    const users = this.getUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+    
+    if (userIndex === -1) {
+        return { success: false, message: 'Пользователь не найден' };
+    }
+    
+    // Проверяем, не привязан ли уже этот телеграм аккаунт
+    const existingBinding = users.find(u => u.telegram && u.telegram.username === telegramUsername && u.id !== userId);
+    if (existingBinding) {
+        return { success: false, message: 'Этот Telegram аккаунт уже привязан к другому пользователю' };
+    }
+    
+    users[userIndex].telegram = {
+        username: telegramUsername,
+        verified: false,
+        verificationCode: null,
+        codeExpires: null,
+        boundAt: null
+    };
+    
+    this.saveUsers(users);
+    this.setCurrentUser(users[userIndex]);
+    
+    return { success: true, message: 'Telegram аккаунт привязан. Требуется верификация.' };
+};
+
+UserSystem.verifyTelegramAccount = function(userId, verificationCode) {
+    const users = this.getUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+    
+    if (userIndex === -1) {
+        return { success: false, message: 'Пользователь не найден' };
+    }
+    
+    const user = users[userIndex];
+    
+    if (!user.telegram) {
+        return { success: false, message: 'Telegram аккаунт не привязан' };
+    }
+    
+    // Проверяем срок действия кода
+    if (user.telegram.codeExpires && Date.now() > user.telegram.codeExpires) {
+        return { success: false, message: 'Срок действия кода истек' };
+    }
+    
+    // Проверяем код
+    if (user.telegram.verificationCode !== verificationCode) {
+        return { success: false, message: 'Неверный код подтверждения' };
+    }
+    
+    // Верифицируем аккаунт
+    user.telegram.verified = true;
+    user.telegram.verificationCode = null;
+    user.telegram.codeExpires = null;
+    user.telegram.boundAt = new Date().toISOString();
+    
+    this.saveUsers(users);
+    this.setCurrentUser(user);
+    
+    return { success: true, message: 'Telegram аккаунт успешно подтвержден!' };
+};
+
+UserSystem.generateTelegramVerificationCode = function(userId) {
+    const users = this.getUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+    
+    if (userIndex === -1) {
+        return null;
+    }
+    
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + (10 * 60 * 1000); // 10 минут
+    
+    users[userIndex].telegram.verificationCode = code;
+    users[userIndex].telegram.codeExpires = expires;
+    
+    this.saveUsers(users);
+    
+    return {
+        code: code,
+        expires: expires,
+        username: users[userIndex].telegram.username
+    };
+};
+
+UserSystem.sendTelegramVerificationCode = function(userId) {
+    const user = this.findUserById(userId);
+    
+    if (!user || !user.telegram || !user.telegram.username) {
+        return { success: false, message: 'Telegram аккаунт не привязан' };
+    }
+    
+    const codeData = this.generateTelegramVerificationCode(userId);
+    if (!codeData) {
+        return { success: false, message: 'Ошибка генерации кода' };
+    }
+    
+    // Здесь будет интеграция с Telegram Bot API
+    // Временная заглушка - код будет в консоли
+    console.log(`📱 Telegram код для @${codeData.username}: ${codeData.code}`);
+    console.log(`⏰ Срок действия: до ${new Date(codeData.expires).toLocaleTimeString()}`);
+    
+    return { 
+        success: true, 
+        message: 'Код отправлен в Telegram',
+        code: codeData.code, // Для демо-режима
+        username: codeData.username
+    };
+};
+
+UserSystem.requestPasswordResetViaTelegram = function(telegramUsername) {
+    const users = this.getUsers();
+    const user = users.find(u => 
+        u.telegram && 
+        u.telegram.username === telegramUsername && 
+        u.telegram.verified === true
+    );
+    
+    if (!user) {
+        return { success: false, message: 'Telegram аккаунт не найден или не подтвержден' };
+    }
+    
+    // Генерируем код для сброса пароля
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = Date.now() + (10 * 60 * 1000); // 10 минут
+    
+    // Сохраняем код
+    const resetKey = `tg_reset_${user.id}`;
+    localStorage.setItem(resetKey, JSON.stringify({
+        code: resetCode,
+        expires: expires,
+        telegramUsername: telegramUsername,
+        userId: user.id
+    }));
+    
+    // Здесь будет интеграция с Telegram Bot API
+    console.log(`🔐 Telegram сброс пароля для @${telegramUsername}: ${resetCode}`);
+    console.log(`⏰ Срок действия: до ${new Date(expires).toLocaleTimeString()}`);
+    
+    return { 
+        success: true, 
+        message: 'Код для сброса пароля отправлен в Telegram',
+        code: resetCode, // Для демо-режима
+        userId: user.id
+    };
+};
+
+UserSystem.verifyTelegramResetCode = function(telegramUsername, code) {
+    const users = this.getUsers();
+    const user = users.find(u => 
+        u.telegram && 
+        u.telegram.username === telegramUsername && 
+        u.telegram.verified === true
+    );
+    
+    if (!user) {
+        return { success: false, message: 'Telegram аккаунт не найден' };
+    }
+    
+    const resetKey = `tg_reset_${user.id}`;
+    const resetData = JSON.parse(localStorage.getItem(resetKey) || '{}');
+    
+    // Проверяем срок действия
+    if (!resetData.code || Date.now() > resetData.expires) {
+        localStorage.removeItem(resetKey);
+        return { success: false, message: 'Срок действия кода истек' };
+    }
+    
+    // Проверяем код
+    if (resetData.code !== code) {
+        return { success: false, message: 'Неверный код' };
+    }
+    
+    // Код верный
+    return { 
+        success: true, 
+        message: 'Код подтвержден',
+        userId: user.id,
+        resetToken: btoa(JSON.stringify({ userId: user.id, timestamp: Date.now() }))
+    };
+};
+
+UserSystem.resetPasswordWithTelegramToken = function(token, newPassword) {
+    try {
+        const data = JSON.parse(atob(token));
+        const userId = data.userId;
+        
+        // Проверяем, что токен не старше 15 минут
+        if (Date.now() - data.timestamp > 15 * 60 * 1000) {
+            return { success: false, message: 'Срок действия токена истек' };
+        }
+        
+        const users = this.getUsers();
+        const userIndex = users.findIndex(u => u.id === userId);
+        
+        if (userIndex === -1) {
+            return { success: false, message: 'Пользователь не найден' };
+        }
+        
+        // Устанавливаем новый пароль
+        users[userIndex].password = this.hashPassword(newPassword);
+        users[userIndex].updatedAt = new Date().toISOString();
+        
+        // Очищаем данные сброса
+        localStorage.removeItem(`tg_reset_${userId}`);
+        
+        this.saveUsers(users);
+        
+        return { success: true, message: 'Пароль успешно изменен!' };
+        
+    } catch (error) {
+        return { success: false, message: 'Неверный токен' };
+    }
+};
+
+// Добавьте эти функции для поиска пользователя
+UserSystem.getUserByTelegramUsername = function(username) {
+    const users = this.getUsers();
+    return users.find(u => u.telegram && u.telegram.username === username);
+};
+
+UserSystem.findUserById = function(userId) {
+    const users = this.getUsers();
+    return users.find(u => u.id === userId);
+};
+// Поиск пользователя по Telegram username
+findUserByTelegramUsername: function(username) {
+    const users = this.getUsers();
+    return users.find(user => 
+      user.telegram && user.telegram.username && 
+      user.telegram.username.toLowerCase() === username.toLowerCase()
+    );
+  },
+  
+  // Запрос сброса пароля через Telegram (демо-версия)
+  requestPasswordResetViaTelegram: function(username) {
+    const user = this.findUserByTelegramUsername(username);
+    
+    if (!user) {
+      return {
+        success: false,
+        message: 'Пользователь с таким Telegram не найден'
+      };
+    }
+    
+    // Генерируем 6-значный код
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Сохраняем код в localStorage (в реальном приложении отправляем в Telegram)
+    localStorage.setItem(`tg_reset_code_${username}`, resetCode);
+    localStorage.setItem(`tg_reset_user_id_${username}`, user.id);
+    
+    // В демо-режиме просто возвращаем код
+    return {
+      success: true,
+      message: 'Код отправлен в Telegram',
+      code: resetCode, // Только для демо-режима
+      userId: user.id
+    };
+  },
+  
+  // Проверка Telegram кода
+  verifyTelegramResetCode: function(username, code) {
+    const savedCode = localStorage.getItem(`tg_reset_code_${username}`);
+    const userId = localStorage.getItem(`tg_reset_user_id_${username}`);
+    
+    if (savedCode === code && userId) {
+      return {
+        success: true,
+        userId: userId
+      };
+    }
+    
+    return {
+      success: false,
+      message: 'Неверный код'
+    };
+  },
+  
+  // Получить реферальную ссылку пользователя
+  getReferralLink: function(userId) {
+    const user = this.findUser(userId);
+    if (!user) return null;
+    
+    // Генерируем реферальный код если его нет
+    if (!user.referralCode) {
+      user.referralCode = 'REF_' + Math.random().toString(36).substring(2, 10).toUpperCase();
+      const users = this.getUsers();
+      const userIndex = users.findIndex(u => u.id === userId);
+      if (userIndex !== -1) {
+        users[userIndex] = user;
+        this.saveUsers(users);
+      }
+    }
+    
+    const baseUrl = window.location.origin + window.location.pathname;
+    return `${baseUrl}?ref=${user.referralCode}`;
+  };
