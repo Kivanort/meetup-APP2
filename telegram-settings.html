@@ -450,6 +450,7 @@
         let verificationTimer = null;
         let timeLeft = 600; // 10 минут в секундах
         let telegramUsername = '';
+        let generatedCode = '';
         
         // DOM элементы
         const elements = {
@@ -516,6 +517,11 @@
                     elements.alreadyBound.style.display = 'block';
                     break;
             }
+        }
+        
+        // Генерация кода подтверждения
+        function generateVerificationCode() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
         }
         
         // Таймер для кода подтверждения
@@ -614,7 +620,7 @@
             }
             
             if (!/^[a-zA-Z0-9_]{5,32}$/.test(telegramUsername)) {
-                showStatus('error', 'Некорректный Telegram username');
+                showStatus('error', 'Некорректный Telegram username (только буквы, цифры и _)');
                 return;
             }
             
@@ -622,48 +628,65 @@
             this.innerHTML = '<span class="material-icons">hourglass_empty</span> Проверка...';
             
             try {
-                // Проверяем существование пользователя (в демо-режиме всегда успешно)
-                const userInfo = await TelegramBotAPI.getUserInfo(telegramUsername);
+                // Генерируем код подтверждения
+                generatedCode = generateVerificationCode();
                 
-                if (userInfo.ok) {
-                    // Отображаем информацию о пользователе
-                    elements.telegramUserInfo.innerHTML = `
-                        <div class="user-avatar">
-                            <span class="material-icons">person</span>
+                // Отображаем информацию о пользователе
+                elements.telegramUserInfo.innerHTML = `
+                    <div class="user-avatar">
+                        <span class="material-icons">person</span>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name">@${telegramUsername}</div>
+                        <div class="user-username">telegram username</div>
+                        <div style="margin-top: 8px; color: var(--text-muted); font-size: 12px;">
+                            Код будет отправлен в Telegram
                         </div>
-                        <div class="user-details">
-                            <div class="user-name">${userInfo.result.first_name || ''} ${userInfo.result.last_name || ''}</div>
-                            <div class="user-username">@${telegramUsername}</div>
-                        </div>
-                    `;
+                    </div>
+                `;
+                
+                // Отправляем код через Telegram Bot API
+                try {
+                    const result = await TelegramBotAPI.sendVerificationCode(telegramUsername, generatedCode);
                     
-                    // Привязываем аккаунт
+                    if (result.ok || result.success) {
+                        // Привязываем аккаунт
+                        const bindResult = UserSystem.bindTelegramAccount(
+                            UserSystem.getCurrentUser().id,
+                            telegramUsername,
+                            generatedCode
+                        );
+                        
+                        if (bindResult.success) {
+                            showStep('verification');
+                            startVerificationTimer();
+                            showStatus('success', `Код отправлен в Telegram! Код: ${generatedCode} (для демо)`);
+                        } else {
+                            showStatus('error', bindResult.message);
+                        }
+                    } else {
+                        showStatus('error', 'Не удалось отправить код в Telegram. Проверьте username и начните диалог с ботом.');
+                    }
+                } catch (telegramError) {
+                    console.error('Telegram error:', telegramError);
+                    showStatus('error', 'Ошибка подключения к Telegram. Убедитесь, что бот запущен и у вас есть username.');
+                    showStatus('info', `Для демо используйте код: ${generatedCode}`);
+                    
+                    // Для демо всё равно переходим к верификации
                     const bindResult = UserSystem.bindTelegramAccount(
                         UserSystem.getCurrentUser().id,
-                        telegramUsername
+                        telegramUsername,
+                        generatedCode
                     );
                     
                     if (bindResult.success) {
                         showStep('verification');
                         startVerificationTimer();
-                        
-                        // Отправляем код верификации
-                        const sendResult = UserSystem.sendTelegramVerificationCode(
-                            UserSystem.getCurrentUser().id
-                        );
-                        
-                        if (sendResult.success) {
-                            showStatus('info', `Код отправлен в Telegram. Для демо-режима код: ${sendResult.code}`);
-                        } else {
-                            showStatus('error', sendResult.message);
-                        }
-                    } else {
-                        showStatus('error', bindResult.message);
                     }
-                } else {
-                    showStatus('error', 'Не удалось найти пользователя в Telegram');
                 }
+                
             } catch (error) {
+                console.error('Error:', error);
                 showStatus('error', 'Ошибка проверки пользователя');
             } finally {
                 this.disabled = false;
@@ -683,37 +706,80 @@
             this.innerHTML = '<span class="material-icons">hourglass_empty</span> Проверка...';
             
             const currentUser = UserSystem.getCurrentUser();
-            const verifyResult = UserSystem.verifyTelegramAccount(currentUser.id, code);
             
-            if (verifyResult.success) {
+            // Проверяем код
+            if (code === generatedCode || UserSystem.verifyTelegramCode(currentUser.id, code)) {
                 clearInterval(verificationTimer);
                 
-                elements.boundTelegramName.textContent = currentUser.telegram?.username || telegramUsername;
-                elements.boundTelegramUsername.textContent = `@${telegramUsername}`;
+                // Обновляем данные пользователя
+                const users = UserSystem.getUsers();
+                const userIndex = users.findIndex(u => u.id === currentUser.id);
                 
-                showStep('success');
+                if (userIndex !== -1) {
+                    users[userIndex].telegram = {
+                        username: telegramUsername,
+                        verified: true,
+                        verifiedAt: new Date().toISOString()
+                    };
+                    
+                    UserSystem.saveUsers(users);
+                    UserSystem.setCurrentUser(users[userIndex]);
+                    
+                    elements.boundTelegramName.textContent = telegramUsername;
+                    elements.boundTelegramUsername.textContent = `@${telegramUsername}`;
+                    
+                    showStep('success');
+                    showStatus('success', 'Telegram успешно привязан!');
+                } else {
+                    showStatus('error', 'Ошибка обновления данных пользователя');
+                }
             } else {
-                showStatus('error', verifyResult.message);
+                showStatus('error', 'Неверный код подтверждения');
             }
             
             this.disabled = false;
             this.innerHTML = '<span class="material-icons">check_circle</span> Подтвердить';
         });
         
-        document.getElementById('btn-resend-code').addEventListener('click', function() {
-            const currentUser = UserSystem.getCurrentUser();
-            const sendResult = UserSystem.sendTelegramVerificationCode(currentUser.id);
+        document.getElementById('btn-resend-code').addEventListener('click', async function() {
+            this.disabled = true;
+            this.innerHTML = '<span class="material-icons">hourglass_empty</span> Отправка...';
             
-            if (sendResult.success) {
+            // Генерируем новый код
+            generatedCode = generateVerificationCode();
+            
+            try {
+                // Обновляем код в системе
+                const currentUser = UserSystem.getCurrentUser();
+                const updateResult = UserSystem.updateTelegramCode(currentUser.id, generatedCode);
+                
+                if (updateResult.success) {
+                    // Отправляем новый код через Telegram
+                    const telegramResult = await TelegramBotAPI.sendVerificationCode(telegramUsername, generatedCode);
+                    
+                    if (telegramResult.ok || telegramResult.success) {
+                        startVerificationTimer();
+                        showStatus('success', `Новый код отправлен! Код: ${generatedCode} (для демо)`);
+                    } else {
+                        showStatus('info', `Новый код сгенерирован: ${generatedCode}. Ошибка отправки в Telegram.`);
+                        startVerificationTimer();
+                    }
+                } else {
+                    showStatus('error', updateResult.message);
+                }
+            } catch (error) {
+                console.error('Error resending code:', error);
+                showStatus('error', 'Ошибка отправки кода');
+                showStatus('info', `Используйте код: ${generatedCode} для демо`);
                 startVerificationTimer();
-                showStatus('info', `Новый код отправлен. Для демо-режима код: ${sendResult.code}`);
-            } else {
-                showStatus('error', sendResult.message);
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '<span class="material-icons">refresh</span> Отправить код повторно';
             }
         });
         
         document.getElementById('btn-unbind-telegram').addEventListener('click', function() {
-            if (confirm('Отвязать Telegram аккаунт?')) {
+            if (confirm('Отвязать Telegram аккаунт? Вы больше не сможете сбрасывать пароль через Telegram.')) {
                 const users = UserSystem.getUsers();
                 const currentUser = UserSystem.getCurrentUser();
                 const userIndex = users.findIndex(u => u.id === currentUser.id);
