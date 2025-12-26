@@ -1,16 +1,19 @@
-// telegram-bot-api.js - Браузерная версия для фронтенда MeetUP
-
+// telegram-bot-api.js - Браузерная версия для MeetUP с поддержкой Widget Login
 const TelegramBotAPI = {
-    // Конфигурация с вашими данными
+    // Конфигурация
     botToken: '8431099911:AAFGMszkfzgTzoWEBZcgn7ENvVCr7faWqL0',
     botUsername: 'MeetUPpasswordbot',
     isInitialized: false,
     isDemoMode: false,
+    widgetScriptLoaded: false,
     
     // Инициализация
     init: function(token = null) {
         try {
             console.log('🤖 Инициализация Telegram Bot API для MeetUP...');
+            
+            // Загружаем Telegram Widget Script
+            this.loadTelegramWidget();
             
             // Используем переданный токен или наш по умолчанию
             this.botToken = token || this.botToken;
@@ -24,12 +27,21 @@ const TelegramBotAPI = {
                 console.log('🤖 Бот:', this.botUsername);
                 console.log('🔐 Токен:', this.maskToken(this.botToken));
                 
+                // Проверяем есть ли сохраненный Telegram пользователь
+                this.checkSavedTelegramUser();
+                
                 // Проверяем соединение с ботом
                 setTimeout(() => {
                     this.testConnection().then(result => {
                         if (result.ok) {
                             console.log('🎉 Бот доступен! Username: @' + result.result.username);
-                            console.log('📱 Начните диалог: https://t.me/' + result.result.username);
+                            console.log('📱 Для привязки используйте Telegram Widget на сайте');
+                            
+                            // Обновляем username если изменился
+                            if (result.result.username !== this.botUsername) {
+                                this.botUsername = result.result.username;
+                                console.log('🔄 Username обновлен:', this.botUsername);
+                            }
                         } else {
                             console.warn('⚠️ Бот недоступен. Переключаемся в демо-режим');
                             this.switchToDemoMode();
@@ -49,6 +61,148 @@ const TelegramBotAPI = {
         }
     },
     
+    // Загрузка Telegram Widget Script
+    loadTelegramWidget: function() {
+        if (this.widgetScriptLoaded) return;
+        
+        try {
+            // Проверяем, не загружен ли уже скрипт
+            if (!document.querySelector('script[src*="telegram-widget"]')) {
+                const script = document.createElement('script');
+                script.src = 'https://telegram.org/js/telegram-widget.js?22';
+                script.async = true;
+                document.head.appendChild(script);
+                console.log('📱 Telegram Widget Script загружен');
+            }
+            
+            this.widgetScriptLoaded = true;
+        } catch (error) {
+            console.error('❌ Ошибка загрузки Telegram Widget:', error);
+        }
+    },
+    
+    // Проверка сохраненного Telegram пользователя
+    checkSavedTelegramUser: function() {
+        try {
+            const savedUser = localStorage.getItem('telegram_user');
+            if (savedUser) {
+                const user = JSON.parse(savedUser);
+                console.log('👤 Найден сохраненный Telegram пользователь:', user.username || user.first_name);
+                return user;
+            }
+        } catch (error) {
+            console.error('❌ Ошибка чтения сохраненного Telegram пользователя:', error);
+        }
+        return null;
+    },
+    
+    // Обработка авторизации через Telegram Widget
+    handleTelegramAuth: function(userData) {
+        try {
+            console.log('✅ Получены данные от Telegram Widget:', userData);
+            
+            // Сохраняем данные пользователя
+            const telegramUser = {
+                id: userData.id,
+                first_name: userData.first_name,
+                last_name: userData.last_name || '',
+                username: userData.username || '',
+                photo_url: userData.photo_url || '',
+                auth_date: userData.auth_date,
+                hash: userData.hash,
+                verified: true,
+                verified_at: new Date().toISOString()
+            };
+            
+            // Сохраняем в localStorage
+            localStorage.setItem('telegram_user', JSON.stringify(telegramUser));
+            localStorage.setItem('telegram_verified', 'true');
+            localStorage.setItem('telegram_auth_date', new Date().toISOString());
+            
+            // Сохраняем chat_id для отправки сообщений
+            // При авторизации через Widget мы получаем chat_id пользователя
+            localStorage.setItem('telegram_chat_id', userData.id.toString());
+            
+            console.log('✅ Telegram пользователь сохранен. Chat ID:', userData.id);
+            
+            // Отправляем приветственное сообщение
+            this.sendWelcomeMessage(userData.id, userData.username || userData.first_name);
+            
+            return {
+                success: true,
+                user: telegramUser,
+                message: 'Telegram успешно привязан'
+            };
+        } catch (error) {
+            console.error('❌ Ошибка обработки авторизации Telegram:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    },
+    
+    // Отправка приветственного сообщения
+    sendWelcomeMessage: async function(chatId, userName) {
+        try {
+            const message = `👋 <b>Добро пожаловать в MeetUP, ${userName}!</b>\n\n` +
+                           `✅ Ваш Telegram успешно привязан к аккаунту MeetUP.\n\n` +
+                           `📱 <b>Что теперь доступно:</b>\n` +
+                           `• Получение кодов подтверждения\n` +
+                           `• Сброс пароля через Telegram\n` +
+                           `• Уведомления о безопасности\n\n` +
+                           `🔐 <b>Ваш Chat ID:</b> <code>${chatId}</code>\n\n` +
+                           `💡 Сохраните этот Chat ID для будущих обращений в поддержку.\n\n` +
+                           `🙏 Спасибо за использование MeetUP!`;
+            
+            const result = await this.sendMessage(chatId, message);
+            
+            if (result.ok) {
+                console.log('✅ Приветственное сообщение отправлено');
+            } else {
+                console.warn('⚠️ Не удалось отправить приветственное сообщение:', result.error);
+            }
+            
+            return result;
+        } catch (error) {
+            console.error('❌ Ошибка отправки приветственного сообщения:', error);
+            return { ok: false, error: error.message };
+        }
+    },
+    
+    // Проверка привязан ли Telegram
+    isTelegramVerified: function() {
+        return localStorage.getItem('telegram_verified') === 'true';
+    },
+    
+    // Получение данных Telegram пользователя
+    getTelegramUser: function() {
+        try {
+            const userJson = localStorage.getItem('telegram_user');
+            return userJson ? JSON.parse(userJson) : null;
+        } catch (error) {
+            console.error('❌ Ошибка получения данных Telegram:', error);
+            return null;
+        }
+    },
+    
+    // Получение chat_id (из Widget авторизации или localStorage)
+    getChatId: function() {
+        // Пробуем получить chat_id из сохраненного пользователя
+        const user = this.getTelegramUser();
+        if (user && user.id) {
+            return user.id.toString();
+        }
+        
+        // Пробуем получить из localStorage
+        const savedChatId = localStorage.getItem('telegram_chat_id');
+        if (savedChatId) {
+            return savedChatId;
+        }
+        
+        return null;
+    },
+    
     // Переключение в демо-режим
     switchToDemoMode: function() {
         this.botToken = 'demo_token_' + Date.now();
@@ -58,10 +212,7 @@ const TelegramBotAPI = {
         
         console.log('📱 ДЕМО-РЕЖИМ АКТИВЕН');
         console.log('💡 Коды будут показываться в консоли');
-        console.log('🔧 Для реальной работы убедитесь что:');
-        console.log('   1. Бот @MeetUPpasswordbot активен');
-        console.log('   2. Пользователь написал боту /start');
-        console.log('   3. Username указан правильно без @');
+        console.log('🔧 Для реальной работы используйте Telegram Widget на сайте');
     },
     
     // Валидация токена
@@ -139,10 +290,24 @@ const TelegramBotAPI = {
         }
     },
     
-    // Отправка сообщения
+    // Отправка сообщения (улучшенная версия)
     sendMessage: async function(chatId, text, options = {}) {
         try {
             console.log(`📤 Отправка сообщения через Telegram...`);
+            
+            // Если передан объект пользователя, извлекаем chat_id
+            if (typeof chatId === 'object' && chatId.id) {
+                chatId = chatId.id;
+            }
+            
+            // Если chatId не указан, пробуем получить из сохраненных данных
+            if (!chatId) {
+                chatId = this.getChatId();
+                if (!chatId) {
+                    throw new Error('Chat ID не найден. Привяжите Telegram через Widget');
+                }
+            }
+            
             console.log(`👤 Получатель: ${chatId}`);
             console.log(`📝 Текст: ${text.substring(0, 80)}...`);
             
@@ -176,7 +341,7 @@ const TelegramBotAPI = {
                         chat: {
                             id: chatId,
                             first_name: 'User',
-                            username: chatId.replace('@', ''),
+                            username: 'demo_user',
                             type: 'private'
                         },
                         date: Math.floor(Date.now() / 1000),
@@ -187,14 +352,6 @@ const TelegramBotAPI = {
             }
             
             console.log(`🌐 Отправка реального сообщения через Telegram API...`);
-            
-            // Проверяем chatId - если это username, убеждаемся что пользователь писал боту
-            if (chatId.startsWith('@')) {
-                console.log('ℹ️ Отправка по username. Убедитесь что:');
-                console.log('   1. Пользователь написал боту /start');
-                console.log('   2. Username правильный: ' + chatId);
-                console.log('   3. Бот не заблокирован пользователем');
-            }
             
             // Реальный запрос к Telegram API
             const params = {
@@ -230,17 +387,6 @@ const TelegramBotAPI = {
                 }
                 
                 console.error('❌ Ошибка Telegram API:', errorData.description || 'Unknown error');
-                
-                // Если ошибка "chat not found", даем подробные инструкции
-                if (errorData.description && errorData.description.includes('chat not found')) {
-                    console.error('🔍 Возможные причины:');
-                    console.error('   1. Пользователь не писал боту /start');
-                    console.error('   2. Username указан неверно');
-                    console.error('   3. Бот заблокирован пользователем');
-                    console.error('   4. Пользователь не имеет username в Telegram');
-                    console.error('💡 Решение: Попросите пользователя написать /start боту');
-                }
-                
                 throw new Error(errorData.description || `HTTP ${response.status}`);
             }
             
@@ -264,14 +410,11 @@ const TelegramBotAPI = {
                 userMessage = 'Таймаут запроса к Telegram API';
                 debugInfo = 'Проверьте интернет соединение';
             } else if (error.message.includes('chat not found')) {
-                userMessage = 'Пользователь не найден';
-                debugInfo = 'Убедитесь что пользователь написал /start боту';
+                userMessage = 'Чат не найден';
+                debugInfo = 'Пользователь не привязывал Telegram через Widget';
             } else if (error.message.includes('bot was blocked')) {
                 userMessage = 'Бот заблокирован';
                 debugInfo = 'Пользователь заблокировал бота';
-            } else if (error.message.includes('user is deactivated')) {
-                userMessage = 'Аккаунт неактивен';
-                debugInfo = 'Аккаунт Telegram деактивирован';
             }
             
             return {
@@ -283,187 +426,190 @@ const TelegramBotAPI = {
         }
     },
     
-    // Отправка кода верификации
-    sendVerificationCode: async function(telegramUsername, code) {
-        console.log(`🔐 Отправка кода верификации...`);
-        console.log(`👤 Пользователь: @${telegramUsername}`);
-        console.log(`🔢 Код: ${code}`);
-        
-        const message = `🔐 <b>Код подтверждения для MeetUP</b>\n\n` +
-                       `🆔 <b>Код:</b> <code><b>${code}</b></code>\n\n` +
-                       `⏰ <b>Действует:</b> 10 минут\n` +
-                       `🔒 <b>Безопасность:</b> Никому не передавайте этот код\n\n` +
-                       `💡 <b>Инструкция:</b>\n` +
-                       `1. Вернитесь на сайт MeetUP\n` +
-                       `2. Введите этот код в поле подтверждения\n` +
-                       `3. Нажмите "Подтвердить"\n\n` +
-                       `⚠️ <b>Внимание:</b>\n` +
-                       `Если вы не запрашивали привязку Telegram, проигнорируйте это сообщение\n\n` +
-                       `🤖 <b>Бот:</b> @MeetUPpasswordbot`;
-        
-        return await this.sendMessage(`@${telegramUsername}`, message);
+    // Отправка кода верификации (улучшенная)
+    sendVerificationCode: async function(identifier, code) {
+        try {
+            console.log(`🔐 Отправка кода верификации...`);
+            console.log(`🔢 Код: ${code}`);
+            
+            // Определяем получателя
+            let chatId = identifier;
+            
+            // Если передан username, пробуем найти chat_id
+            if (identifier.startsWith('@')) {
+                const user = this.getTelegramUser();
+                if (user && user.username === identifier.replace('@', '')) {
+                    chatId = user.id;
+                } else {
+                    // Если не нашли, используем сохраненный chat_id
+                    chatId = this.getChatId();
+                    if (!chatId) {
+                        throw new Error('Telegram не привязан. Используйте Widget авторизацию');
+                    }
+                }
+            }
+            
+            const message = `🔐 <b>Код подтверждения для MeetUP</b>\n\n` +
+                           `🆔 <b>Код:</b> <code><b>${code}</b></code>\n\n` +
+                           `⏰ <b>Действует:</b> 10 минут\n` +
+                           `🔒 <b>Безопасность:</b> Никому не передавайте этот код\n\n` +
+                           `💡 <b>Инструкция:</b>\n` +
+                           `1. Вернитесь на сайт MeetUP\n` +
+                           `2. Введите этот код в поле подтверждения\n` +
+                           `3. Нажмите "Подтвердить"\n\n` +
+                           `🤖 <b>Бот:</b> @${this.botUsername}`;
+            
+            return await this.sendMessage(chatId, message);
+        } catch (error) {
+            console.error('❌ Ошибка отправки кода верификации:', error);
+            return {
+                ok: false,
+                error: error.message
+            };
+        }
     },
     
-    // Отправка кода сброса пароля
-    sendPasswordResetCode: async function(telegramUsername, code) {
-        console.log(`🔄 Отправка кода сброса пароля...`);
-        console.log(`👤 Пользователь: @${telegramUsername}`);
-        console.log(`🔢 Код: ${code}`);
-        
-        const message = `🔄 <b>Сброс пароля MeetUP</b>\n\n` +
-                       `🔐 <b>Код для сброса:</b> <code><b>${code}</b></code>\n\n` +
-                       `⏰ <b>Действует:</b> 10 минут\n` +
-                       `⚠️ <b>Внимание:</b> Если это не вы, проигнорируйте сообщение\n\n` +
-                       `📝 <b>Инструкция:</b>\n` +
-                       `1. Вернитесь на сайт MeetUP\n` +
-                       `2. Введите этот код в поле ввода\n` +
-                       `3. Установите новый пароль\n\n` +
-                       `🔒 <b>Рекомендации:</b>\n` +
-                       `• Используйте надежный пароль\n` +
-                       `• Не используйте старые пароли\n` +
-                       `• Включите двухфакторную аутентификацию\n\n` +
-                       `🤖 <b>Бот:</b> @MeetUPpasswordbot`;
-        
-        return await this.sendMessage(`@${telegramUsername}`, message);
-    },
-    
-    // Отправка уведомления об успешном сбросе пароля
-    sendPasswordResetSuccess: async function(telegramUsername) {
-        console.log(`✅ Отправка уведомления об успешном сбросе...`);
-        console.log(`👤 Пользователь: @${telegramUsername}`);
-        
-        const message = `✅ <b>Пароль успешно изменен</b>\n\n` +
-                       `Ваш пароль в аккаунте MeetUP был изменен.\n\n` +
-                       `🛡️ <b>Рекомендации по безопасности:</b>\n` +
-                       `• Используйте уникальные пароли\n` +
-                       `• Регулярно меняйте пароли\n` +
-                       `• Включите двухфакторную аутентификацию\n\n` +
-                       `🔐 <b>Если это были не вы:</b>\n` +
-                       `Немедленно обратитесь в поддержку\n\n` +
-                       `🙏 Спасибо, что используете MeetUP!`;
-        
-        return await this.sendMessage(`@${telegramUsername}`, message);
+    // Отправка кода сброса пароля (улучшенная)
+    sendPasswordResetCode: async function(identifier, code) {
+        try {
+            console.log(`🔄 Отправка кода сброса пароля...`);
+            console.log(`🔢 Код: ${code}`);
+            
+            let chatId = identifier;
+            
+            if (identifier.startsWith('@')) {
+                const user = this.getTelegramUser();
+                if (user && user.username === identifier.replace('@', '')) {
+                    chatId = user.id;
+                } else {
+                    chatId = this.getChatId();
+                }
+            }
+            
+            const message = `🔄 <b>Сброс пароля MeetUP</b>\n\n` +
+                           `🔐 <b>Код для сброса:</b> <code><b>${code}</b></code>\n\n` +
+                           `⏰ <b>Действует:</b> 10 минут\n` +
+                           `⚠️ <b>Внимание:</b> Если это не вы, проигнорируйте\n\n` +
+                           `📝 <b>Инструкция:</b>\n` +
+                           `1. Вернитесь на сайт MeetUP\n` +
+                           `2. Введите этот код\n` +
+                           `3. Установите новый пароль\n\n` +
+                           `🤖 <b>Бот:</b> @${this.botUsername}`;
+            
+            return await this.sendMessage(chatId, message);
+        } catch (error) {
+            console.error('❌ Ошибка отправки кода сброса:', error);
+            return {
+                ok: false,
+                error: error.message
+            };
+        }
     },
     
     // Получение читаемого сообщения об ошибке
     getErrorMessage: function(error) {
         const msg = error.message || '';
         
-        // Телеграм ошибки
-        if (msg.includes('chat not found')) return 'Пользователь не писал боту /start';
+        if (msg.includes('chat not found')) return 'Пользователь не привязывал Telegram';
         if (msg.includes('bot was blocked')) return 'Бот заблокирован';
-        if (msg.includes('user is deactivated')) return 'Аккаунт Telegram деактивирован';
-        if (msg.includes('have no rights')) return 'Нет прав для отправки';
-        if (msg.includes('Too Many Requests')) return 'Слишком много запросов';
         if (msg.includes('401')) return 'Неверный токен бота';
         if (msg.includes('404')) return 'Токен не найден';
-        if (msg.includes('429')) return 'Лимит запросов исчерпан';
+        if (msg.includes('429')) return 'Лимит запросов';
         
-        // Сетевые ошибки
         if (msg.includes('NetworkError')) return 'Проблемы с сетью';
-        if (msg.includes('Failed to fetch')) return 'Не удалось подключиться';
-        if (msg.includes('timeout')) return 'Таймаут запроса';
-        if (msg.includes('AbortError')) return 'Запрос отменен';
+        if (msg.includes('AbortError')) return 'Таймаут запроса';
         
         return 'Неизвестная ошибка';
     },
     
-    // Проверка существования пользователя
-    checkUserExists: async function(telegramUsername) {
-        try {
-            console.log(`🔍 Проверка пользователя: @${telegramUsername}`);
-            
-            // В реальном режиме пробуем отправить тестовое сообщение
-            if (!this.isDemoMode) {
-                const testMessage = "🔒 Это тестовое сообщение для проверки. Проигнорируйте его.";
-                const result = await this.sendMessage(`@${telegramUsername}`, testMessage);
-                
-                return { 
-                    ok: result.ok, 
-                    exists: result.ok,
-                    username: telegramUsername,
-                    message: result.ok ? 'Пользователь найден' : 'Пользователь не найден'
-                };
-            } else {
-                // В демо-режиме всегда возвращаем true
-                console.log('📱 Демо-режим: пользователь считается существующим');
-                return { 
-                    ok: true, 
-                    exists: true,
-                    username: telegramUsername,
-                    message: 'Демо-режим: проверка пройдена',
-                    demo: true
-                };
-            }
-            
-        } catch (error) {
-            console.error('❌ Ошибка проверки пользователя:', error);
-            return { 
-                ok: false, 
-                exists: false, 
-                username: telegramUsername,
-                error: error.message 
-            };
-        }
-    },
-    
-    // Маскировка токена для логирования
+    // Маскировка токена
     maskToken: function(token) {
         if (!token || token.length < 10) return '***INVALID***';
         return token.substring(0, 4) + '***' + token.substring(token.length - 4);
     },
     
-    // Проверка, активен ли бот
-    isBotActive: function() {
-        return this.isInitialized && !this.isDemoMode;
-    },
-    
-    // Получение режима работы
-    getMode: function() {
-        return this.isDemoMode ? 'demo' : 'real';
-    },
-    
-    // Принудительное переключение в демо-режим (для тестирования)
-    forceDemoMode: function() {
-        this.switchToDemoMode();
-        console.log('🔄 Принудительно переключен в демо-режим');
-        return { mode: 'demo', message: 'Демо-режим активирован' };
-    },
-    
-    // Принудительное переключение в реальный режим
-    forceRealMode: function() {
-        this.botToken = '8431099911:AAFGMszkfzgTzoWEBZcgn7ENvVCr7faWqL0';
-        this.botUsername = 'MeetUPpasswordbot';
-        this.isDemoMode = false;
-        console.log('🔄 Принудительно переключен в реальный режим');
-        return { mode: 'real', message: 'Реальный режим активирован' };
+    // Создание Telegram Widget
+    createTelegramWidget: function(elementId, onAuthCallback) {
+        try {
+            const container = document.getElementById(elementId);
+            if (!container) {
+                console.error('❌ Контейнер для Telegram Widget не найден:', elementId);
+                return false;
+            }
+            
+            // Очищаем контейнер
+            container.innerHTML = '';
+            
+            // Создаем кнопку Telegram Widget
+            const widgetHTML = `
+                <script async src="https://telegram.org/js/telegram-widget.js?22" 
+                    data-telegram-login="${this.botUsername}" 
+                    data-size="large" 
+                    data-radius="8"
+                    data-onauth="${onAuthCallback}" 
+                    data-request-access="write"
+                    data-userpic="true">
+                </script>
+            `;
+            
+            container.innerHTML = widgetHTML;
+            
+            // Перезагружаем скрипт если нужно
+            if (!this.widgetScriptLoaded) {
+                this.loadTelegramWidget();
+            }
+            
+            console.log('✅ Telegram Widget создан в элементе:', elementId);
+            return true;
+        } catch (error) {
+            console.error('❌ Ошибка создания Telegram Widget:', error);
+            return false;
+        }
     }
 };
 
-// Автоматическая инициализация при загрузке в браузере
-if (typeof window !== 'undefined') {
-    console.log('🚀 Загрузка Telegram Bot API для MeetUP...');
+// Глобальная функция для обработки авторизации Telegram
+window.onTelegramAuth = function(user) {
+    console.log('✅ Telegram Widget авторизация:', user);
     
-    // Ждем полной загрузки страницы
+    const result = TelegramBotAPI.handleTelegramAuth(user);
+    
+    if (result.success) {
+        // Показываем успех
+        const event = new CustomEvent('telegram-auth-success', { 
+            detail: { user: result.user } 
+        });
+        window.dispatchEvent(event);
+        
+        // Вызываем пользовательский callback если есть
+        if (window.telegramAuthCallback) {
+            window.telegramAuthCallback(result.user);
+        }
+    } else {
+        const event = new CustomEvent('telegram-auth-error', { 
+            detail: { error: result.error } 
+        });
+        window.dispatchEvent(event);
+    }
+    
+    return result;
+};
+
+// Автоматическая инициализация
+if (typeof window !== 'undefined') {
+    // Инициализируем при загрузке
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('📄 DOM загружен, инициализируем Telegram Bot API...');
             setTimeout(() => {
                 TelegramBotAPI.init();
-            }, 500);
+            }, 1000);
         });
     } else {
-        console.log('📄 DOM уже загружен, инициализируем Telegram Bot API...');
         setTimeout(() => {
             TelegramBotAPI.init();
-        }, 500);
+        }, 1000);
     }
     
     // Экспортируем для глобального доступа
     window.TelegramBotAPI = TelegramBotAPI;
-}
-
-// Экспорт для использования в других модулях
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = TelegramBotAPI;
 }
