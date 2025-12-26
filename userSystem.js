@@ -91,6 +91,8 @@ const UserSystem = {
                 lastActive: Date.now(),
                 position: userData.position || [55.751244, 37.618423],
                 about: '',
+                phoneNumber: userData.phoneNumber || null,
+                phoneVerified: false,
                 stats: {
                     friendsCount: 0,
                     totalDistance: 0,
@@ -155,7 +157,9 @@ const UserSystem = {
                 'nickname', 'avatar', 'status', 'invisible',
                 'position', 'about', 'settings', 'stats',
                 'referralCode', 'referralGeneratedAt', 'referredBy',
-                'password', 'lastSeen', 'lastActive', 'telegram'
+                'password', 'lastSeen', 'lastActive', 'telegram',
+                'phoneNumber', 'phoneVerified', 'phoneVerificationCode',
+                'phoneVerificationExpires', 'phoneVerificationSentAt'
             ];
             
             const updatedUser = { ...users[userIndex] };
@@ -228,7 +232,8 @@ const UserSystem = {
         return users.find(user => 
             (user.email && user.email.toLowerCase() === searchTerm) ||
             (user.nickname && user.nickname.toLowerCase() === searchTerm) ||
-            (user.id && user.id.toLowerCase() === searchTerm)
+            (user.id && user.id.toLowerCase() === searchTerm) ||
+            (user.phoneNumber && user.phoneNumber.replace(/[^\d+]/g, '').includes(searchTerm.replace(/[^\d+]/g, '')))
         );
     },
 
@@ -378,6 +383,312 @@ const UserSystem = {
         } catch (error) {
             console.error('❌ Ошибка выхода:', error);
             return false;
+        }
+    },
+
+    // ============ ТЕЛЕФОН И ТЕЛЕГРАМ ВЕРИФИКАЦИЯ ============
+    
+    // Добавить номер телефона пользователю
+    addPhoneNumber: function(userId, phoneNumber) {
+        try {
+            const users = this.getUsers();
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex === -1) {
+                return { success: false, message: '❌ Пользователь не найден' };
+            }
+            
+            // Проверка формата номера телефона (базовая)
+            const cleanPhone = phoneNumber.replace(/[^\d+]/g, '');
+            
+            if (!cleanPhone || cleanPhone.length < 10) {
+                return { success: false, message: '❌ Некорректный номер телефона' };
+            }
+            
+            // Проверяем, не используется ли номер уже другим пользователем
+            const existingUser = users.find(u => 
+                u.phoneNumber && 
+                u.phoneNumber.replace(/[^\d+]/g, '') === cleanPhone && 
+                u.id !== userId
+            );
+            
+            if (existingUser) {
+                return { success: false, message: '❌ Этот номер телефона уже используется другим аккаунтом' };
+            }
+            
+            // Сохраняем номер телефона (пока не подтвержден)
+            users[userIndex].phoneNumber = phoneNumber;
+            users[userIndex].phoneVerified = false;
+            
+            this.saveUsers(users);
+            
+            return { 
+                success: true, 
+                message: '✅ Номер телефона добавлен. Требуется подтверждение.',
+                phoneNumber: phoneNumber 
+            };
+        } catch (error) {
+            console.error('❌ Ошибка добавления номера телефона:', error);
+            return { success: false, message: '❌ Ошибка добавления номера телефона' };
+        }
+    },
+
+    // Генерация кода подтверждения телефона
+    generatePhoneVerificationCode: function(userId) {
+        try {
+            const users = this.getUsers();
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex === -1) {
+                return { success: false, message: '❌ Пользователь не найден' };
+            }
+            
+            const user = users[userIndex];
+            
+            if (!user.phoneNumber) {
+                return { success: false, message: '❌ Номер телефона не добавлен' };
+            }
+            
+            // Генерируем 4-значный код (более удобный для пользователей)
+            const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
+            const expiresAt = Date.now() + (10 * 60 * 1000); // 10 минут
+            
+            // Сохраняем код подтверждения
+            users[userIndex].phoneVerificationCode = verificationCode;
+            users[userIndex].phoneVerificationExpires = expiresAt;
+            users[userIndex].phoneVerificationSentAt = Date.now();
+            
+            this.saveUsers(users);
+            
+            console.log(`📱 Сгенерирован код подтверждения телефона для ${user.phoneNumber}: ${verificationCode}`);
+            
+            return { 
+                success: true, 
+                message: '✅ Код подтверждения сгенерирован',
+                code: verificationCode,
+                expiresAt: expiresAt,
+                phoneNumber: user.phoneNumber
+            };
+        } catch (error) {
+            console.error('❌ Ошибка генерации кода подтверждения телефона:', error);
+            return { success: false, message: '❌ Ошибка генерации кода подтверждения' };
+        }
+    },
+
+    // Отправка кода подтверждения телефона через Telegram
+    sendPhoneVerificationCode: async function(userId) {
+        try {
+            const users = this.getUsers();
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex === -1) {
+                return { success: false, message: '❌ Пользователь не найден' };
+            }
+            
+            const user = users[userIndex];
+            
+            if (!user.phoneNumber) {
+                return { success: false, message: '❌ Номер телефона не добавлен' };
+            }
+            
+            // Генерируем код подтверждения
+            const codeData = this.generatePhoneVerificationCode(userId);
+            
+            if (!codeData.success) {
+                return codeData;
+            }
+            
+            // Отправляем код через Telegram
+            if (typeof TelegramBotAPI !== 'undefined' && TelegramBotAPI.validateToken()) {
+                try {
+                    console.log(`📤 Отправка кода подтверждения телефона через Telegram Bot API для ${user.phoneNumber}`);
+                    
+                    // Отправляем сообщение с кодом
+                    const sendResult = await TelegramBotAPI.sendPhoneVerificationCode(
+                        user.phoneNumber,
+                        codeData.code,
+                        user.nickname || user.email
+                    );
+                    
+                    if (sendResult.ok) {
+                        return { 
+                            success: true, 
+                            message: '✅ Код подтверждения отправлен на ваш телефон через Telegram',
+                            phoneNumber: user.phoneNumber,
+                            expiresAt: codeData.expiresAt,
+                            viaTelegram: true
+                        };
+                    } else {
+                        // Если отправка не удалась, возвращаем код для ручного ввода
+                        console.error('❌ Ошибка отправки через Telegram API:', sendResult.description);
+                        return { 
+                            success: true, 
+                            message: '⚠️ Не удалось отправить через Telegram. Используйте код ниже.',
+                            code: codeData.code, // Для демо-режима или ручного ввода
+                            phoneNumber: user.phoneNumber,
+                            expiresAt: codeData.expiresAt,
+                            isDemo: true
+                        };
+                    }
+                } catch (telegramError) {
+                    console.error('❌ Ошибка Telegram API:', telegramError);
+                    return { 
+                        success: true, 
+                        message: '⚠️ Ошибка Telegram API. Используйте код для ручного ввода.',
+                        code: codeData.code,
+                        phoneNumber: user.phoneNumber,
+                        expiresAt: codeData.expiresAt,
+                        isDemo: true
+                    };
+                }
+            } else {
+                // Telegram Bot API не доступен - демо-режим
+                console.log(`📱 ДЕМО-РЕЖИМ: Код подтверждения телефона для ${user.phoneNumber}: ${codeData.code}`);
+                console.log(`⏰ Код действителен до: ${new Date(codeData.expiresAt).toLocaleTimeString()}`);
+                
+                return { 
+                    success: true, 
+                    message: '📱 Код сгенерирован (демо-режим). Проверьте консоль браузера.',
+                    code: codeData.code, // Для демо-режима
+                    phoneNumber: user.phoneNumber,
+                    expiresAt: codeData.expiresAt,
+                    isDemo: true
+                };
+            }
+        } catch (error) {
+            console.error('❌ Ошибка отправки кода подтверждения телефона:', error);
+            return { success: false, message: '❌ Ошибка отправки кода подтверждения' };
+        }
+    },
+
+    // Проверка кода подтверждения телефона
+    verifyPhoneCode: function(userId, code) {
+        try {
+            const users = this.getUsers();
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex === -1) {
+                return { success: false, message: '❌ Пользователь не найден' };
+            }
+            
+            const user = users[userIndex];
+            
+            // Проверяем, есть ли код подтверждения
+            if (!user.phoneVerificationCode || !user.phoneVerificationExpires) {
+                return { success: false, message: '❌ Код подтверждения не найден или истек' };
+            }
+            
+            // Проверяем срок действия кода
+            if (Date.now() > user.phoneVerificationExpires) {
+                // Очищаем устаревший код
+                users[userIndex].phoneVerificationCode = null;
+                users[userIndex].phoneVerificationExpires = null;
+                this.saveUsers(users);
+                
+                return { success: false, message: '❌ Срок действия кода истек. Запросите новый код' };
+            }
+            
+            // Проверяем код
+            if (user.phoneVerificationCode !== code) {
+                return { success: false, message: '❌ Неверный код подтверждения' };
+            }
+            
+            // Код верный - подтверждаем номер телефона
+            users[userIndex].phoneVerified = true;
+            users[userIndex].phoneVerificationCode = null;
+            users[userIndex].phoneVerificationExpires = null;
+            users[userIndex].phoneVerifiedAt = new Date().toISOString();
+            
+            this.saveUsers(users);
+            
+            // Обновляем текущего пользователя если это он
+            const currentUser = this.getCurrentUser();
+            if (currentUser && currentUser.id === userId) {
+                this.setCurrentUser(users[userIndex]);
+            }
+            
+            // Отправляем уведомление об успешном подтверждении
+            if (typeof TelegramBotAPI !== 'undefined' && TelegramBotAPI.validateToken()) {
+                setTimeout(async () => {
+                    try {
+                        await TelegramBotAPI.sendPhoneVerifiedNotification(
+                            user.phoneNumber,
+                            user.nickname || user.email
+                        );
+                    } catch (error) {
+                        console.warn('Не удалось отправить уведомление в Telegram:', error);
+                    }
+                }, 1000);
+            }
+            
+            return { 
+                success: true, 
+                message: '✅ Номер телефона успешно подтвержден!',
+                phoneNumber: user.phoneNumber
+            };
+        } catch (error) {
+            console.error('❌ Ошибка проверки кода подтверждения телефона:', error);
+            return { success: false, message: '❌ Ошибка проверки кода' };
+        }
+    },
+
+    // Удалить номер телефона
+    removePhoneNumber: function(userId) {
+        try {
+            const users = this.getUsers();
+            const userIndex = users.findIndex(u => u.id === userId);
+            
+            if (userIndex === -1) {
+                return { success: false, message: '❌ Пользователь не найден' };
+            }
+            
+            // Сохраняем старый номер для логирования
+            const oldPhoneNumber = users[userIndex].phoneNumber;
+            
+            // Удаляем данные телефона
+            users[userIndex].phoneNumber = null;
+            users[userIndex].phoneVerified = false;
+            users[userIndex].phoneVerificationCode = null;
+            users[userIndex].phoneVerificationExpires = null;
+            users[userIndex].phoneVerifiedAt = null;
+            
+            this.saveUsers(users);
+            
+            // Обновляем текущего пользователя если это он
+            const currentUser = this.getCurrentUser();
+            if (currentUser && currentUser.id === userId) {
+                this.setCurrentUser(users[userIndex]);
+            }
+            
+            console.log(`🗑️ Удален номер телефона ${oldPhoneNumber} для пользователя ${userId}`);
+            
+            return { success: true, message: '✅ Номер телефона удален' };
+        } catch (error) {
+            console.error('❌ Ошибка удаления номера телефона:', error);
+            return { success: false, message: '❌ Ошибка удаления номера телефона' };
+        }
+    },
+
+    // Проверка статуса верификации телефона
+    getPhoneVerificationStatus: function(userId) {
+        try {
+            const user = this.findUser(userId);
+            
+            if (!user) {
+                return { success: false, message: '❌ Пользователь не найден' };
+            }
+            
+            return {
+                success: true,
+                phoneNumber: user.phoneNumber,
+                phoneVerified: user.phoneVerified || false,
+                phoneVerifiedAt: user.phoneVerifiedAt,
+                hasPendingVerification: !!user.phoneVerificationCode,
+                verificationExpires: user.phoneVerificationExpires
+            };
+        } catch (error) {
+            console.error('❌ Ошибка получения статуса верификации телефона:', error);
+            return { success: false, message: '❌ Ошибка получения статуса' };
         }
     },
 
@@ -1686,6 +1997,12 @@ const UserSystem = {
             lastActive: user.lastActive || Date.now(),
             position: Array.isArray(user.position) ? user.position : [55.751244, 37.618423],
             about: user.about || '',
+            phoneNumber: user.phoneNumber || null,
+            phoneVerified: Boolean(user.phoneVerified),
+            phoneVerificationCode: user.phoneVerificationCode || null,
+            phoneVerificationExpires: user.phoneVerificationExpires || null,
+            phoneVerificationSentAt: user.phoneVerificationSentAt || null,
+            phoneVerifiedAt: user.phoneVerifiedAt || null,
             stats: {
                 friendsCount: Number(user.stats?.friendsCount) || 0,
                 totalDistance: Number(user.stats?.totalDistance) || 0,
@@ -1749,6 +2066,8 @@ const UserSystem = {
             lastActive: Date.now(),
             position: [55.751244, 37.618423],
             about: '',
+            phoneNumber: null,
+            phoneVerified: false,
             stats: {
                 friendsCount: 0,
                 totalDistance: 0,
@@ -1835,9 +2154,37 @@ const UserSystem = {
             // Очищаем устаревшие коды сброса пароля Telegram
             this.cleanupExpiredTelegramResetCodes();
             
+            // Очищаем устаревшие коды подтверждения телефона
+            this.cleanupExpiredPhoneVerificationCodes();
+            
             console.log('✅ Очистка данных завершена');
         } catch (error) {
             console.error('❌ Ошибка очистки данных:', error);
+        }
+    },
+
+    // Очистка устаревших кодов подтверждения телефона
+    cleanupExpiredPhoneVerificationCodes: function() {
+        try {
+            const users = this.getUsers();
+            const now = Date.now();
+            let cleaned = false;
+            
+            users.forEach(user => {
+                if (user.phoneVerificationExpires && user.phoneVerificationExpires < now) {
+                    user.phoneVerificationCode = null;
+                    user.phoneVerificationExpires = null;
+                    user.phoneVerificationSentAt = null;
+                    cleaned = true;
+                }
+            });
+            
+            if (cleaned) {
+                this.saveUsers(users);
+                console.log('🗑️ Очищены устаревшие коды подтверждения телефона');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка очистки кодов подтверждения телефона:', error);
         }
     },
 
@@ -2145,11 +2492,25 @@ const UserSystem = {
             // Telegram статистика
             let telegramUsers = 0;
             let verifiedTelegramUsers = 0;
+            
+            // Телефонная статистика
+            let phoneUsers = 0;
+            let verifiedPhoneUsers = 0;
+            
             users.forEach(user => {
+                // Telegram статистика
                 if (user.telegram) {
                     telegramUsers++;
                     if (user.telegram.verified) {
                         verifiedTelegramUsers++;
+                    }
+                }
+                
+                // Телефонная статистика
+                if (user.phoneNumber) {
+                    phoneUsers++;
+                    if (user.phoneVerified) {
+                        verifiedPhoneUsers++;
                     }
                 }
             });
@@ -2172,7 +2533,14 @@ const UserSystem = {
                 qrSuccessRate: qrRequests.length > 0 ? (acceptedQRRequests.length / qrRequests.length * 100).toFixed(1) : 0,
                 telegramUsers: telegramUsers,
                 verifiedTelegramUsers: verifiedTelegramUsers,
-                telegramVerificationRate: telegramUsers > 0 ? ((verifiedTelegramUsers / telegramUsers) * 100).toFixed(1) : 0
+                telegramVerificationRate: telegramUsers > 0 ? ((verifiedTelegramUsers / telegramUsers) * 100).toFixed(1) : 0,
+                phoneUsers: phoneUsers,
+                verifiedPhoneUsers: verifiedPhoneUsers,
+                phoneVerificationRate: phoneUsers > 0 ? ((verifiedPhoneUsers / phoneUsers) * 100).toFixed(1) : 0,
+                dualVerifiedUsers: users.filter(u => 
+                    (u.telegram && u.telegram.verified) && 
+                    (u.phoneNumber && u.phoneVerified)
+                ).length
             };
         } catch (error) {
             console.error('❌ Ошибка получения статистики:', error);
