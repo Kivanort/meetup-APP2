@@ -818,40 +818,24 @@
       </div>
     </div>
     
-    <!-- Две отдельные секции: для приглашения друзей и для добавления в друзья -->
+    <!-- Реферальная секция -->
     <div class="referral-section" id="referral-section">
       <div class="referral-title">
         <span class="material-icons">share</span>
-        Пригласить друзей (регистрация)
+        Пригласить друзей
       </div>
       
       <div class="referral-link-container">
         <input type="text" class="referral-input" id="referral-link" readonly value="Загрузка ссылки...">
         <button class="copy-btn" id="copy-btn">Копировать</button>
-      </div>
-      
-      <div class="referral-info">
-        Отправьте эту ссылку друзьям для регистрации. После регистрации они автоматически добавятся к вам в друзья.
-      </div>
-    </div>
-    
-    <div class="referral-section" id="friend-section" style="background: rgba(76, 175, 80, 0.05); border-color: rgba(76, 175, 80, 0.2);">
-      <div class="referral-title">
-        <span class="material-icons">person_add</span>
-        Добавить в друзья
-      </div>
-      
-      <div class="referral-link-container">
-        <input type="text" class="referral-input" id="friend-qr-link" readonly value="Загрузка ссылки...">
-        <button class="copy-btn" id="copy-friend-btn" style="background: linear-gradient(90deg, #4CAF50, #2E7D32);">Копировать</button>
-        <button class="copy-btn qr-btn" id="friend-qr-btn" style="background: linear-gradient(90deg, #FF9800, #FF5722);">
+        <button class="copy-btn qr-btn" id="qr-btn" style="background: linear-gradient(90deg, #FF9800, #FF5722);">
           <span class="material-icons">qr_code</span>
-          QR для друзей
+          Мой QR
         </button>
       </div>
       
       <div class="referral-info">
-        Отправьте эту ссылку или QR-код друзьям, которые уже зарегистрированы в приложении, чтобы они могли добавить вас в друзья.
+        Отправьте эту ссылку или QR-код друзьям. При регистрации по ссылке они автоматически добавятся к вам в друзья.
       </div>
     </div>
     
@@ -892,11 +876,11 @@
     </div>
   </div>
   
-  <!-- Модальное окно QR кода для друзей -->
-  <div class="qr-modal" id="friend-qr-modal">
+  <!-- Модальное окно QR кода -->
+  <div class="qr-modal" id="qr-modal">
     <div class="qr-content">
       <div class="qr-title">Мой QR-код для друзей</div>
-      <div id="friend-qr-code">
+      <div id="qr-code">
         <div class="qr-alternative">
           <div class="qr-alternative-code">
             <div style="font-family: monospace; font-size: 14px; color: black; margin-bottom: 10px;">
@@ -913,8 +897,8 @@
         Покажите этот QR-код другу для добавления в друзья
       </div>
       <div class="qr-actions">
-        <button class="qr-btn close" id="close-friend-qr">Закрыть</button>
-        <button class="qr-btn share" id="share-friend-qr">
+        <button class="qr-btn close" id="close-qr">Закрыть</button>
+        <button class="qr-btn share" id="share-qr">
           <span class="material-icons">share</span>
           Поделиться
         </button>
@@ -930,6 +914,17 @@
       if (!currentUser) {
         window.location.href = 'index.html';
         return;
+      }
+
+      // Проверяем загрузку QRCode библиотеки
+      if (typeof QRCode === 'undefined') {
+        console.warn('QRCode библиотека не загрузилась');
+        const qrBtn = document.getElementById('qr-btn');
+        if (qrBtn) {
+          qrBtn.innerHTML = '<span class="material-icons">warning</span> QR (ошибка)';
+          qrBtn.style.background = 'linear-gradient(90deg, #FF4444, #992222)';
+          qrBtn.title = 'Библиотека QR-кода не загружена. Обновите страницу.';
+        }
       }
 
       // Функция обновления статуса
@@ -1040,7 +1035,7 @@
           console.log('Аватар удален');
         }
         
-        // Показываем сообщение об успешном удаления
+        // Показываем сообщение об успешном удалении
         showTempMessage('Аватар удален');
       }
 
@@ -1216,25 +1211,25 @@
 
       // Генерация QR кода для добавления в друзья
       function generateFriendQRCode(userId, nickname) {
-        const qrContainer = document.getElementById('friend-qr-code');
+        const qrContainer = document.getElementById('qr-code');
         qrContainer.innerHTML = '';
         
-        // Создаем рабочую ссылку, которая ведет на существующую страницу с параметром
-        const friendLink = generateFriendLink(userId);
+        // Создаем специальный формат для QR-кода добавления в друзья
+        const qrData = `meetup://add-friend/${userId}/${encodeURIComponent(nickname || 'Пользователь')}`;
         
         // Проверяем загружена ли библиотека QRCode
         if (typeof QRCode !== 'undefined') {
           try {
             // Используем QRCode.js
             new QRCode(qrContainer, {
-              text: friendLink,
+              text: qrData,
               width: 200,
               height: 200,
               colorDark: "#000000",
               colorLight: "#ffffff",
               correctLevel: QRCode.CorrectLevel.H
             });
-            console.log('QR-код для друзей успешно создан:', friendLink);
+            console.log('QR-код успешно создан');
           } catch (error) {
             console.error('Ошибка при создании QR-кода:', error);
             qrContainer.innerHTML = `
@@ -1259,13 +1254,13 @@
                 <div style="font-family: monospace; font-size: 12px; color: #666; word-break: break-all;">
                   ID: ${userId}
                 </div>
-                <div style="font-family: monospace; font-size: 10px; color: #999; margin-top: 10px;">
-                  ${friendLink}
+                <div style="margin-top: 10px; font-size: 10px; color: #999;">
+                  Отсканируйте этот текст
                 </div>
               </div>
               <div class="qr-warning">
                 <span class="material-icons" style="font-size: 16px;">warning</span>
-                Скопируйте ссылку выше
+                Используйте альтернативный метод для добавления в друзья
               </div>
             </div>
           `;
@@ -1274,15 +1269,8 @@
         // Обновляем заголовок с именем пользователя
         const currentUser = UserSystem.getCurrentUser();
         if (currentUser) {
-          document.querySelector('#friend-qr-modal .qr-title').textContent = `Добавить ${currentUser.nickname} в друзья`;
+          document.querySelector('.qr-title').textContent = `Добавить ${currentUser.nickname} в друзья`;
         }
-      }
-
-      // Генерация рабочей ссылки для добавления в друзья
-      function generateFriendLink(userId) {
-        // Создаем ссылку на существующую страницу map.html с параметром
-        // Это рабочая страница, которая точно существует
-        return `${window.location.origin}/map.html?add-friend=${userId}`;
       }
 
       // Функции для работы с реферальными ссылками
@@ -1290,15 +1278,19 @@
         const currentUser = UserSystem.getCurrentUser();
         if (!currentUser) return;
         
-        // 1. Реферальная ссылка для регистрации
+        // Генерируем и показываем реферальную ссылку
         const referralLink = UserSystem.getReferralLink(currentUser.id);
         const referralInput = document.getElementById('referral-link');
         const copyBtn = document.getElementById('copy-btn');
+        const qrBtn = document.getElementById('qr-btn');
+        const qrModal = document.getElementById('qr-modal');
+        const closeQrBtn = document.getElementById('close-qr');
+        const shareQrBtn = document.getElementById('share-qr');
         
         if (referralLink) {
           referralInput.value = referralLink;
           
-          // Копирование реферальной ссылки
+          // Копирование ссылки
           copyBtn.onclick = async function() {
             try {
               await navigator.clipboard.writeText(referralLink);
@@ -1306,7 +1298,7 @@
               copyBtn.classList.add('copied');
               
               // Показываем временное сообщение
-              showTempMessage('Реферальная ссылка скопирована в буфер обмена');
+              showTempMessage('Ссылка скопирована в буфер обмена');
               
               setTimeout(() => {
                 copyBtn.textContent = 'Копировать';
@@ -1316,58 +1308,17 @@
               // Fallback для старых браузеров
               referralInput.select();
               document.execCommand('copy');
-              showTempMessage('Реферальная ссылка скопирована');
-            }
-          };
-        }
-      }
-
-      // Инициализация секции добавления в друзья
-      function initFriendSection() {
-        const currentUser = UserSystem.getCurrentUser();
-        if (!currentUser) return;
-        
-        // 2. Ссылка для добавления в друзья
-        const friendLink = generateFriendLink(currentUser.id);
-        const friendQrLinkInput = document.getElementById('friend-qr-link');
-        const copyFriendBtn = document.getElementById('copy-friend-btn');
-        const friendQrBtn = document.getElementById('friend-qr-btn');
-        const friendQrModal = document.getElementById('friend-qr-modal');
-        const closeFriendQrBtn = document.getElementById('close-friend-qr');
-        const shareFriendQrBtn = document.getElementById('share-friend-qr');
-        
-        if (friendLink) {
-          friendQrLinkInput.value = friendLink;
-          
-          // Копирование ссылки для друзей
-          copyFriendBtn.onclick = async function() {
-            try {
-              await navigator.clipboard.writeText(friendLink);
-              copyFriendBtn.textContent = 'Скопировано!';
-              copyFriendBtn.classList.add('copied');
-              
-              // Показываем временное сообщение
-              showTempMessage('Ссылка для добавления в друзья скопирована');
-              
-              setTimeout(() => {
-                copyFriendBtn.textContent = 'Копировать';
-                copyFriendBtn.classList.remove('copied');
-              }, 2000);
-            } catch (err) {
-              // Fallback для старых браузеров
-              friendQrLinkInput.select();
-              document.execCommand('copy');
-              showTempMessage('Ссылка для друзей скопирована');
+              showTempMessage('Ссылка скопирована');
             }
           };
           
           // Открытие QR кода для добавления в друзья
-          friendQrBtn.onclick = function() {
+          qrBtn.onclick = function() {
             // Проверяем загружена ли библиотека QRCode
             if (typeof QRCode === 'undefined') {
               showTempMessage('Библиотека QR-кода не загружена. Обновите страницу или проверьте подключение к интернету.', 5000);
               // Показываем альтернативный контент
-              const qrContainer = document.getElementById('friend-qr-code');
+              const qrContainer = document.getElementById('qr-code');
               qrContainer.innerHTML = `
                 <div class="qr-alternative">
                   <div class="qr-alternative-code">
@@ -1375,33 +1326,33 @@
                       ${currentUser.nickname || 'Пользователь'}
                     </div>
                     <div style="font-family: monospace; font-size: 12px; color: #666; word-break: break-all;">
-                      ${friendLink}
+                      Ссылка: ${referralLink}
                     </div>
                   </div>
                   <div class="qr-warning">
                     <span class="material-icons" style="font-size: 16px;">error</span>
-                    Скопируйте ссылку выше
+                    QR-код временно недоступен
                   </div>
                 </div>
               `;
-              friendQrModal.style.display = 'flex';
+              qrModal.style.display = 'flex';
               return;
             }
             
             // Генерируем персональный QR-код для добавления в друзья
             generateFriendQRCode(currentUser.id, currentUser.nickname);
-            friendQrModal.style.display = 'flex';
+            qrModal.style.display = 'flex';
           };
           
           // Закрытие QR модального окна
-          closeFriendQrBtn.onclick = function() {
-            friendQrModal.style.display = 'none';
+          closeQrBtn.onclick = function() {
+            qrModal.style.display = 'none';
           };
           
-          // Поделиться QR кодом для друзей
-          shareFriendQrBtn.onclick = async function() {
+          // Поделиться QR кодом
+          shareQrBtn.onclick = async function() {
             try {
-              const qrCanvas = document.querySelector('#friend-qr-code canvas');
+              const qrCanvas = document.querySelector('#qr-code canvas');
               if (qrCanvas) {
                 qrCanvas.toBlob(async function(blob) {
                   const file = new File([blob], 'meetup-friend-qr.png', { type: 'image/png' });
@@ -1418,7 +1369,7 @@
                     link.download = 'meetup-friend-qr.png';
                     link.href = qrCanvas.toDataURL();
                     link.click();
-                    showTempMessage('QR код для друзей сохранен');
+                    showTempMessage('QR код сохранен');
                   }
                 });
               } else {
@@ -1426,26 +1377,26 @@
                 if (navigator.share) {
                   await navigator.share({
                     title: 'Добавь меня в друзья в MeetUP!',
-                    text: `Добавь меня в друзья: ${friendLink}`,
-                    url: friendLink
+                    text: `Добавь меня в друзья: ${referralLink}`,
+                    url: referralLink
                   });
                 } else {
-                  await navigator.clipboard.writeText(friendLink);
-                  showTempMessage('Ссылка для друзей скопирована в буфер обмена');
+                  await navigator.clipboard.writeText(referralLink);
+                  showTempMessage('Ссылка скопирована в буфер обмена');
                 }
               }
             } catch (error) {
               console.log('Ошибка при совместном использовании:', error);
               // Копируем ссылку в буфер обмена как запасной вариант
-              await navigator.clipboard.writeText(friendLink);
-              showTempMessage('Ссылка для друзей скопирована в буфер обмена');
+              await navigator.clipboard.writeText(referralLink);
+              showTempMessage('Ссылка скопирована в буфер обмена');
             }
           };
           
           // Закрытие по клику вне окна
-          friendQrModal.onclick = function(e) {
-            if (e.target === friendQrModal) {
-              friendQrModal.style.display = 'none';
+          qrModal.onclick = function(e) {
+            if (e.target === qrModal) {
+              qrModal.style.display = 'none';
             }
           };
         }
@@ -1460,6 +1411,20 @@
           window.location.href = 'index.html';
           return;
         }
+
+        // Проверяем загрузку QRCode библиотеки
+        setTimeout(() => {
+          if (typeof QRCode === 'undefined') {
+            console.warn('QRCode библиотека не загрузилась');
+            // Показываем предупреждение пользователю
+            const qrBtn = document.getElementById('qr-btn');
+            if (qrBtn) {
+              qrBtn.innerHTML = '<span class="material-icons">warning</span> QR (ошибка)';
+              qrBtn.style.background = 'linear-gradient(90deg, #FF4444, #992222)';
+              qrBtn.title = 'Библиотека QR-кода не загружена. Обновите страницу.';
+            }
+          }
+        }, 3000);
 
         // Обновляем активность пользователя
         updateUserActivity(currentUser);
@@ -1563,9 +1528,8 @@
           document.getElementById('user-email').textContent = `Email: ${currentUser.email}`;
         }
 
-        // Инициализируем реферальную секцию и секцию для друзей
+        // Инициализируем реферальную секцию
         initReferralSection();
-        initFriendSection();
         
         // Кнопка Telegram
         document.getElementById('btn-telegram-settings').onclick = function() {
