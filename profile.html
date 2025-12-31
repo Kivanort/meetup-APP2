@@ -35,6 +35,7 @@
       --telegram-gradient: linear-gradient(135deg, #0088cc, #34b7f1);
     }
     html, body {
+      height: 100%;
       margin: 0;
       font-family: 'Montserrat','Segoe UI', Arial, sans-serif;
       background: var(--bg-main);
@@ -42,15 +43,15 @@
       min-height: 100vh;
       min-width: 100vw;
       width: 100vw;
-      overflow-x: hidden;
+      overflow: auto;
     }
 
     body {
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       min-height: 100vh;
       animation: profile-fadein 0.55s cubic-bezier(.27,.69,.51,1.35);
-      padding: 0;
-      margin: 0;
     }
     @keyframes profile-fadein {
       from { opacity:0; transform:translateY(20px);}
@@ -63,15 +64,13 @@
       box-shadow: var(--shadow);
       width: 500px;
       max-width: 100vw;
-      margin: 28px auto;
+      margin: 28px 0;
       padding: 40px 44px 34px 44px;
       display: flex;
       flex-direction: column;
       align-items: center;
       position: relative;
       animation: profile-fadein 0.7s;
-      box-sizing: border-box;
-      overflow: visible;
     }
 
     /* Стрелка назад */
@@ -115,14 +114,7 @@
         max-width: 100vw;
         border-radius: 0;
         margin: 0;
-        padding: 24px 16px;
-        min-height: auto;
-        overflow: auto;
-      }
-      body {
-        display: block;
-        height: auto;
-        overflow-y: auto;
+        padding: 24px 11px 24px 11px;
       }
       .profile-stats-row {
         flex-direction: column;
@@ -166,25 +158,14 @@
       .back-arrow .material-icons {
         font-size: 23px;
       }
-      .referral-link-container {
-        flex-direction: column;
+      .btn-share-avatar {
+        width: 36px;
+        height: 36px;
+        right: -8px;
+        bottom: 0;
       }
-      .referral-input {
-        width: 100%;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .profile-card {
-        padding: 20px 12px;
-      }
-      .profile-avatar {
-        width: 100px;
-        height: 100px;
-      }
-      .avatar-placeholder-svg {
-        width: 58px;
-        height: 58px;
+      .btn-share-avatar .material-icons {
+        font-size: 16px;
       }
     }
 
@@ -270,6 +251,49 @@
       display: flex;
       opacity: 1;
       transform: scale(1);
+    }
+    
+    /* Кнопка поделиться под аватаром (45 градусов) */
+    .btn-share-avatar {
+      position: absolute;
+      right: -10px;
+      bottom: 5px;
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #00FFFF 0%, #9400D3 100%);
+      border: none;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 10;
+      box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3);
+      transform: rotate(45deg);
+      animation: share-pulse 2s infinite;
+    }
+    .btn-share-avatar:hover {
+      transform: rotate(45deg) scale(1.1);
+      box-shadow: 0 6px 20px rgba(0, 255, 255, 0.5);
+      background: linear-gradient(135deg, #00FFFF 20%, #9400D3 80%);
+    }
+    .btn-share-avatar:active {
+      transform: rotate(45deg) scale(0.95);
+    }
+    .btn-share-avatar .material-icons {
+      font-size: 18px;
+      transform: rotate(-45deg);
+      transition: transform 0.3s;
+    }
+    .btn-share-avatar:hover .material-icons {
+      transform: rotate(-45deg) scale(1.1);
+    }
+    @keyframes share-pulse {
+      0% { box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3); }
+      50% { box-shadow: 0 4px 20px rgba(148, 0, 211, 0.4); }
+      100% { box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3); }
     }
     
     .profile-avatar-wrap:hover .profile-avatar {
@@ -767,6 +791,31 @@
       gap: 5px;
       margin-top: 10px;
     }
+
+    /* Временные сообщения */
+    .temp-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.85);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 12px;
+      font-size: 14px;
+      z-index: 10001;
+      backdrop-filter: blur(10px);
+      text-align: center;
+      max-width: 80%;
+      box-shadow: 0 8px 32px rgba(0, 255, 255, 0.2);
+      border: 1px solid rgba(0, 255, 255, 0.2);
+      animation: messageIn 0.3s;
+    }
+    
+    @keyframes messageIn {
+      from { opacity: 0; transform: translate(-50%, -40%); }
+      to { opacity: 1; transform: translate(-50%, -50%); }
+    }
   </style>
 </head>
 <body>
@@ -790,6 +839,10 @@
       <!-- Кнопка удалить фото -->
       <button class="btn-remove-avatar" id="btn-remove-avatar" title="Удалить фото" tabindex="0">
         <span class="material-icons" style="font-size:16px;">close</span>
+      </button>
+      <!-- Кнопка поделиться (под углом 45 градусов) -->
+      <button class="btn-share-avatar" id="btn-share-avatar" title="Поделиться профилем">
+        <span class="material-icons">share</span>
       </button>
       <!-- input file (скрытый) -->
       <input type="file" accept="image/*" id="avatar-upload" style="display:none;">
@@ -1306,8 +1359,8 @@
         const currentUser = UserSystem.getCurrentUser();
         if (!currentUser) return;
         
-        // Генерируем и показываем реферальную ссылку
-        const referralLink = UserSystem.getReferralLink(currentUser.id);
+        // Получаем все ссылки пользователя
+        const userLinks = UserSystem.getAllUserLinks(currentUser.id);
         const referralInput = document.getElementById('referral-link');
         const copyBtn = document.getElementById('copy-btn');
         const qrBtn = document.getElementById('qr-btn');
@@ -1315,13 +1368,14 @@
         const closeQrBtn = document.getElementById('close-qr');
         const shareQrBtn = document.getElementById('share-qr');
         
-        if (referralLink) {
-          referralInput.value = referralLink;
+        if (userLinks) {
+          // Показываем красивую ссылку (как в Blink)
+          referralInput.value = userLinks.prettyLink;
           
           // Копирование ссылки
           copyBtn.onclick = async function() {
             try {
-              await navigator.clipboard.writeText(referralLink);
+              await navigator.clipboard.writeText(userLinks.prettyLink);
               copyBtn.textContent = 'Скопировано!';
               copyBtn.classList.add('copied');
               
@@ -1354,7 +1408,7 @@
                       ${currentUser.nickname || 'Пользователь'}
                     </div>
                     <div style="font-family: monospace; font-size: 12px; color: #666; word-break: break-all;">
-                      Ссылка: ${referralLink}
+                      Ссылка: ${userLinks.prettyLink}
                     </div>
                   </div>
                   <div class="qr-warning">
@@ -1405,18 +1459,18 @@
                 if (navigator.share) {
                   await navigator.share({
                     title: 'Добавь меня в друзья в MeetUP!',
-                    text: `Добавь меня в друзья: ${referralLink}`,
-                    url: referralLink
+                    text: `Добавь меня в друзья: ${userLinks.prettyLink}`,
+                    url: userLinks.prettyLink
                   });
                 } else {
-                  await navigator.clipboard.writeText(referralLink);
+                  await navigator.clipboard.writeText(userLinks.prettyLink);
                   showTempMessage('Ссылка скопирована в буфер обмена');
                 }
               }
             } catch (error) {
               console.log('Ошибка при совместном использовании:', error);
               // Копируем ссылку в буфер обмена как запасной вариант
-              await navigator.clipboard.writeText(referralLink);
+              await navigator.clipboard.writeText(userLinks.prettyLink);
               showTempMessage('Ссылка скопирована в буфер обмена');
             }
           };
@@ -1472,6 +1526,7 @@
         const avatarImg = document.getElementById('avatar-img');
         const avatarPlaceholder = document.querySelector('.avatar-placeholder-svg');
         const btnRemove = document.getElementById('btn-remove-avatar');
+        const btnShare = document.getElementById('btn-share-avatar');
         const avatarWrap = document.getElementById('profile-avatar-wrap');
         const avatar = document.getElementById('profile-avatar');
         
@@ -1480,9 +1535,9 @@
           avatarImg.style.display = "block";
           avatarPlaceholder.style.display = "none";
           avatar.classList.add('has-photo');
-          avatarWrap.classList.add('has-avatar'); // Добавляем класс для показа кнопки удаления
+          avatarWrap.classList.add('has-avatar');
         } else {
-          avatarWrap.classList.remove('has-avatar'); // Убираем класс для скрытия кнопки удаления
+          avatarWrap.classList.remove('has-avatar');
         }
 
         // Статус
@@ -1621,9 +1676,15 @@
         const avatarContainer = document.getElementById('profile-avatar-wrap');
 
         avatarContainer.onclick = (e) => {
-          if (e.target !== btnRemove) {
+          if (e.target !== btnRemove && e.target !== btnShare) {
             avatarUpload.click();
           }
+        };
+        
+        // Кнопка поделиться профилем (открывает новый файл)
+        btnShare.onclick = function(e) {
+          e.stopPropagation();
+          window.location.href = 'share-profile.html';
         };
         
         avatarUpload.onchange = async function(){
@@ -1640,7 +1701,7 @@
             avatarImg.style.display = "block";
             avatarPlaceholder.style.display = "none";
             avatar.classList.add("has-photo");
-            avatarWrap.classList.add("has-avatar"); // Добавляем класс для показа кнопки удаления
+            avatarWrap.classList.add("has-avatar");
 
             // Сохраняем аватар в профиль
             const users = UserSystem.getUsers();
