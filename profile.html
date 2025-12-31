@@ -902,12 +902,12 @@
     <!-- Реферальная секция -->
     <div class="referral-section" id="referral-section">
       <div class="referral-title">
-        <span class="material-icons">share</span>
+        <span class="material-icons">person_add</span>
         Пригласить друзей
       </div>
       
       <div class="referral-link-container">
-        <input type="text" class="referral-input" id="referral-link" readonly value="Загрузка ссылки...">
+        <input type="text" class="referral-input" id="referral-link" readonly value="https://kivanort.github.io/@Ivan">
         <button class="copy-btn" id="copy-btn">Копировать</button>
         <button class="copy-btn qr-btn" id="qr-btn" style="background: linear-gradient(90deg, #FF9800, #FF5722);">
           <span class="material-icons">qr_code</span>
@@ -1359,8 +1359,6 @@
         const currentUser = UserSystem.getCurrentUser();
         if (!currentUser) return;
         
-        // Получаем все ссылки пользователя
-        const userLinks = UserSystem.getAllUserLinks(currentUser.id);
         const referralInput = document.getElementById('referral-link');
         const copyBtn = document.getElementById('copy-btn');
         const qrBtn = document.getElementById('qr-btn');
@@ -1368,120 +1366,118 @@
         const closeQrBtn = document.getElementById('close-qr');
         const shareQrBtn = document.getElementById('share-qr');
         
-        if (userLinks) {
-          // Показываем красивую ссылку (как в Blink)
-          referralInput.value = userLinks.prettyLink;
-          
-          // Копирование ссылки
-          copyBtn.onclick = async function() {
-            try {
-              await navigator.clipboard.writeText(userLinks.prettyLink);
-              copyBtn.textContent = 'Скопировано!';
-              copyBtn.classList.add('copied');
-              
-              // Показываем временное сообщение
-              showTempMessage('Ссылка скопирована в буфер обмена');
-              
-              setTimeout(() => {
-                copyBtn.textContent = 'Копировать';
-                copyBtn.classList.remove('copied');
-              }, 2000);
-            } catch (err) {
-              // Fallback для старых браузеров
-              referralInput.select();
-              document.execCommand('copy');
-              showTempMessage('Ссылка скопирована');
-            }
-          };
-          
-          // Открытие QR кода для добавления в друзья
-          qrBtn.onclick = function() {
-            // Проверяем загружена ли библиотека QRCode
-            if (typeof QRCode === 'undefined') {
-              showTempMessage('Библиотека QR-кода не загружена. Обновите страницу или проверьте подключение к интернету.', 5000);
-              // Показываем альтернативный контент
-              const qrContainer = document.getElementById('qr-code');
-              qrContainer.innerHTML = `
-                <div class="qr-alternative">
-                  <div class="qr-alternative-code">
-                    <div style="font-family: monospace; font-size: 16px; color: black; margin-bottom: 10px; font-weight: bold;">
-                      ${currentUser.nickname || 'Пользователь'}
-                    </div>
-                    <div style="font-family: monospace; font-size: 12px; color: #666; word-break: break-all;">
-                      Ссылка: ${userLinks.prettyLink}
-                    </div>
+        // Устанавливаем фиксированную ссылку
+        referralInput.value = 'https://kivanort.github.io/@Ivan';
+        
+        // Копирование ссылки
+        copyBtn.onclick = async function() {
+          try {
+            await navigator.clipboard.writeText('https://kivanort.github.io/@Ivan');
+            copyBtn.textContent = 'Скопировано!';
+            copyBtn.classList.add('copied');
+            
+            // Показываем временное сообщение
+            showTempMessage('Ссылка скопирована в буфер обмена');
+            
+            setTimeout(() => {
+              copyBtn.textContent = 'Копировать';
+              copyBtn.classList.remove('copied');
+            }, 2000);
+          } catch (err) {
+            // Fallback для старых браузеров
+            referralInput.select();
+            document.execCommand('copy');
+            showTempMessage('Ссылка скопирована');
+          }
+        };
+        
+        // Открытие QR кода для добавления в друзья
+        qrBtn.onclick = function() {
+          // Проверяем загружена ли библиотека QRCode
+          if (typeof QRCode === 'undefined') {
+            showTempMessage('Библиотека QR-кода не загружена. Обновите страницу или проверьте подключение к интернету.', 5000);
+            // Показываем альтернативный контент
+            const qrContainer = document.getElementById('qr-code');
+            qrContainer.innerHTML = `
+              <div class="qr-alternative">
+                <div class="qr-alternative-code">
+                  <div style="font-family: monospace; font-size: 16px; color: black; margin-bottom: 10px; font-weight: bold;">
+                    ${currentUser.nickname || 'Пользователь'}
                   </div>
-                  <div class="qr-warning">
-                    <span class="material-icons" style="font-size: 16px;">error</span>
-                    QR-код временно недоступен
+                  <div style="font-family: monospace; font-size: 12px; color: #666; word-break: break-all;">
+                    Ссылка: https://kivanort.github.io/@Ivan
                   </div>
                 </div>
-              `;
-              qrModal.style.display = 'flex';
-              return;
-            }
-            
-            // Генерируем персональный QR-код для добавления в друзья
-            generateFriendQRCode(currentUser.id, currentUser.nickname);
+                <div class="qr-warning">
+                  <span class="material-icons" style="font-size: 16px;">error</span>
+                  QR-код временно недоступен
+                </div>
+              </div>
+            `;
             qrModal.style.display = 'flex';
-          };
+            return;
+          }
           
-          // Закрытие QR модального окна
-          closeQrBtn.onclick = function() {
-            qrModal.style.display = 'none';
-          };
-          
-          // Поделиться QR кодом
-          shareQrBtn.onclick = async function() {
-            try {
-              const qrCanvas = document.querySelector('#qr-code canvas');
-              if (qrCanvas) {
-                qrCanvas.toBlob(async function(blob) {
-                  const file = new File([blob], 'meetup-friend-qr.png', { type: 'image/png' });
-                  
-                  if (navigator.share && navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                      files: [file],
-                      title: 'Добавь меня в друзья в MeetUP!',
-                      text: 'Отсканируй этот QR-код, чтобы добавить меня в друзья в приложении MeetUP.'
-                    });
-                  } else {
-                    // Fallback: скачивание
-                    const link = document.createElement('a');
-                    link.download = 'meetup-friend-qr.png';
-                    link.href = qrCanvas.toDataURL();
-                    link.click();
-                    showTempMessage('QR код сохранен');
-                  }
-                });
-              } else {
-                // Если нет canvas, предлагаем поделиться ссылкой
-                if (navigator.share) {
+          // Генерируем персональный QR-код для добавления в друзья
+          generateFriendQRCode(currentUser.id, currentUser.nickname);
+          qrModal.style.display = 'flex';
+        };
+        
+        // Закрытие QR модального окна
+        closeQrBtn.onclick = function() {
+          qrModal.style.display = 'none';
+        };
+        
+        // Поделиться QR кодом
+        shareQrBtn.onclick = async function() {
+          try {
+            const qrCanvas = document.querySelector('#qr-code canvas');
+            if (qrCanvas) {
+              qrCanvas.toBlob(async function(blob) {
+                const file = new File([blob], 'meetup-friend-qr.png', { type: 'image/png' });
+                
+                if (navigator.share && navigator.canShare({ files: [file] })) {
                   await navigator.share({
+                    files: [file],
                     title: 'Добавь меня в друзья в MeetUP!',
-                    text: `Добавь меня в друзья: ${userLinks.prettyLink}`,
-                    url: userLinks.prettyLink
+                    text: 'Отсканируй этот QR-код, чтобы добавить меня в друзья в приложении MeetUP.'
                   });
                 } else {
-                  await navigator.clipboard.writeText(userLinks.prettyLink);
-                  showTempMessage('Ссылка скопирована в буфер обмена');
+                  // Fallback: скачивание
+                  const link = document.createElement('a');
+                  link.download = 'meetup-friend-qr.png';
+                  link.href = qrCanvas.toDataURL();
+                  link.click();
+                  showTempMessage('QR код сохранен');
                 }
+              });
+            } else {
+              // Если нет canvas, предлагаем поделиться ссылкой
+              if (navigator.share) {
+                await navigator.share({
+                  title: 'Добавь меня в друзья в MeetUP!',
+                  text: `Добавь меня в друзья: https://kivanort.github.io/@Ivan`,
+                  url: 'https://kivanort.github.io/@Ivan'
+                });
+              } else {
+                await navigator.clipboard.writeText('https://kivanort.github.io/@Ivan');
+                showTempMessage('Ссылка скопирована в буфер обмена');
               }
-            } catch (error) {
-              console.log('Ошибка при совместном использовании:', error);
-              // Копируем ссылку в буфер обмена как запасной вариант
-              await navigator.clipboard.writeText(userLinks.prettyLink);
-              showTempMessage('Ссылка скопирована в буфер обмена');
             }
-          };
-          
-          // Закрытие по клику вне окна
-          qrModal.onclick = function(e) {
-            if (e.target === qrModal) {
-              qrModal.style.display = 'none';
-            }
-          };
-        }
+          } catch (error) {
+            console.log('Ошибка при совместном использовании:', error);
+            // Копируем ссылку в буфер обмена как запасной вариант
+            await navigator.clipboard.writeText('https://kivanort.github.io/@Ivan');
+            showTempMessage('Ссылка скопирована в буфер обмена');
+          }
+        };
+        
+        // Закрытие по клику вне окна
+        qrModal.onclick = function(e) {
+          if (e.target === qrModal) {
+            qrModal.style.display = 'none';
+          }
+        };
       }
 
       // Основная инициализация профиля
