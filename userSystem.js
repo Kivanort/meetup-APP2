@@ -1243,7 +1243,7 @@ const UserSystem = {
                     };
                 }
             } else {
-                // Демо-режим
+                // Демо-режим - показываем код в консоли
                 console.log(`📱 ДЕМО: Код верификации для @${codeData.username}: ${codeData.code}`);
                 return { 
                     success: true, 
@@ -1909,7 +1909,7 @@ const UserSystem = {
         return code;
     },
 
-    // Получить реферальную ссылку
+    // Получить реферальную ссылку (старый формат)
     getReferralLink: function(userId) {
         const user = this.findUser(userId);
         if (!user) return null;
@@ -1922,6 +1922,40 @@ const UserSystem = {
         // Генерируем полную ссылку
         const currentDomain = window.location.origin;
         return `${currentDomain}/index.html?ref=${code}`;
+    },
+
+    // Получить красивую ссылку для добавления в друзья (как в Blink)
+    getPrettyFriendLink: function(userId) {
+        const user = this.findUser(userId);
+        if (!user) return null;
+        
+        // Генерируем красивую ссылку вида: ваш-домен/@никнейм
+        const currentDomain = window.location.origin;
+        const encodedNickname = encodeURIComponent(user.nickname);
+        return `${currentDomain}/@${encodedNickname}`;
+    },
+
+    // Получить ссылку для добавления в друзья
+    getFriendInviteLink: function(userId) {
+        const user = this.findUser(userId);
+        if (!user) return null;
+        
+        // Генерируем ссылку вида: ваш-домен/add-friend/userId
+        const currentDomain = window.location.origin;
+        return `${currentDomain}/add-friend/${userId}`;
+    },
+
+    // Получить все ссылки пользователя
+    getAllUserLinks: function(userId) {
+        const user = this.findUser(userId);
+        if (!user) return null;
+        
+        return {
+            referralLink: this.getReferralLink(userId),
+            prettyLink: this.getPrettyFriendLink(userId),
+            friendLink: this.getFriendInviteLink(userId),
+            telegramUsername: user.telegram?.username ? `@${user.telegram.username}` : null
+        };
     },
 
     // Проверить и использовать реферальную ссылку
@@ -1981,6 +2015,74 @@ const UserSystem = {
             };
         } catch (error) {
             console.error('❌ Ошибка использования реферальной ссылки:', error);
+            return { success: false, message: 'Ошибка обработки ссылки' };
+        }
+    },
+
+    // Обработать пригласительную ссылку (разные форматы)
+    processInviteLink: function(link, newUserId) {
+        try {
+            console.log('🔗 Обработка пригласительной ссылки:', link);
+            
+            // Разбираем ссылку
+            try {
+                const url = new URL(link);
+                
+                // Обрабатываем параметр ref
+                const refCode = url.searchParams.get('ref');
+                if (refCode) {
+                    return this.useReferralLink(refCode, newUserId);
+                }
+                
+                // Обрабатываем путь /@никнейм
+                if (url.pathname.startsWith('/@')) {
+                    const nickname = decodeURIComponent(url.pathname.substring(2));
+                    const user = this.findUser(nickname);
+                    if (user) {
+                        // Создаем запрос в друзья
+                        this.sendFriendRequest(user.id, newUserId);
+                        return {
+                            success: true,
+                            message: `Запрос в друзья отправлен пользователю ${nickname}`,
+                            referrer: user
+                        };
+                    }
+                }
+                
+                // Обрабатываем путь /add-friend/userId
+                if (url.pathname.startsWith('/add-friend/')) {
+                    const userId = url.pathname.split('/')[2];
+                    const user = this.findUser(userId);
+                    if (user) {
+                        this.sendFriendRequest(user.id, newUserId);
+                        return {
+                            success: true,
+                            message: `Запрос в друзья отправлен пользователю ${user.nickname}`,
+                            referrer: user
+                        };
+                    }
+                }
+            } catch (e) {
+                // Не URL, пробуем как прямой код
+                if (link.startsWith('REF_')) {
+                    return this.useReferralLink(link, newUserId);
+                }
+                
+                // Ищем пользователя по никнейму
+                const user = this.findUser(link);
+                if (user) {
+                    this.sendFriendRequest(user.id, newUserId);
+                    return {
+                        success: true,
+                        message: `Запрос в друзья отправлен пользователю ${user.nickname}`,
+                        referrer: user
+                    };
+                }
+            }
+            
+            return { success: false, message: 'Неверная ссылка' };
+        } catch (error) {
+            console.error('❌ Ошибка обработки пригласительной ссылки:', error);
             return { success: false, message: 'Ошибка обработки ссылки' };
         }
     },
