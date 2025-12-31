@@ -2090,6 +2090,29 @@
         }
       }
       
+      // Добавление бета-пользователя в UserSystem при инициализации
+      function addBetaUsersToSystem() {
+        if (typeof UserSystem !== 'undefined' && UserSystem.addBetaUser) {
+          // Добавляем бета-пользователя moderator2025@mail.ru
+          const betaUser = {
+            id: 'beta_moderator_001',
+            email: 'moderator2025@mail.ru',
+            nickname: 'Moderator2025',
+            password: 'TestMeetUp2025',
+            role: 'moderator',
+            isBeta: true,
+            avatar: '',
+            position: [55.751244, 37.618423],
+            registrationDate: new Date().toISOString(),
+            referralCode: 'BETA-MOD-2025',
+            referredBy: null
+          };
+          
+          UserSystem.addBetaUser(betaUser);
+          console.log('✅ Бета-пользователь добавлен:', betaUser.email);
+        }
+      }
+      
       // Форма входа
       function setupLoginForm() {
         const loginForm = document.getElementById('login-form');
@@ -3159,6 +3182,9 @@
       // Инициализация приложения
       function init() {
         console.log('🚀 Инициализация приложения Карта друзей');
+        
+        // Добавляем бета-пользователей в систему
+        addBetaUsersToSystem();
         
         // Проверяем текущий активный вид
         console.log('📱 Текущий активный вид:', document.querySelector('.form-view.active')?.id);
