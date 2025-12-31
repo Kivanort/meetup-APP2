@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Пригласить в друзья — MeetUP</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="userSystem.js"></script>
+    <style>
+        :root {
+            --bg-main: #000000;
+            --gradient-yellow: #FFD700;
+            --gradient-pink: #FF1493;
+            --text-main: #FFFFFF;
+            --text-muted: #AAAAAA;
+            --button-gradient: linear-gradient(90deg, var(--gradient-yellow), var(--gradient-pink));
+            --button-telegram: #0088CC;
+            --button-whatsapp: #25D366;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Звезды по углам */
+        .star {
+            position: fixed;
+            font-size: 32px;
+            z-index: 0;
+            animation: star-float 4s ease-in-out infinite;
+            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5));
+        }
+
+        .star:nth-child(1) { top: 30px; left: 30px; animation-delay: 0s; }
+        .star:nth-child(2) { top: 30px; right: 30px; animation-delay: 1s; }
+        .star:nth-child(3) { bottom: 30px; left: 30px; animation-delay: 2s; }
+        .star:nth-child(4) { bottom: 30px; right: 30px; animation-delay: 3s; }
+
+        @keyframes star-float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(5deg); }
+        }
+
+        /* Основной контейнер */
+        .share-container {
+            background: rgba(30, 30, 30, 0.9);
+            border-radius: 24px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: container-appear 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes container-appear {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* Крестик закрытия */
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            color: white;
+            z-index: 10;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
+        }
+
+        .close-btn .material-icons {
+            font-size: 24px;
+        }
+
+        /* Логотип */
+        .logo {
+            font-size: 42px;
+            font-weight: 900;
+            background: var(--button-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+        }
+
+        /* Аватар пользователя */
+        .avatar-container {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 25px;
+        }
+
+        .avatar-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: var(--button-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            animation: frame-pulse 2s infinite;
+        }
+
+        @keyframes frame-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); }
+            50% { box-shadow: 0 0 0 20px rgba(255, 215, 0, 0); }
+        }
+
+        .avatar-image {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #000;
+        }
+
+        .avatar-placeholder {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+        }
+
+        /* Информация пользователя */
+        .user-info {
+            margin-bottom: 30px;
+        }
+
+        .username {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: var(--button-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .user-link {
+            font-size: 16px;
+            color: var(--text-muted);
+            font-family: 'Courier New', monospace;
+            margin-bottom: 25px;
+            word-break: break-all;
+            padding: 0 10px;
+        }
+
+        /* Кнопки действий */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 35px;
+            justify-content: center;
+        }
+
+        .btn-copy, .btn-qr {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 12px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 140px;
+        }
+
+        .btn-copy {
+            background: var(--button-gradient);
+            color: black;
+        }
+
+        .btn-copy:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3);
+        }
+
+        .btn-qr {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-qr:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Призыв */
+        .call-to-action {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 35px;
+            background: var(--button-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Кнопки социальных сетей */
+        .social-share {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .social-btn {
+            flex: 1;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: white;
+        }
+
+        .social-btn .material-icons {
+            font-size: 24px;
+        }
+
+        .btn-share-simple {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-share-simple:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn-telegram {
+            background: var(--button-telegram);
+        }
+
+        .btn-telegram:hover {
+            background: #0077b5;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 136, 204, 0.3);
+        }
+
+        .btn-whatsapp {
+            background: var(--button-whatsapp);
+        }
+
+        .btn-whatsapp:hover {
+            background: #128C7E;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37, 211, 102, 0.3);
+        }
+
+        /* Модальное окно QR кода */
+        .qr-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s;
+        }
+
+        .qr-content {
+            background: rgba(30, 30, 30, 0.95);
+            border-radius: 24px;
+            padding: 30px;
+            max-width: 300px;
+            width: 90%;
+            text-align: center;
+            animation: slideUp 0.3s;
+        }
+
+        .qr-title {
+            color: var(--gradient-yellow);
+            margin-bottom: 20px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        #qr-code {
+            margin: 20px auto;
+            padding: 15px;
+            background: white;
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        .qr-actions {
+            margin-top: 25px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .qr-btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+        }
+
+        .qr-btn.close {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .qr-btn.share {
+            background: var(--button-gradient);
+            color: black;
+        }
+
+        .qr-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Временные сообщения */
+        .temp-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 16px;
+            z-index: 1001;
+            backdrop-filter: blur(10px);
+            text-align: center;
+            max-width: 80%;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            box-shadow: 0 10px 40px rgba(255, 215, 0, 0.2);
+            animation: messageIn 0.3s;
+        }
+
+        @keyframes messageIn {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        /* Адаптивность */
+        @media (max-width: 480px) {
+            .share-container {
+                padding: 30px 20px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .social-share {
+                flex-direction: column;
+            }
+            
+            .logo {
+                font-size: 36px;
+            }
+            
+            .avatar-container {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .star {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Звезды по углам -->
+    <div class="star">⭐</div>
+    <div class="star">⭐</div>
+    <div class="star">⭐</div>
+    <div class="star">⭐</div>
+
+    <!-- Основной контейнер -->
+    <div class="share-container">
+        <!-- Кнопка закрытия -->
+        <button class="close-btn" id="close-btn">
+            <span class="material-icons">close</span>
+        </button>
+
+        <!-- Логотип -->
+        <div class="logo">MEETUP</div>
+
+        <!-- Аватар пользователя -->
+        <div class="avatar-container">
+            <div class="avatar-frame">
+                <div id="avatar-image-container">
+                    <!-- Аватар загрузится через JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Информация пользователя -->
+        <div class="user-info">
+            <div class="username" id="username">@USERNAME</div>
+            <div class="user-link" id="user-link">meetup.com/@username</div>
+        </div>
+
+        <!-- Кнопки действий -->
+        <div class="action-buttons">
+            <button class="btn-copy" id="btn-copy-link">
+                <span class="material-icons">content_copy</span>
+                Копировать ссылку
+            </button>
+            <button class="btn-qr" id="btn-show-qr">
+                <span class="material-icons">qr_code_2</span>
+                QR-код
+            </button>
+        </div>
+
+        <!-- Призыв -->
+        <div class="call-to-action">Скорее зови друзей!</div>
+
+        <!-- Кнопки социальных сетей -->
+        <div class="social-share">
+            <button class="social-btn btn-share-simple" id="btn-share-simple">
+                <span class="material-icons">share</span>
+                Поделиться просто
+            </button>
+            <button class="social-btn btn-telegram" id="btn-share-telegram">
+                <span class="material-icons">telegram</span>
+                Телеграм
+            </button>
+            <button class="social-btn btn-whatsapp" id="btn-share-whatsapp">
+                <span class="material-icons">chat</span>
+                WhatsApp
+            </button>
+        </div>
+    </div>
+
+    <!-- Модальное окно QR кода -->
+    <div class="qr-modal" id="qr-modal">
+        <div class="qr-content">
+            <div class="qr-title">Мой QR-код</div>
+            <div id="qr-code">
+                <div style="color: white; padding: 40px;">
+                    Загрузка QR-кода...
+                </div>
+            </div>
+            <div style="color: #AAAAAA; margin-top: 15px; font-size: 14px;">
+                Отсканируйте, чтобы добавить меня в друзья
+            </div>
+            <div class="qr-actions">
+                <button class="qr-btn close" id="close-qr">Закрыть</button>
+                <button class="qr-btn share" id="share-qr-btn">Поделиться</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключаем библиотеку QRCode -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Получаем текущего пользователя
+            const currentUser = UserSystem.getCurrentUser();
+            
+            if (!currentUser) {
+                // Если пользователь не авторизован, перенаправляем на вход
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Получаем элементы DOM
+            const closeBtn = document.getElementById('close-btn');
+            const copyBtn = document.getElementById('btn-copy-link');
+            const qrBtn = document.getElementById('btn-show-qr');
+            const shareSimpleBtn = document.getElementById('btn-share-simple');
+            const shareTelegramBtn = document.getElementById('btn-share-telegram');
+            const shareWhatsappBtn = document.getElementById('btn-share-whatsapp');
+            const qrModal = document.getElementById('qr-modal');
+            const closeQrBtn = document.getElementById('close-qr');
+            const shareQrBtn = document.getElementById('share-qr-btn');
+            const avatarContainer = document.getElementById('avatar-image-container');
+            const usernameEl = document.getElementById('username');
+            const userLinkEl = document.getElementById('user-link');
+
+            // Получаем ссылку пользователя
+            const userLink = UserSystem.getPrettyFriendLink(currentUser.id) || 
+                            `${window.location.origin}/@${encodeURIComponent(currentUser.nickname)}`;
+
+            // Обновляем данные пользователя
+            usernameEl.textContent = `@${currentUser.nickname.toUpperCase()}`;
+            userLinkEl.textContent = userLink.replace('https://', '').replace('http://', '');
+
+            // Отображаем аватар
+            if (currentUser.avatar && currentUser.avatar.length > 0) {
+                avatarContainer.innerHTML = `<img src="${currentUser.avatar}" alt="${currentUser.nickname}" class="avatar-image">`;
+            } else {
+                // Если нет аватара, показываем первую букву никнейма
+                const firstLetter = currentUser.nickname.charAt(0).toUpperCase();
+                avatarContainer.innerHTML = `<div class="avatar-placeholder">${firstLetter}</div>`;
+            }
+
+            // Функция показа временного сообщения
+            function showTempMessage(message, duration = 3000) {
+                // Удаляем существующее сообщение
+                const existingMessage = document.querySelector('.temp-message');
+                if (existingMessage) {
+                    existingMessage.remove();
+                }
+
+                const messageEl = document.createElement('div');
+                messageEl.className = 'temp-message';
+                messageEl.textContent = message;
+                
+                document.body.appendChild(messageEl);
+                
+                setTimeout(() => {
+                    if (messageEl.parentNode) {
+                        messageEl.remove();
+                    }
+                }, duration);
+            }
+
+            // Копирование ссылки
+            copyBtn.onclick = async function() {
+                try {
+                    await navigator.clipboard.writeText(userLink);
+                    copyBtn.innerHTML = '<span class="material-icons">check</span>Скопировано!';
+                    copyBtn.style.background = '#00AA00';
+                    
+                    showTempMessage('Ссылка скопирована в буфер обмена');
+                    
+                    setTimeout(() => {
+                        copyBtn.innerHTML = '<span class="material-icons">content_copy</span>Копировать ссылку';
+                        copyBtn.style.background = '';
+                    }, 2000);
+                } catch (err) {
+                    // Fallback для старых браузеров
+                    const tempInput = document.createElement('input');
+                    tempInput.value = userLink;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                    
+                    showTempMessage('Ссылка скопирована');
+                }
+            };
+
+            // Показать QR код
+            qrBtn.onclick = function() {
+                const qrContainer = document.getElementById('qr-code');
+                qrContainer.innerHTML = '';
+                
+                // Генерируем QR код
+                if (typeof QRCode !== 'undefined') {
+                    try {
+                        new QRCode(qrContainer, {
+                            text: userLink,
+                            width: 200,
+                            height: 200,
+                            colorDark: "#000000",
+                            colorLight: "#FFFFFF",
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                    } catch (error) {
+                        qrContainer.innerHTML = `
+                            <div style="color: white; padding: 40px; text-align: center;">
+                                <div style="color: #FF9800; margin-bottom: 10px;">
+                                    <span class="material-icons">error</span>
+                                </div>
+                                <div>Ошибка создания QR-кода</div>
+                                <div style="font-size: 12px; margin-top: 10px;">${userLink}</div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    qrContainer.innerHTML = `
+                        <div style="color: white; padding: 40px; text-align: center;">
+                            <div style="font-weight: bold; margin-bottom: 10px;">${currentUser.nickname}</div>
+                            <div style="font-size: 12px; word-break: break-all;">${userLink}</div>
+                        </div>
+                    `;
+                }
+                
+                qrModal.style.display = 'flex';
+            };
+
+            // Закрыть QR модальное окно
+            closeQrBtn.onclick = function() {
+                qrModal.style.display = 'none';
+            };
+
+            // Поделиться QR кодом
+            shareQrBtn.onclick = async function() {
+                const qrCanvas = document.querySelector('#qr-code canvas');
+                if (qrCanvas) {
+                    qrCanvas.toBlob(async function(blob) {
+                        const file = new File([blob], 'meetup-friend-qr.png', { type: 'image/png' });
+                        
+                        if (navigator.share && navigator.canShare({ files: [file] })) {
+                            try {
+                                await navigator.share({
+                                    files: [file],
+                                    title: 'Добавь меня в друзья в MeetUP!',
+                                    text: 'Отсканируй этот QR-код, чтобы добавить меня в друзья'
+                                });
+                            } catch (error) {
+                                // Если не удалось поделиться, скачиваем
+                                const link = document.createElement('a');
+                                link.download = 'meetup-friend-qr.png';
+                                link.href = qrCanvas.toDataURL();
+                                link.click();
+                                showTempMessage('QR-код сохранен');
+                            }
+                        } else {
+                            // Fallback: скачивание
+                            const link = document.createElement('a');
+                            link.download = 'meetup-friend-qr.png';
+                            link.href = qrCanvas.toDataURL();
+                            link.click();
+                            showTempMessage('QR-код сохранен');
+                        }
+                    });
+                }
+            };
+
+            // Закрытие QR модального окна по клику вне его
+            qrModal.onclick = function(e) {
+                if (e.target === qrModal) {
+                    qrModal.style.display = 'none';
+                }
+            };
+
+            // Просто поделиться ссылкой
+            shareSimpleBtn.onclick = async function() {
+                try {
+                    if (navigator.share) {
+                        await navigator.share({
+                            title: 'Добавь меня в друзья в MeetUP!',
+                            text: `Привет! Добавь меня в друзья в приложении MeetUP: ${userLink}`,
+                            url: userLink
+                        });
+                    } else {
+                        await navigator.clipboard.writeText(userLink);
+                        showTempMessage('Ссылка скопирована в буфер обмена');
+                    }
+                } catch (error) {
+                    // Копируем в буфер обмена как запасной вариант
+                    await navigator.clipboard.writeText(userLink);
+                    showTempMessage('Ссылка скопирована в буфер обмена');
+                }
+            };
+
+            // Поделиться через Telegram
+            shareTelegramBtn.onclick = function() {
+                const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(userLink)}&text=${encodeURIComponent(`Привет! Добавь меня в друзья в MeetUP: ${currentUser.nickname}`)}`;
+                window.open(telegramUrl, '_blank');
+            };
+
+            // Поделиться через WhatsApp
+            shareWhatsappBtn.onclick = function() {
+                const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Привет! Добавь меня в друзья в приложении MeetUP: ${userLink}`)}`;
+                window.open(whatsappUrl, '_blank');
+            };
+
+            // Закрытие окна и возврат в профиль
+            closeBtn.onclick = function() {
+                window.location.href = 'profile.html';
+            };
+
+            // Закрытие по Escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    if (qrModal.style.display === 'flex') {
+                        qrModal.style.display = 'none';
+                    } else {
+                        window.location.href = 'profile.html';
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
