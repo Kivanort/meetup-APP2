@@ -51,7 +51,7 @@
     .map-placeholder { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #131827; color: var(--text-muted); gap: 15px; position: absolute; top: 0; left: 0; z-index: 20;}
     .map-placeholder.hidden { display: none;}
     .floating-buttons { position: absolute; bottom: 20px; left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 15px; padding: 0 20px; z-index: 5; }
-    .fab-primary { padding: 16px 20px; background: var(--primary-gradient); border: none; border-radius: 16px; color: white; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 20px rgba(44,180,255,0.4); transition: all 0.2s ease; min-height: 54px; white-space: nowrap;}
+    .fab-primary { padding: 16px 20px; background: var(--primary-gradient); border: none; border-radius: 16px; color: white; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer; min-height: 54px; white-space: nowrap;}
     .fab-primary:hover { transform: scale(1.05); box-shadow: 0 6px 25px rgba(44,180,255,0.6);}
     .fab-primary:active { transform: scale(0.95);}
     .fab-secondary { width: 54px; height: 54px; border: none; border-radius: 50%; background: var(--container); color: var(--primary); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.2s ease;}
@@ -177,6 +177,7 @@
       cursor: pointer;
       transition: all 0.3s ease;
       border: 1px solid transparent;
+      position: relative;
     }
     .chat-item:hover {
       background: rgba(255,255,255,0.1);
@@ -232,6 +233,26 @@
       color: var(--text-muted);
       padding: 40px 20px;
       font-size: 14px;
+    }
+    
+    /* Дополнительные стили для общего чата */
+    .chat-item.global-chat {
+      border: 2px solid var(--primary);
+    }
+    
+    .global-chat-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--primary);
+      color: white;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+    
+    .chat-avatar.global-avatar {
+      background: white;
     }
     
     /* Окно шагомера */
@@ -947,7 +968,7 @@
   <div class="chat-overlay" id="chat-overlay">
     <div class="chat-container">
       <div class="chat-header">
-        <div class="chat-title">Чаты с друзьями</div>
+        <div class="chat-title">Чаты</div>
         <button class="chat-close-btn" id="chat-close-btn">
           <span class="material-icons">close</span>
         </button>
@@ -1374,6 +1395,9 @@
           // Проверяем состояние инкогнито из профиля
           isIncognitoMode = currentUser.invisible || false;
           updateIncognitoButton();
+          
+          // Инициализируем общий чат
+          ChatSystem.initializeGlobalChat();
           
           // Загружаем встречи
           meetings = MeetingSystem.getMeetings();
@@ -2007,12 +2031,22 @@
       const user = UserSystem.getUserById(userId);
       if (!user) return;
       
-      showTempMessage('Открывается чат с ' + user.nickname);
+      // Ищем существующий чат или создаем новый
+      const existingChat = ChatSystem.findChat(currentUser.id, userId);
+      let chatId;
+      
+      if (existingChat) {
+        chatId = existingChat.id;
+      } else {
+        const newChat = ChatSystem.createChat(currentUser.id, userId);
+        chatId = newChat.id;
+      }
+      
+      window.location.href = `chat.html?chatId=${chatId}&userId=${userId}`;
     }
     
     function openMeetingChat(meetingId) {
-      showTempMessage('Чат встречи открывается...');
-      // Здесь будет открытие чата встречи
+      showTempMessage('Чат встречи в разработке...');
     }
     
     function showUserProfile(userId) {
@@ -2031,90 +2065,139 @@
       overlay.classList.remove('active');
     }
     
+    // ОБНОВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ ЧАТОВ
     function loadChats() {
       const chatList = document.getElementById('chat-list');
       if (!currentUser) return;
       
-      const chats = ChatSystem.getUserChats(currentUser.id);
-      const friends = UserSystem.getUserFriends(currentUser.id);
+      // Показываем индикатор загрузки
+      chatList.innerHTML = '<div class="chat-empty">Загрузка чатов...</div>';
       
-      if (chats.length === 0 && friends.length === 0) {
-        chatList.innerHTML = `
-          <div class="chat-empty">
-            <span class="material-icons" style="font-size: 60px; opacity: 0.5; margin-bottom: 20px;">chat</span>
-            <div>У вас пока нет чатов</div>
-            <div style="font-size: 12px; margin-top: 10px; color: #666;">Добавьте друзей, чтобы начать общение</div>
-          </div>
-        `;
-        return;
-      }
-      
-      let chatHTML = '';
-      
-      if (chats.length > 0) {
-        chats.forEach(chat => {
-          const otherParticipantId = chat.participants.find(id => id !== currentUser.id);
-          const friend = friends.find(f => f.id === otherParticipantId) || UserSystem.getUserById(otherParticipantId);
-          if (!friend) return;
+      // Имитация задержки загрузки
+      setTimeout(() => {
+        // Получаем данные
+        const chats = ChatSystem.getUserChats(currentUser.id);
+        const friends = UserSystem.getUserFriends(currentUser.id);
+        
+        let chatHTML = '';
+        
+        // 1. Добавляем общий чат ПЕРВЫМ (невозможно удалить)
+        const globalChat = ChatSystem.getGlobalChat();
+        if (globalChat) {
+          const lastGlobalMessage = globalChat.messages && globalChat.messages.length > 0 
+            ? globalChat.messages[globalChat.messages.length - 1] 
+            : { text: 'Добро пожаловать в общий чат!', timestamp: globalChat.createdAt };
           
-          const lastMessage = ChatSystem.getLastMessage(chat);
-          const unreadCount = chat.unreadCount || 0;
-          const timeAgo = ChatSystem.formatTime(lastMessage.timestamp);
+          const timeAgo = ChatSystem.formatTime(lastGlobalMessage.timestamp);
           
           chatHTML += `
-            <div class="chat-item" data-chat-id="${chat.id}" data-user-id="${friend.id}">
-              <div class="chat-avatar">
-                <span class="material-icons">person</span>
+            <div class="chat-item global-chat" onclick="openGlobalChat()">
+              <div class="chat-avatar global-avatar">
+                <img src="meetup-logo.png" alt="Общий чат" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
               </div>
               <div class="chat-info">
-                <div class="chat-friend-name">${friend.nickname || 'Пользователь'}</div>
-                <div class="chat-last-message">${lastMessage.text || 'Нет сообщений'}</div>
+                <div class="chat-friend-name">Общий чат MeetUP</div>
+                <div class="chat-last-message">${lastGlobalMessage.text}</div>
                 <div class="chat-time">${timeAgo}</div>
               </div>
-              ${unreadCount > 0 ? `<div class="chat-unread">${unreadCount}</div>` : ''}
+              <div class="global-chat-badge">Все</div>
             </div>
           `;
-        });
-      } else {
-        friends.forEach(friend => {
-          chatHTML += `
-            <div class="chat-item" data-user-id="${friend.id}">
-              <div class="chat-avatar">
-                <span class="material-icons">person</span>
+        }
+        
+        // 2. Добавляем личные чаты
+        if (chats.length > 0) {
+          chats.forEach(chat => {
+            const otherParticipantId = chat.participants.find(id => id !== currentUser.id);
+            const friend = friends.find(f => f.id === otherParticipantId) || UserSystem.getUserById(otherParticipantId);
+            if (!friend) return;
+            
+            const lastMessage = ChatSystem.getLastMessage(chat);
+            const unreadCount = chat.unreadCount || 0;
+            const timeAgo = ChatSystem.formatTime(lastMessage.timestamp);
+            
+            chatHTML += `
+              <div class="chat-item" data-chat-id="${chat.id}" data-user-id="${friend.id}">
+                <div class="chat-avatar">
+                  <span class="material-icons">person</span>
+                </div>
+                <div class="chat-info">
+                  <div class="chat-friend-name">${friend.nickname || 'Пользователь'}</div>
+                  <div class="chat-last-message">${lastMessage.text || 'Нет сообщений'}</div>
+                  <div class="chat-time">${timeAgo}</div>
+                </div>
+                ${unreadCount > 0 ? `<div class="chat-unread">${unreadCount}</div>` : ''}
               </div>
-              <div class="chat-info">
-                <div class="chat-friend-name">${friend.nickname || 'Пользователь'}</div>
-                <div class="chat-last-message">Нажмите, чтобы начать чат</div>
-                <div class="chat-time">${friend.status === 'online' ? 'В сети' : 'Не в сети'}</div>
+            `;
+          });
+        } else if (friends.length > 0) {
+          // Если нет чатов, но есть друзья - показываем друзей для начала чата
+          friends.forEach(friend => {
+            chatHTML += `
+              <div class="chat-item" data-user-id="${friend.id}">
+                <div class="chat-avatar">
+                  <span class="material-icons">person</span>
+                </div>
+                <div class="chat-info">
+                  <div class="chat-friend-name">${friend.nickname || 'Пользователь'}</div>
+                  <div class="chat-last-message">Начните общение первым!</div>
+                  <div class="chat-time">${friend.status === 'online' ? 'В сети' : 'Не в сети'}</div>
+                </div>
               </div>
+            `;
+          });
+        }
+        
+        // 3. Если нет ни чатов, ни друзей
+        if (chatHTML === '') {
+          chatHTML = `
+            <div class="chat-empty">
+              <span class="material-icons" style="font-size: 60px; opacity: 0.5; margin-bottom: 20px;">chat</span>
+              <div>У вас пока нет чатов</div>
+              <div style="font-size: 12px; margin-top: 10px; color: #666;">Добавьте друзей, чтобы начать общение</div>
             </div>
           `;
+        }
+        
+        chatList.innerHTML = chatHTML;
+        
+        // Добавляем обработчики кликов для личных чатов
+        document.querySelectorAll('.chat-item:not(.global-chat)').forEach(item => {
+          item.addEventListener('click', function() {
+            const userId = this.getAttribute('data-user-id');
+            const chatId = this.getAttribute('data-chat-id');
+            
+            if (chatId) {
+              window.location.href = `chat.html?chatId=${chatId}&userId=${userId}`;
+            } else {
+              const chat = ChatSystem.createChat(currentUser.id, userId);
+              window.location.href = `chat.html?chatId=${chat.id}&userId=${userId}`;
+            }
+          });
         });
-      }
-      
-      chatList.innerHTML = chatHTML;
-      
-      document.querySelectorAll('.chat-item').forEach(item => {
-        item.addEventListener('click', function() {
-          const userId = this.getAttribute('data-user-id');
-          const chatId = this.getAttribute('data-chat-id');
-          
-          if (chatId) {
-            window.location.href = `chat.html?chatId=${chatId}&userId=${userId}`;
-          } else {
-            const chat = ChatSystem.createChat(currentUser.id, userId);
-            window.location.href = `chat.html?chatId=${chat.id}&userId=${userId}`;
-          }
-        });
-      });
+      }, 300); // Имитация загрузки
+    }
+    
+    // Функция открытия общего чата
+    function openGlobalChat() {
+      window.location.href = 'chat.html?chatId=global_chat_meetup&global=true';
     }
     
     function updateChatNotificationCount() {
       if (!currentUser) return;
-      const unreadCount = ChatSystem.getUnreadCount(currentUser.id);
+      
+      // Получаем количество непрочитанных в личных чатах
+      const personalUnreadCount = ChatSystem.getUnreadCount(currentUser.id);
+      
+      // Здесь можно добавить логику для подсчета непрочитанных в общем чате
+      // Пока оставляем 0, так как общий чат для всех
+      const globalUnreadCount = 0;
+      
+      const totalUnreadCount = personalUnreadCount + globalUnreadCount;
+      
       const badge = document.getElementById('chat-notification-badge');
-      if (unreadCount > 0) {
-        badge.textContent = unreadCount;
+      if (totalUnreadCount > 0) {
+        badge.textContent = totalUnreadCount;
         badge.style.display = 'flex';
       } else {
         badge.style.display = 'none';
