@@ -115,6 +115,8 @@ const UserSystem = {
                 },
                 isVerified: false,
                 isActive: true,
+                isBeta: false,
+                role: 'user',
                 referredBy: userData.referredBy || null,
                 referralCode: userData.referralCode || null
             };
@@ -142,6 +144,80 @@ const UserSystem = {
         }
     },
 
+    // Добавить бета-пользователя
+    addBetaUser: function(userData) {
+        try {
+            const users = this.getUsers();
+            
+            // Проверяем, существует ли уже пользователь
+            if (this.isEmailUsed(userData.email)) {
+                console.log('ℹ️ Бета-пользователь уже существует:', userData.email);
+                return this.findUserByEmail(userData.email);
+            }
+            
+            // Создаем бета-пользователя
+            const betaUser = {
+                id: userData.id || this.generateUserId(),
+                email: userData.email.toLowerCase().trim(),
+                nickname: userData.nickname.trim(),
+                password: this.hashPassword(userData.password),
+                avatar: userData.avatar || '',
+                status: 'online',
+                invisible: false,
+                registeredAt: userData.registrationDate || new Date().toISOString(),
+                lastSeen: new Date().toISOString(),
+                lastActive: Date.now(),
+                position: userData.position || [55.751244, 37.618423],
+                about: userData.about || '',
+                phoneNumber: userData.phoneNumber || null,
+                phoneVerified: false,
+                stats: {
+                    friendsCount: 0,
+                    totalDistance: 0,
+                    onlineHours: 0,
+                    totalFriends: 0,
+                    meetingCount: 0,
+                    referralsCount: 0,
+                    referralBonus: 0
+                },
+                settings: {
+                    notifications: true,
+                    showOnMap: true,
+                    privacy: 'public',
+                    theme: 'dark'
+                },
+                metadata: {
+                    version: 2,
+                    created: Date.now(),
+                    modified: Date.now()
+                },
+                isVerified: true, // Бета-пользователи верифицированы по умолчанию
+                isActive: true,
+                isBeta: true, // Флаг бета-пользователя
+                role: userData.role || 'user', // Добавляем роль (moderator/user)
+                referralCode: userData.referralCode || this.generateReferralCode(),
+                referralGeneratedAt: Date.now(),
+                referredBy: userData.referredBy || null
+            };
+            
+            users.push(betaUser);
+            
+            if (this.saveUsers(users)) {
+                console.log('✅ Бета-пользователь добавлен:', betaUser.email);
+                
+                // Создаем профиль активности
+                this.createUserActivityProfile(betaUser.id);
+                
+                return betaUser;
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('❌ Ошибка добавления бета-пользователя:', error);
+            throw error;
+        }
+    },
+
     // Обновить данные пользователя
     updateUser: function(userId, updates) {
         try {
@@ -159,7 +235,8 @@ const UserSystem = {
                 'referralCode', 'referralGeneratedAt', 'referredBy',
                 'password', 'lastSeen', 'lastActive', 'telegram',
                 'phoneNumber', 'phoneVerified', 'phoneVerificationCode',
-                'phoneVerificationExpires', 'phoneVerificationSentAt'
+                'phoneVerificationExpires', 'phoneVerificationSentAt',
+                'isBeta', 'role'
             ];
             
             const updatedUser = { ...users[userIndex] };
@@ -275,6 +352,25 @@ const UserSystem = {
             user.nickname.toLowerCase() === searchNickname &&
             (!excludeUserId || user.id !== excludeUserId)
         );
+    },
+
+    // Найти пользователей по роли
+    findUsersByRole: function(role) {
+        if (!role || typeof role !== 'string') return [];
+        
+        const users = this.getUsers();
+        return users.filter(user => user.role === role);
+    },
+
+    // Найти модераторов
+    getModerators: function() {
+        return this.findUsersByRole('moderator');
+    },
+
+    // Проверить, является ли пользователь модератором
+    isModerator: function(userId) {
+        const user = this.findUser(userId);
+        return user && user.role === 'moderator';
     },
 
     // ============ АВТОРИЗАЦИЯ ============
@@ -2033,8 +2129,10 @@ const UserSystem = {
             referralCode: user.referralCode || null,
             referralGeneratedAt: user.referralGeneratedAt || null,
             referredBy: user.referredBy || null,
-            isVerified: Boolean(user.isVerified),
-            isActive: Boolean(user.isActive ?? true)
+            isVerified: Boolean(user.isVerified ?? false),
+            isActive: Boolean(user.isActive ?? true),
+            isBeta: Boolean(user.isBeta ?? false),
+            role: user.role || 'user'
         };
 
         // Добавляем данные Telegram если есть
@@ -2095,7 +2193,9 @@ const UserSystem = {
             referralGeneratedAt: null,
             referredBy: null,
             isVerified: false,
-            isActive: true
+            isActive: true,
+            isBeta: false,
+            role: 'user'
         };
     },
 
@@ -2540,7 +2640,9 @@ const UserSystem = {
                 dualVerifiedUsers: users.filter(u => 
                     (u.telegram && u.telegram.verified) && 
                     (u.phoneNumber && u.phoneVerified)
-                ).length
+                ).length,
+                totalBetaUsers: users.filter(u => u.isBeta).length,
+                moderatorUsers: users.filter(u => u.role === 'moderator').length
             };
         } catch (error) {
             console.error('❌ Ошибка получения статистики:', error);
@@ -2582,6 +2684,30 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Очистка старых данных
     UserSystem.cleanupOldData();
+    
+    // Добавляем бета-пользователя moderator2025
+    try {
+        const betaUserData = {
+            id: 'beta_moderator_001',
+            email: 'moderator2025@mail.ru',
+            nickname: 'Moderator2025',
+            password: 'TestMeetUp2025',
+            role: 'moderator',
+            isBeta: true,
+            referralCode: 'BETA-MOD-2025'
+        };
+        
+        // Проверяем, не существует ли уже такой пользователь
+        const existingUser = UserSystem.findUserByEmail(betaUserData.email);
+        if (!existingUser) {
+            UserSystem.addBetaUser(betaUserData);
+            console.log('✅ Бета-пользователь moderator2025 добавлен');
+        } else {
+            console.log('ℹ️ Бета-пользователь moderator2025 уже существует');
+        }
+    } catch (error) {
+        console.error('❌ Ошибка добавления бета-пользователя:', error);
+    }
     
     // Создаем резервную копию
     UserSystem.createBackup();
