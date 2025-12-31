@@ -155,5 +155,143 @@ const ChatSystem = {
         if (diff < 604800000) return Math.floor(diff / 86400000) + ' д назад';
         
         return date.toLocaleDateString('ru-RU');
+    },
+
+    // ===== ФУНКЦИИ ДЛЯ ОБЩЕГО ЧАТА =====
+
+    // Получить общий чат
+    getGlobalChat: function() {
+        try {
+            const globalChat = localStorage.getItem('meetup_global_chat');
+            if (globalChat) {
+                return JSON.parse(globalChat);
+            }
+        } catch (e) {
+            console.error('Ошибка загрузки общего чата:', e);
+        }
+        return null;
+    },
+
+    // Сохранить общий чат
+    saveGlobalChat: function(chatData) {
+        try {
+            localStorage.setItem('meetup_global_chat', JSON.stringify(chatData));
+            return true;
+        } catch (e) {
+            console.error('Ошибка сохранения общего чата:', e);
+            return false;
+        }
+    },
+
+    // Добавить сообщение в общий чат
+    addMessageToGlobalChat: function(message) {
+        const globalChat = this.getGlobalChat();
+        if (!globalChat) return false;
+        
+        if (!globalChat.messages) {
+            globalChat.messages = [];
+        }
+        
+        globalChat.messages.push(message);
+        
+        // Увеличиваем счетчик непрочитанных для всех пользователей
+        // В реальном приложении здесь была бы сложная логика отслеживания
+        // Для простоты просто увеличиваем счетчик
+        globalChat.totalMessages = (globalChat.totalMessages || 0) + 1;
+        
+        return this.saveGlobalChat(globalChat);
+    },
+
+    // Получить все сообщения общего чата
+    getGlobalChatMessages: function() {
+        const globalChat = this.getGlobalChat();
+        if (globalChat && globalChat.messages) {
+            return globalChat.messages;
+        }
+        return [];
+    },
+
+    // Инициализировать общий чат при первом запуске
+    initializeGlobalChat: function() {
+        const globalChat = this.getGlobalChat();
+        
+        if (!globalChat) {
+            const initialGlobalChat = {
+                id: 'global_chat_meetup',
+                name: 'Общий чат MeetUP',
+                description: 'Основной чат сообщества MeetUP. Здесь могут общаться все пользователи.',
+                avatar: 'meetup-logo.png',
+                participants: [], // Пустой массив означает, что чат доступен всем
+                messages: [
+                    {
+                        id: 'welcome_message_1',
+                        senderId: 'system',
+                        senderName: 'Система MeetUP',
+                        text: 'Добро пожаловать в общий чат MeetUP! Здесь вы можете общаться со всеми пользователями сообщества.',
+                        timestamp: Date.now(),
+                        type: 'system',
+                        read: true
+                    },
+                    {
+                        id: 'welcome_message_2',
+                        senderId: 'system',
+                        senderName: 'Система MeetUP',
+                        text: 'Правила чата: 1. Уважайте других участников. 2. Не спамьте. 3. Делитесь полезной информацией о встречах.',
+                        timestamp: Date.now() + 1000,
+                        type: 'system',
+                        read: true
+                    }
+                ],
+                createdAt: Date.now(),
+                lastMessageAt: Date.now(),
+                isGlobal: true,
+                totalMessages: 2,
+                cannotBeDeleted: true
+            };
+            
+            this.saveGlobalChat(initialGlobalChat);
+            console.log('✅ Общий чат инициализирован');
+        }
+        
+        return this.getGlobalChat();
+    },
+
+    // Получить чат по ID (поддерживает как личные, так и общие чаты)
+    getChatById: function(chatId, userId) {
+        if (chatId === 'global_chat_meetup') {
+            return this.getGlobalChat();
+        }
+        
+        const userChats = this.getUserChats(userId);
+        return userChats.find(chat => chat.id === chatId);
+    },
+
+    // Отправить сообщение (поддерживает общие чаты)
+    sendMessageToChat: function(chatId, senderId, senderName, text) {
+        if (chatId === 'global_chat_meetup') {
+            const message = {
+                id: 'global_msg_' + Date.now(),
+                senderId: senderId,
+                senderName: senderName,
+                text: text,
+                timestamp: Date.now(),
+                read: false,
+                type: 'user'
+            };
+            
+            return this.addMessageToGlobalChat(message);
+        } else {
+            return this.sendMessage(chatId, senderId, text);
+        }
+    },
+
+    // Получить сообщения чата (поддерживает общие чаты)
+    getMessages: function(chatId, userId) {
+        if (chatId === 'global_chat_meetup') {
+            return this.getGlobalChatMessages();
+        } else {
+            return this.getChatMessages(chatId);
+        }
     }
 };
+[file content end]
