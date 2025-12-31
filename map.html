@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=yes"> <!-- Изменено на user-scalable=yes -->
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=yes">
   <title>Карта друзей — MeetUP</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script src="userSystem.js"></script>
@@ -27,7 +27,7 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: var(--main-bg);
       color: var(--text-light);
-      overflow: auto; /* Изменено с hidden на auto */
+      overflow: auto;
     }
     #app-root {
       height: 100vh;
@@ -512,6 +512,18 @@
       color: white;
     }
     
+    /* Стили для кнопки создания встречи */
+    .fab-meeting {
+      background: linear-gradient(135deg, #FF8A00 0%, #FF5252 100%);
+      color: white;
+    }
+    
+    .fab-meeting:hover {
+      background: linear-gradient(135deg, #FF9E40 0%, #FF6B6B 100%);
+      transform: scale(1.05);
+      box-shadow: 0 6px 25px rgba(255, 138, 0, 0.4);
+    }
+    
     @media (max-width: 768px) {
       .header-content {padding: 12px 15px;}
       .app-logo {font-size: 20px;}
@@ -541,7 +553,7 @@
       .fab-primary span:last-child {display: none;}
       .fab-primary {padding: 12px 15px; min-height: 48px; border-radius: 12px;}
       .fab-secondary {width: 48px; height: 48px;}
-      .floating-buttons {bottom: 12px; padding: 0 12px;}
+      .floating-buttons {bottom: 12px; padding: 0 12px; gap: 10px;}
       .map-controls {top: 10px; right: 10px;}
       .map-filter-btn {width: 45px; height: 45px;}
       .map-controls-top {top: 10px; left: 10px;}
@@ -710,6 +722,11 @@
           <span class="material-icons">person_add</span>
           <span>Добавить друга</span>
         </button>
+        <!-- Кнопка создания встречи -->
+        <button class="fab-primary fab-meeting" id="btn-create-meeting">
+          <span class="material-icons">event</span>
+          <span>Создать встречу</span>
+        </button>
       </div>
     </div>
   </div>
@@ -783,31 +800,67 @@
     
     function loadYandexMapsAPI() {
       return new Promise((resolve, reject) => {
-        if (typeof ymaps !== 'undefined') { resolve(ymaps); return; }
-        if (isMapsApiLoading) { mapsApiLoadCallbacks.push({ resolve, reject }); return; }
-        isMapsApiLoading = true;
-        const script = document.createElement('script');
-        script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=ваш_ключ_апи_здесь';
-        script.async = true;
-        script.onload = () => {
-          if (typeof ymaps !== 'undefined' && ymaps.ready) {
-            ymaps.ready(() => {
-              isMapsApiLoading = false;
-              resolve(ymaps);
-              mapsApiLoadCallbacks.forEach(cb => cb.resolve(ymaps));
-              mapsApiLoadCallbacks = [];
-            });
+        if (typeof ymaps !== 'undefined') { 
+          console.log('✅ Яндекс Карты уже загружены');
+          if (ymaps.ready) {
+            ymaps.ready(() => resolve(ymaps));
           } else {
-            reject(new Error('Yandex Maps API загружен, но не готов'));
+            resolve(ymaps);
+          }
+          return; 
+        }
+        
+        if (isMapsApiLoading) { 
+          mapsApiLoadCallbacks.push({ resolve, reject }); 
+          return; 
+        }
+        
+        isMapsApiLoading = true;
+        console.log('🔄 Начинаем загрузку Яндекс Карт...');
+        
+        const script = document.createElement('script');
+        script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=90b86ccd-906b-465a-a7bc-4aa12e596aec';
+        script.async = true;
+        
+        script.onload = () => {
+          console.log('✅ Скрипт Яндекс Карт загружен');
+          if (typeof ymaps !== 'undefined') {
+            if (ymaps.ready) {
+              ymaps.ready(() => {
+                console.log('✅ Яндекс Карты готовы к использованию');
+                isMapsApiLoading = false;
+                resolve(ymaps);
+                mapsApiLoadCallbacks.forEach(cb => cb.resolve(ymaps));
+                mapsApiLoadCallbacks = [];
+              });
+            } else {
+              console.log('⚠️ ymaps.ready не существует, используем таймаут');
+              // Если ymaps.ready не существует, ждем немного и пробуем снова
+              setTimeout(() => {
+                if (typeof ymaps !== 'undefined') {
+                  isMapsApiLoading = false;
+                  resolve(ymaps);
+                  mapsApiLoadCallbacks.forEach(cb => cb.resolve(ymaps));
+                  mapsApiLoadCallbacks = [];
+                } else {
+                  reject(new Error('Yandex Maps API не загрузился'));
+                }
+              }, 1000);
+            }
+          } else {
+            reject(new Error('Yandex Maps API не загрузился'));
           }
         };
-        script.onerror = () => {
+        
+        script.onerror = (error) => {
+          console.error('❌ Ошибка загрузки Яндекс Карт:', error);
           isMapsApiLoading = false;
-          const error = new Error('Не удалось загрузить Яндекс Карты');
-          reject(error);
-          mapsApiLoadCallbacks.forEach(cb => cb.reject(error));
+          const errorMsg = new Error('Не удалось загрузить Яндекс Карты. Проверьте подключение к интернету и API-ключ.');
+          reject(errorMsg);
+          mapsApiLoadCallbacks.forEach(cb => cb.reject(errorMsg));
           mapsApiLoadCallbacks = [];
         };
+        
         document.head.appendChild(script);
       });
     }
@@ -885,6 +938,8 @@
       const mapElement = document.getElementById('map');
       const placeholder = document.getElementById('map-placeholder');
       
+      console.log('🔄 Инициализация карты...');
+      
       loadYandexMapsAPI()
         .then(ymaps => {
           console.log('✅ Яндекс Карты успешно загружены');
@@ -900,7 +955,7 @@
           isIncognitoMode = currentUser.invisible || false;
           updateIncognitoButton();
           
-          const defaultPosition = currentUser.position || [55.751244, 37.618423];
+          const defaultPosition = currentUser.position || [55.751244, 37.618423]; // Москва по умолчанию
           const MIN_ZOOM = 2;
           const MAX_ZOOM = 19;
           const DEFAULT_ZOOM = 12;
@@ -949,7 +1004,7 @@
               suppressMapDragOutside: true
             });
             
-            // при любом boundschange немедленно возвращаемся внутрь (ультра жесткий вариант)
+            // при любом boundschange немедленно возвращаемся внутрь
             map.events.add('actiontick', function (e) {
               let bounds = map.getBounds();
               if (
@@ -1029,7 +1084,8 @@
             console.error('❌ Ошибка при инициализации карты:', error);
             placeholder.innerHTML = `
               <span class="material-icons" style="font-size: 64px; opacity: 0.5;">error</span>
-              <div>Ошибка загрузки карты</div>
+              <div>Ошибка инициализации карты</div>
+              <div style="font-size: 12px; margin-top: 10px; color: #888;">${error.message || 'Неизвестная ошибка'}</div>
               <button onclick="location.reload()" style="
                 margin-top: 15px;
                 padding: 10px 20px;
@@ -1049,7 +1105,7 @@
             <span class="material-icons" style="font-size: 64px; opacity: 0.5;">wifi_off</span>
             <div>Не удалось загрузить карту</div>
             <div style="font-size: 12px; margin-top: 10px; color: #888;">
-              Проверьте подключение к интернету
+              ${error.message || 'Проверьте подключение к интернету и API-ключ'}
             </div>
             <button onclick="initializeMap()" style="
               margin-top: 15px;
@@ -1072,7 +1128,7 @@
       if (isIncognitoMode) {
         btn.classList.add('active');
         btn.title = 'Режим инкогнито включен';
-        icon.textContent = 'visibility_off'; // Оставляем иконку видимости
+        icon.textContent = 'visibility_off';
       } else {
         btn.classList.remove('active');
         btn.title = 'Режим инкогнито';
@@ -1096,7 +1152,7 @@
       }
       
       // Создаем новую метку
-      const iconColor = isIncognitoMode ? '#FF4444' : '#2CB4FF'; // Красная при инкогнито
+      const iconColor = isIncognitoMode ? '#FF4444' : '#2CB4FF';
       const preset = isIncognitoMode ? 'islands#redCircleDotIcon' : 'islands#blueCircleDotIcon';
       const statusText = isIncognitoMode ? 'Скрыт' : 'Ваше местоположение';
       
@@ -1299,6 +1355,23 @@
       }
     }
     
+    // Функция для создания встречи
+    function createMeeting() {
+      console.log('Создание новой встречи...');
+      
+      // Проверяем, есть ли у пользователя текущее местоположение
+      if (!currentUser || !currentUser.position) {
+        showTempMessage('Не удалось определить ваше местоположение. Включите геолокацию.');
+        return;
+      }
+      
+      // Сохраняем текущую позицию для создания встречи
+      sessionStorage.setItem('meetingCreationPosition', JSON.stringify(currentUser.position));
+      
+      // Открываем страницу создания встречи
+      window.location.href = 'createmeeting.html';
+    }
+    
     function startAutoUpdate() {
       const autoUpdate = localStorage.getItem('meetup_auto_update') !== 'false';
       if (autoUpdate) {
@@ -1489,63 +1562,72 @@
       clearRoute();
       
       // Создаем мультимаршрут
-      currentRoute = new ymaps.multiRouter.MultiRoute({
-        referencePoints: [
-          currentUser.position,
-          position
-        ],
-        params: {
-          routingMode: 'auto',
-          results: 1
-        }
-      }, {
-        boundsAutoApply: true,
-        routeActiveStrokeWidth: 6,
-        routeActiveStrokeColor: "#34eb89",
-        routeStrokeColor: "#2CB4FF",
-        routeStrokeWidth: 4,
-        pinIconFillColor: "#34eb89",
-        pinActiveIconFillColor: "#2CB4FF"
-      });
-      
-      // Добавляем маршрут на карту
-      map.geoObjects.add(currentRoute);
-      
-      // Показываем панель маршрута
-      showRoutePanel(position, name);
-      
-      // Подписываемся на событие обновления маршрута
-      currentRoute.model.events.add('requestsuccess', function() {
-        updateRouteInfo();
-      });
-      
-      // Обновляем информацию о маршруте через 1 секунду
-      setTimeout(updateRouteInfo, 1000);
+      try {
+        currentRoute = new ymaps.multiRouter.MultiRoute({
+          referencePoints: [
+            currentUser.position,
+            position
+          ],
+          params: {
+            routingMode: 'auto',
+            results: 1
+          }
+        }, {
+          boundsAutoApply: true,
+          routeActiveStrokeWidth: 6,
+          routeActiveStrokeColor: "#34eb89",
+          routeStrokeColor: "#2CB4FF",
+          routeStrokeWidth: 4,
+          pinIconFillColor: "#34eb89",
+          pinActiveIconFillColor: "#2CB4FF"
+        });
+        
+        // Добавляем маршрут на карту
+        map.geoObjects.add(currentRoute);
+        
+        // Показываем панель маршрута
+        showRoutePanel(position, name);
+        
+        // Подписываемся на событие обновления маршрута
+        currentRoute.model.events.add('requestsuccess', function() {
+          updateRouteInfo();
+        });
+        
+        // Обновляем информацию о маршруте через 1 секунду
+        setTimeout(updateRouteInfo, 1000);
+      } catch (error) {
+        console.error('Ошибка при построении маршрута:', error);
+        showTempMessage('Не удалось построить маршрут. Попробуйте позже.');
+      }
     }
     
     // Функция для обновления информации о маршруте
     function updateRouteInfo() {
       if (!currentRoute) return;
       
-      const route = currentRoute.getRoutes().get(0);
-      if (!route) return;
-      
-      const properties = route.properties;
-      const distance = properties.get('distance');
-      const duration = properties.get('duration');
-      
-      if (distance && duration) {
-        const distanceText = distance.text;
-        const durationText = duration.text;
+      try {
+        const route = currentRoute.getRoutes().get(0);
+        if (!route) return;
         
-        document.getElementById('route-distance').textContent = `Расстояние: ${distanceText}`;
-        document.getElementById('route-time').textContent = `Время: ${durationText}`;
-        document.getElementById('route-details').style.display = 'block';
+        const properties = route.properties;
+        const distance = properties.get('distance');
+        const duration = properties.get('duration');
         
-        document.getElementById('route-info').innerHTML = `
-          <strong>Маршрут до ${selectedMeeting?.name || 'места встречи'}</strong><br>
-          <span style="color: #34eb89; font-size: 12px;">Маршрут построен</span>
-        `;
+        if (distance && duration) {
+          const distanceText = distance.text;
+          const durationText = duration.text;
+          
+          document.getElementById('route-distance').textContent = `Расстояние: ${distanceText}`;
+          document.getElementById('route-time').textContent = `Время: ${durationText}`;
+          document.getElementById('route-details').style.display = 'block';
+          
+          document.getElementById('route-info').innerHTML = `
+            <strong>Маршрут до ${selectedMeeting?.name || 'места встречи'}</strong><br>
+            <span style="color: #34eb89; font-size: 12px;">Маршрут построен</span>
+          `;
+        }
+      } catch (error) {
+        console.error('Ошибка при получении информации о маршруте:', error);
       }
     }
     
@@ -1562,17 +1644,25 @@
       
       // Центрируем карту на маршруте
       if (currentRoute) {
-        map.setBounds(currentRoute.getBounds(), {
-          checkZoomRange: true,
-          zoomMargin: 100
-        });
+        try {
+          map.setBounds(currentRoute.getBounds(), {
+            checkZoomRange: true,
+            zoomMargin: 100
+          });
+        } catch (error) {
+          console.error('Ошибка при центрировании карты:', error);
+        }
       }
     }
     
     // Функция для очистки маршрута
     function clearRoute() {
       if (currentRoute) {
-        map.geoObjects.remove(currentRoute);
+        try {
+          map.geoObjects.remove(currentRoute);
+        } catch (error) {
+          console.error('Ошибка при удалении маршрута:', error);
+        }
         currentRoute = null;
       }
       
@@ -1864,6 +1954,9 @@
         window.location.href = 'addfriend.html';
       });
       
+      // Кнопка создания встречи
+      document.getElementById('btn-create-meeting').addEventListener('click', createMeeting);
+      
       // Исправленная кнопка навигатора для мобильных устройств
       document.getElementById('btn-locate').addEventListener('click', function() {
         if (!navigator.geolocation) {
@@ -1929,7 +2022,7 @@
           },
           {
             enableHighAccuracy: true,
-            timeout: 15000, // Увеличено время ожидания для мобильных устройств
+            timeout: 15000,
             maximumAge: 60000
           }
         );
