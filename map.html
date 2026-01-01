@@ -768,7 +768,7 @@
       background: linear-gradient(135deg, #FF9E40 0%, #FF6B6B 100%);
     }
     
-    /* Новые стили для поля ввода с кнопкой текущего местоположения */
+    /* Новые стили для поля ввода с кнопкой текущего местоположения и подсказками */
     .location-input-group {
       position: relative;
     }
@@ -793,7 +793,7 @@
       justify-content: center;
       cursor: pointer;
       transition: all 0.3s ease;
-      z-index: 1;
+      z-index: 10;
     }
     
     .btn-current-location:hover {
@@ -807,6 +807,106 @@
     
     .btn-current-location .material-icons {
       font-size: 20px;
+    }
+    
+    /* Стили для выпадающего списка подсказок */
+    .suggestions-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--container);
+      border-radius: 0 0 10px 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-top: none;
+      max-height: 250px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    
+    .suggestions-dropdown.active {
+      display: block;
+      animation: slideIn 0.2s ease;
+    }
+    
+    .suggestion-item {
+      padding: 12px 15px;
+      color: var(--text-light);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+    
+    .suggestion-item:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    
+    .suggestion-item.selected {
+      background: rgba(44, 180, 255, 0.1);
+      color: var(--primary);
+    }
+    
+    .suggestion-item .material-icons {
+      font-size: 16px;
+      margin-right: 8px;
+      vertical-align: middle;
+      color: var(--text-muted);
+    }
+    
+    .suggestion-item:hover .material-icons {
+      color: var(--primary);
+    }
+    
+    .suggestion-loading {
+      padding: 15px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    
+    .suggestion-empty {
+      padding: 15px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    
+    /* Стили для индикаторов валидации */
+    .validation-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 5px;
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .validation-status.visible {
+      opacity: 1;
+    }
+    
+    .status-valid {
+      color: #34eb89;
+    }
+    
+    .status-invalid {
+      color: #FF5252;
+    }
+    
+    .status-loading {
+      color: #2CB4FF;
+    }
+    
+    .validation-status .material-icons {
+      font-size: 16px;
     }
     
     @media (max-width: 768px) {
@@ -1093,13 +1193,21 @@
                 type="text" 
                 class="form-input" 
                 id="meeting-location" 
-                placeholder="Адрес или название места (например: Центральный парк, кафе 'Кофехаус')" 
+                placeholder="Начните вводить адрес или название места" 
                 required
+                autocomplete="off"
               >
               <!-- Кнопка текущего местоположения -->
               <button type="button" class="btn-current-location" id="btn-current-location" title="Использовать текущее местоположение">
                 <span class="material-icons">my_location</span>
               </button>
+              <!-- Выпадающий список подсказок -->
+              <div class="suggestions-dropdown" id="suggestions-dropdown"></div>
+            </div>
+            <!-- Индикатор валидации -->
+            <div class="validation-status" id="location-validation-status">
+              <span class="material-icons">check_circle</span>
+              <span>Адрес проверен</span>
             </div>
           </div>
           
@@ -1329,6 +1437,15 @@
     let geolocationWatchId = null;
     let hasGeolocationPermission = false;
     
+    // Переменные для системы подсказок и валидации
+    let suggestionsTimeout = null;
+    let currentSuggestions = [];
+    let selectedSuggestionIndex = -1;
+    let isFetchingSuggestions = false;
+    let isLocationValid = false;
+    let locationValidationInProgress = false;
+    let selectedLocationCoordinates = null;
+    
     // Функция для получения текущего адреса по координатам
     function getAddressFromCoordinates(coords) {
       return new Promise((resolve, reject) => {
@@ -1351,17 +1468,327 @@
       });
     }
     
+    // Функция для получения подсказок при вводе адреса
+    function fetchAddressSuggestions(query) {
+      return new Promise((resolve, reject) => {
+        if (typeof ymaps === 'undefined' || !query || query.length < 2) {
+          resolve([]);
+          return;
+        }
+        
+        // Используем suggest API Яндекс.Карт
+        const url = `https://suggest-maps.yandex.ru/v1/suggest?apikey=&text=${encodeURIComponent(query)}&lang=ru_RU&types=house,street,metro,district,locality`;
+        
+        fetch(url)
+          .then(response => response.json())
+          .then(data => {
+            if (data.results) {
+              const suggestions = data.results.map(item => ({
+                displayName: item.title.text || item.subtitle?.text || '',
+                fullAddress: item.subtitle?.text ? `${item.title.text}, ${item.subtitle.text}` : item.title.text,
+                type: item.tags?.[0] || 'other'
+              }));
+              resolve(suggestions);
+            } else {
+              resolve([]);
+            }
+          })
+          .catch(error => {
+            console.error('Ошибка получения подсказок:', error);
+            // Если API недоступно, используем локальные подсказки
+            const localSuggestions = getLocalSuggestions(query);
+            resolve(localSuggestions);
+          });
+      });
+    }
+    
+    // Локальные подсказки на случай недоступности API
+    function getLocalSuggestions(query) {
+      const commonAddresses = [
+        { displayName: "Москва, Красная площадь", fullAddress: "Москва, Красная площадь", type: "street" },
+        { displayName: "Москва, Тверская улица", fullAddress: "Москва, Тверская улица", type: "street" },
+        { displayName: "Москва, Парк Горького", fullAddress: "Москва, Парк Горького", type: "park" },
+        { displayName: "Санкт-Петербург, Невский проспект", fullAddress: "Санкт-Петербург, Невский проспект", type: "street" },
+        { displayName: "Санкт-Петербург, Эрмитаж", fullAddress: "Санкт-Петербург, Эрмитаж", type: "museum" },
+        { displayName: "Кафе Starbucks", fullAddress: "Москва, Кафе Starbucks", type: "cafe" },
+        { displayName: "ТРЦ Авиапарк", fullAddress: "Москва, ТРЦ Авиапарк", type: "mall" },
+        { displayName: "Московский Кремль", fullAddress: "Москва, Московский Кремль", type: "landmark" }
+      ];
+      
+      const lowerQuery = query.toLowerCase();
+      return commonAddresses.filter(addr => 
+        addr.displayName.toLowerCase().includes(lowerQuery) || 
+        addr.fullAddress.toLowerCase().includes(lowerQuery)
+      ).slice(0, 5);
+    }
+    
+    // Функция для валидации адреса
+    async function validateAddress(address) {
+      if (!address || address.trim().length < 3) {
+        return { 
+          valid: false, 
+          error: 'Введите адрес (минимум 3 символа)',
+          precision: 'none'
+        };
+      }
+      
+      if (typeof ymaps === 'undefined') {
+        return { 
+          valid: true, // Разрешаем без валидации, если API не загружено
+          error: null,
+          precision: 'unknown',
+          coordinates: null
+        };
+      }
+      
+      try {
+        const geocodeResult = await ymaps.geocode(address);
+        const foundObjects = geocodeResult.geoObjects;
+        
+        if (foundObjects.getLength() === 0) {
+          return { 
+            valid: false, 
+            error: 'Адрес не найден. Уточните название или добавьте город',
+            precision: 'none'
+          };
+        }
+        
+        // Получаем первый (наиболее точный) результат
+        const firstObject = foundObjects.get(0);
+        const metaData = firstObject.properties.get('metaDataProperty').GeocoderMetaData;
+        const precision = metaData.precision || 'other';
+        const text = metaData.text || address;
+        
+        // Определяем координаты
+        const coordinates = firstObject.geometry.getCoordinates();
+        
+        // Проверяем точность геокодирования
+        const acceptablePrecision = ['exact', 'number', 'range', 'street', 'other'];
+        
+        if (!acceptablePrecision.includes(precision)) {
+          return { 
+            valid: false, 
+            error: 'Адрес указан слишком расплывчато. Добавьте номер дома или улицу',
+            precision: precision,
+            coordinates: coordinates,
+            address: text
+          };
+        }
+        
+        // Если точность "other", предупреждаем пользователя
+        if (precision === 'other') {
+          return { 
+            valid: true, 
+            error: 'Адрес найден, но рекомендуется уточнить (добавить номер дома)',
+            precision: precision,
+            coordinates: coordinates,
+            address: text,
+            warning: true
+          };
+        }
+        
+        return { 
+          valid: true, 
+          error: null,
+          precision: precision,
+          coordinates: coordinates,
+          address: text
+        };
+      } catch (error) {
+        console.error('Ошибка валидации адреса:', error);
+        return { 
+          valid: false, 
+          error: 'Ошибка проверки адреса. Проверьте подключение к интернету',
+          precision: 'error'
+        };
+      }
+    }
+    
+    // Функция для отображения подсказок
+    function showSuggestions(suggestions) {
+      const dropdown = document.getElementById('suggestions-dropdown');
+      const input = document.getElementById('meeting-location');
+      
+      if (!dropdown || !input) return;
+      
+      currentSuggestions = suggestions;
+      selectedSuggestionIndex = -1;
+      
+      if (suggestions.length === 0) {
+        dropdown.innerHTML = `
+          <div class="suggestion-empty">
+            <span class="material-icons">search_off</span>
+            <div>Адреса не найдены</div>
+          </div>
+        `;
+        dropdown.classList.add('active');
+        return;
+      }
+      
+      let html = '';
+      
+      suggestions.forEach((suggestion, index) => {
+        let icon = 'location_on';
+        switch(suggestion.type) {
+          case 'house': icon = 'home'; break;
+          case 'street': icon = 'road'; break;
+          case 'metro': icon = 'subway'; break;
+          case 'district': icon = 'location_city'; break;
+          case 'locality': icon = 'place'; break;
+          case 'park': icon = 'park'; break;
+          case 'museum': icon = 'museum'; break;
+          case 'cafe': icon = 'restaurant'; break;
+          case 'mall': icon = 'store'; break;
+          case 'landmark': icon = 'flag'; break;
+          default: icon = 'location_on';
+        }
+        
+        html += `
+          <div class="suggestion-item" data-index="${index}">
+            <span class="material-icons">${icon}</span>
+            ${suggestion.displayName}
+          </div>
+        `;
+      });
+      
+      dropdown.innerHTML = html;
+      dropdown.classList.add('active');
+      
+      // Добавляем обработчики кликов для подсказок
+      dropdown.querySelectorAll('.suggestion-item').forEach(item => {
+        item.addEventListener('click', function() {
+          const index = parseInt(this.getAttribute('data-index'));
+          selectSuggestion(index);
+        });
+      });
+      
+      // Позиционируем dropdown под input
+      const inputRect = input.getBoundingClientRect();
+      dropdown.style.width = inputRect.width + 'px';
+    }
+    
+    // Функция для выбора подсказки
+    function selectSuggestion(index) {
+      if (index < 0 || index >= currentSuggestions.length) return;
+      
+      const suggestion = currentSuggestions[index];
+      const input = document.getElementById('meeting-location');
+      const dropdown = document.getElementById('suggestions-dropdown');
+      
+      if (input && suggestion) {
+        input.value = suggestion.fullAddress;
+        
+        // Валидируем выбранный адрес
+        validateAddressAsync(suggestion.fullAddress);
+        
+        // Скрываем dropdown
+        if (dropdown) {
+          dropdown.classList.remove('active');
+        }
+        
+        // Фокусируемся на следующем поле
+        setTimeout(() => {
+          input.blur();
+          document.getElementById('meeting-date')?.focus();
+        }, 100);
+      }
+    }
+    
+    // Функция для скрытия подсказок
+    function hideSuggestions() {
+      const dropdown = document.getElementById('suggestions-dropdown');
+      if (dropdown) {
+        dropdown.classList.remove('active');
+      }
+    }
+    
+    // Асинхронная валидация адреса с индикацией
+    async function validateAddressAsync(address) {
+      const statusEl = document.getElementById('location-validation-status');
+      if (!statusEl) return;
+      
+      locationValidationInProgress = true;
+      selectedLocationCoordinates = null;
+      
+      // Показываем индикатор загрузки
+      statusEl.innerHTML = `
+        <span class="material-icons" style="color: #2CB4FF;">hourglass_empty</span>
+        <span>Проверка адреса...</span>
+      `;
+      statusEl.className = 'validation-status visible status-loading';
+      
+      const result = await validateAddress(address);
+      locationValidationInProgress = false;
+      
+      if (result.valid) {
+        isLocationValid = true;
+        selectedLocationCoordinates = result.coordinates;
+        
+        if (result.warning) {
+          // Адрес найден, но с предупреждением
+          statusEl.innerHTML = `
+            <span class="material-icons" style="color: #FFA726;">warning</span>
+            <span>${result.error}</span>
+          `;
+          statusEl.className = 'validation-status visible status-invalid';
+        } else {
+          // Адрес валидный
+          statusEl.innerHTML = `
+            <span class="material-icons" style="color: #34eb89;">check_circle</span>
+            <span>Адрес проверен</span>
+          `;
+          statusEl.className = 'validation-status visible status-valid';
+        }
+        
+        // Обновляем поле ввода каноническим адресом, если он отличается
+        const input = document.getElementById('meeting-location');
+        if (input && result.address && result.address !== input.value) {
+          input.value = result.address;
+        }
+      } else {
+        isLocationValid = false;
+        selectedLocationCoordinates = null;
+        
+        statusEl.innerHTML = `
+          <span class="material-icons" style="color: #FF5252;">error</span>
+          <span>${result.error}</span>
+        `;
+        statusEl.className = 'validation-status visible status-invalid';
+      }
+      
+      return result;
+    }
+    
+    // Функция для сброса статуса валидации
+    function resetValidationStatus() {
+      const statusEl = document.getElementById('location-validation-status');
+      if (statusEl) {
+        statusEl.className = 'validation-status';
+        isLocationValid = false;
+        selectedLocationCoordinates = null;
+      }
+    }
+    
     // Функция для использования текущего местоположения в поле адреса
     function useCurrentLocationForMeeting() {
       const locationInput = document.getElementById('meeting-location');
+      const statusEl = document.getElementById('location-validation-status');
+      
+      if (!locationInput || !statusEl) return;
       
       // Показываем индикатор загрузки
       locationInput.placeholder = 'Определение вашего местоположения...';
       locationInput.value = '';
+      statusEl.innerHTML = `
+        <span class="material-icons" style="color: #2CB4FF;">hourglass_empty</span>
+        <span>Определение местоположения...</span>
+      `;
+      statusEl.className = 'validation-status visible status-loading';
       
       if (!navigator.geolocation) {
         showTempMessage('Геолокация не поддерживается вашим устройством');
-        locationInput.placeholder = 'Адрес или название места (например: Центральный парк, кафе "Кофехаус")';
+        locationInput.placeholder = 'Начните вводить адрес или название места';
+        statusEl.className = 'validation-status';
         return;
       }
       
@@ -1374,10 +1801,19 @@
           })
           .then((address) => {
             locationInput.value = address;
-            showTempMessage('Текущее местоположение подставлено в адрес встречи');
+            locationInput.placeholder = 'Начните вводить адрес или название места';
+            
+            // Валидируем полученный адрес
+            return validateAddressAsync(address);
+          })
+          .then((result) => {
+            if (result.valid) {
+              showTempMessage('Текущее местоположение подставлено в адрес встречи');
+            }
           })
           .catch(() => {
-            locationInput.placeholder = 'Адрес или название места (например: Центральный парк, кафе "Кофехаус")';
+            locationInput.placeholder = 'Начните вводить адрес или название места';
+            statusEl.className = 'validation-status';
             showTempMessage('Не удалось определить ваше местоположение');
           });
       } else {
@@ -1391,14 +1827,22 @@
               })
               .then((address) => {
                 locationInput.value = address;
-                showTempMessage('Текущее местоположение подставлено в адрес встречи');
+                locationInput.placeholder = 'Начните вводить адрес или название места';
+                return validateAddressAsync(address);
+              })
+              .then((result) => {
+                if (result.valid) {
+                  showTempMessage('Текущее местоположение подставлено в адрес встречи');
+                }
               })
               .catch(() => {
-                locationInput.placeholder = 'Адрес или название места (например: Центральный парк, кафе "Кофехаус")';
+                locationInput.placeholder = 'Начните вводить адрес или название места';
+                statusEl.className = 'validation-status';
                 showTempMessage('Не удалось определить ваше местоположение');
               });
           } else {
-            locationInput.placeholder = 'Адрес или название места (например: Центральный парк, кафе "Кофехаус")';
+            locationInput.placeholder = 'Начните вводить адрес или название места';
+            statusEl.className = 'validation-status';
             showTempMessage('Доступ к геолокации не предоставлен');
           }
         });
@@ -1429,15 +1873,32 @@
       document.getElementById('meeting-location').value = '';
       document.getElementById('meeting-max-participants').value = '10';
       
+      // Сбрасываем валидацию
+      resetValidationStatus();
+      
       // Сбрасываем выбор приватности к публичной
       document.querySelector('input[name="privacy"][value="public"]').checked = true;
       updatePrivacySelection();
+      
+      // Фокусируемся на первом поле
+      setTimeout(() => {
+        document.getElementById('meeting-description').focus();
+      }, 100);
     }
     
     // Функция для закрытия модального окна создания встречи
     function closeMeetingModal() {
       const modal = document.getElementById('meeting-modal-overlay');
       modal.classList.remove('active');
+      
+      // Скрываем подсказки если открыты
+      hideSuggestions();
+      
+      // Сбрасываем состояние
+      currentSuggestions = [];
+      selectedSuggestionIndex = -1;
+      isLocationValid = false;
+      selectedLocationCoordinates = null;
     }
     
     // Функция для обновления визуального выделения выбранной приватности
@@ -1458,7 +1919,7 @@
     }
     
     // Функция для создания встречи (из формы)
-    function createMeetingFromForm() {
+    async function createMeetingFromForm() {
       const description = document.getElementById('meeting-description').value.trim();
       const location = document.getElementById('meeting-location').value.trim();
       const date = document.getElementById('meeting-date').value;
@@ -1476,6 +1937,19 @@
       if (!location) {
         showTempMessage('Пожалуйста, укажите местоположение встречи');
         document.getElementById('meeting-location').focus();
+        return;
+      }
+      
+      // Финальная проверка адреса
+      if (!isLocationValid && !locationValidationInProgress) {
+        const validationResult = await validateAddressAsync(location);
+        if (!validationResult.valid) {
+          showTempMessage('Пожалуйста, укажите существующий адрес');
+          document.getElementById('meeting-location').focus();
+          return;
+        }
+      } else if (locationValidationInProgress) {
+        showTempMessage('Дождитесь завершения проверки адреса');
         return;
       }
       
@@ -1513,7 +1987,8 @@
         privacy: privacy,
         participants: [currentUser.id],
         createdAt: new Date().toISOString(),
-        status: 'active'
+        status: 'active',
+        coordinates: selectedLocationCoordinates
       };
       
       // В реальном приложении здесь был бы запрос к серверу
@@ -2908,6 +3383,119 @@
       document.getElementById('btn-clear-route').addEventListener('click', clearRoute);
       document.getElementById('btn-navigate').addEventListener('click', openNavigation);
       
+      // Обработчики для поля ввода адреса с подсказками
+      const locationInput = document.getElementById('meeting-location');
+      const suggestionsDropdown = document.getElementById('suggestions-dropdown');
+      
+      if (locationInput) {
+        // Ввод текста (подсказки с дебаунсингом)
+        locationInput.addEventListener('input', function(e) {
+          const query = e.target.value.trim();
+          
+          // Сбрасываем предыдущий таймаут
+          if (suggestionsTimeout) {
+            clearTimeout(suggestionsTimeout);
+          }
+          
+          // Сбрасываем валидацию при изменении текста
+          resetValidationStatus();
+          
+          // Если текст слишком короткий, скрываем подсказки
+          if (query.length < 2) {
+            hideSuggestions();
+            return;
+          }
+          
+          // Показываем индикатор загрузки
+          if (suggestionsDropdown) {
+            suggestionsDropdown.innerHTML = `
+              <div class="suggestion-loading">
+                <span class="material-icons" style="font-size: 24px; margin-bottom: 10px;">search</span>
+                <div>Поиск адресов...</div>
+              </div>
+            `;
+            suggestionsDropdown.classList.add('active');
+          }
+          
+          // Дебаунсинг 300ms
+          suggestionsTimeout = setTimeout(async () => {
+            try {
+              const suggestions = await fetchAddressSuggestions(query);
+              showSuggestions(suggestions);
+            } catch (error) {
+              console.error('Ошибка получения подсказок:', error);
+              hideSuggestions();
+            }
+          }, 300);
+        });
+        
+        // Фокус
+        locationInput.addEventListener('focus', function(e) {
+          const query = e.target.value.trim();
+          if (query.length >= 2 && currentSuggestions.length > 0) {
+            showSuggestions(currentSuggestions);
+          }
+        });
+        
+        // Потеря фокуса (валидация)
+        locationInput.addEventListener('blur', function(e) {
+          // Небольшая задержка перед валидацией, чтобы обработчик клика по подсказке сработал
+          setTimeout(async () => {
+            const query = e.target.value.trim();
+            if (query.length >= 3) {
+              await validateAddressAsync(query);
+            }
+            hideSuggestions();
+          }, 200);
+        });
+        
+        // Обработка клавиш для навигации по подсказкам
+        locationInput.addEventListener('keydown', function(e) {
+          const dropdown = document.getElementById('suggestions-dropdown');
+          if (!dropdown || !dropdown.classList.contains('active')) return;
+          
+          const items = dropdown.querySelectorAll('.suggestion-item');
+          if (items.length === 0) return;
+          
+          switch(e.key) {
+            case 'ArrowDown':
+              e.preventDefault();
+              selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length;
+              updateSelectedSuggestion(items);
+              break;
+              
+            case 'ArrowUp':
+              e.preventDefault();
+              selectedSuggestionIndex = selectedSuggestionIndex <= 0 ? items.length - 1 : selectedSuggestionIndex - 1;
+              updateSelectedSuggestion(items);
+              break;
+              
+            case 'Enter':
+              e.preventDefault();
+              if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < items.length) {
+                selectSuggestion(selectedSuggestionIndex);
+              }
+              break;
+              
+            case 'Escape':
+              hideSuggestions();
+              break;
+          }
+        });
+      }
+      
+      // Обновление выделения выбранной подсказки
+      function updateSelectedSuggestion(items) {
+        items.forEach((item, index) => {
+          if (index === selectedSuggestionIndex) {
+            item.classList.add('selected');
+            item.scrollIntoView({ block: 'nearest' });
+          } else {
+            item.classList.remove('selected');
+          }
+        });
+      }
+      
       // Закрытие панелей при клике вне
       document.addEventListener('click', function(event) {
         const filterPanel = document.getElementById('filter-panel');
@@ -2917,6 +3505,8 @@
         const routePanel = document.getElementById('route-panel');
         const meetingModal = document.getElementById('meeting-modal-overlay');
         const meetingModalContainer = document.querySelector('.meeting-modal-container');
+        const locationInput = document.getElementById('meeting-location');
+        const suggestionsDropdown = document.getElementById('suggestions-dropdown');
         
         if (filterPanel && !filterPanel.contains(event.target) && filterBtn && !filterBtn.contains(event.target)) {
           filterPanel.classList.remove('active');
@@ -2928,6 +3518,13 @@
         
         if (routePanel && !routePanel.contains(event.target)) {
           // Не закрываем панель маршрута при клике вне - только по кнопке "Очистить"
+        }
+        
+        // Закрытие подсказок при клике вне
+        if (suggestionsDropdown && suggestionsDropdown.classList.contains('active') &&
+            !suggestionsDropdown.contains(event.target) && 
+            locationInput && !locationInput.contains(event.target)) {
+          hideSuggestions();
         }
         
         if (meetingModal && meetingModal.classList.contains('active') && 
