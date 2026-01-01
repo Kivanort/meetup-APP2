@@ -515,14 +515,14 @@
     
     /* Стили для кнопки создания встречи */
     .fab-meeting {
-      background: linear-gradient(135deg, #FF8A00 0%, #FF5252 100%);
+      background: linear-gradient(135deg, #34eb89 0%, #08e7bd 100%);
       color: white;
     }
     
     .fab-meeting:hover {
-      background: linear-gradient(135deg, #FF9E40 0%, #FF6B6B 100%);
+      background: linear-gradient(135deg, #40f79c 0%, #1afad9 100%);
       transform: scale(1.05);
-      box-shadow: 0 6px 25px rgba(255, 138, 0, 0.4);
+      box-shadow: 0 6px 25px rgba(52, 235, 137, 0.4);
     }
     
     /* Стили для модального окна создания встречи */
@@ -768,35 +768,6 @@
       background: linear-gradient(135deg, #FF9E40 0%, #FF6B6B 100%);
     }
     
-    /* Кнопка календаря */
-    .btn-calendar {
-      width: 54px;
-      height: 54px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #34eb89 0%, #08e7bd 100%);
-      border: none;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 12px rgba(52, 235, 137, 0.3);
-      position: absolute;
-      bottom: 90px;
-      right: 20px;
-      z-index: 5;
-    }
-    
-    .btn-calendar:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 20px rgba(52, 235, 137, 0.4);
-    }
-    
-    .btn-calendar:active {
-      transform: scale(0.95);
-    }
-    
     @media (max-width: 768px) {
       .header-content {padding: 12px 15px;}
       .app-logo {font-size: 20px;}
@@ -814,7 +785,6 @@
       .route-controls {top: 130px; right: 15px;}
       .route-btn {width: 50px; height: 50px;}
       .route-panel {top: 60px; left: 15px; min-width: 180px;}
-      .btn-calendar {width: 50px; height: 50px; bottom: 85px; right: 15px;}
       .meeting-modal-container {width: 95%;}
       .datetime-group {flex-direction: column; gap: 15px;}
     }
@@ -839,7 +809,6 @@
       .route-controls {top: 110px; right: 10px;}
       .route-btn {width: 45px; height: 45px;}
       .route-panel {top: 50px; left: 10px; min-width: 160px;}
-      .btn-calendar {width: 45px; height: 45px; bottom: 80px; right: 10px;}
       .meeting-modal-content {padding: 20px;}
       .meeting-modal-actions {padding: 15px 20px 20px;}
       .meeting-modal-btn {padding: 12px;}
@@ -898,11 +867,6 @@
           <span class="material-icons">refresh</span>
         </button>
       </div>
-      
-      <!-- Кнопка календаря для создания встречи -->
-      <button class="btn-calendar" id="btn-calendar" title="Создать встречу">
-        <span class="material-icons">event</span>
-      </button>
       
       <!-- Панель фильтров -->
       <div class="filter-panel" id="filter-panel">
@@ -995,7 +959,7 @@
           <span class="material-icons">person_add</span>
           <span>Добавить друга</span>
         </button>
-        <!-- Кнопка создания встречи -->
+        <!-- Кнопка создания встречи - теперь с зеленым градиентом -->
         <button class="fab-primary fab-meeting" id="btn-create-meeting">
           <span class="material-icons">event</span>
           <span>Создать встречу</span>
@@ -2663,11 +2627,8 @@
         window.location.href = 'addfriend.html';
       });
       
-      // Кнопка создания встречи (старая)
-      document.getElementById('btn-create-meeting').addEventListener('click', createMeeting);
-      
-      // Новая кнопка календаря для создания встречи
-      document.getElementById('btn-calendar').addEventListener('click', openMeetingModal);
+      // Кнопка создания встречи - теперь открывает модальное окно
+      document.getElementById('btn-create-meeting').addEventListener('click', openMeetingModal);
       
       // Обработчики для модального окна встречи
       document.getElementById('meeting-modal-close-btn').addEventListener('click', closeMeetingModal);
@@ -2823,7 +2784,6 @@
         const routePanel = document.getElementById('route-panel');
         const meetingModal = document.getElementById('meeting-modal-overlay');
         const meetingModalContainer = document.querySelector('.meeting-modal-container');
-        const calendarBtn = document.getElementById('btn-calendar');
         
         if (filterPanel && !filterPanel.contains(event.target) && filterBtn && !filterBtn.contains(event.target)) {
           filterPanel.classList.remove('active');
@@ -2839,7 +2799,7 @@
         
         if (meetingModal && meetingModal.classList.contains('active') && 
             !meetingModalContainer.contains(event.target) && 
-            !calendarBtn.contains(event.target)) {
+            !event.target.closest('#btn-create-meeting')) {
           closeMeetingModal();
         }
       });
