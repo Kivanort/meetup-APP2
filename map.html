@@ -768,6 +768,47 @@
       background: linear-gradient(135deg, #FF9E40 0%, #FF6B6B 100%);
     }
     
+    /* Новые стили для поля ввода с кнопкой текущего местоположения */
+    .location-input-group {
+      position: relative;
+    }
+    
+    .location-input-group input {
+      padding-right: 50px !important;
+    }
+    
+    .btn-current-location {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--primary);
+      border: none;
+      border-radius: 6px;
+      width: 36px;
+      height: 36px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 1;
+    }
+    
+    .btn-current-location:hover {
+      background: #1a9fff;
+      transform: translateY(-50%) scale(1.1);
+    }
+    
+    .btn-current-location:active {
+      transform: translateY(-50%) scale(0.95);
+    }
+    
+    .btn-current-location .material-icons {
+      font-size: 20px;
+    }
+    
     @media (max-width: 768px) {
       .header-content {padding: 12px 15px;}
       .app-logo {font-size: 20px;}
@@ -812,6 +853,13 @@
       .meeting-modal-content {padding: 20px;}
       .meeting-modal-actions {padding: 15px 20px 20px;}
       .meeting-modal-btn {padding: 12px;}
+      .btn-current-location {
+        width: 32px;
+        height: 32px;
+      }
+      .btn-current-location .material-icons {
+        font-size: 18px;
+      }
     }
   </style>
 </head>
@@ -1040,13 +1088,19 @@
               <span class="material-icons">location_on</span>
               Местоположение
             </label>
-            <input 
-              type="text" 
-              class="form-input" 
-              id="meeting-location" 
-              placeholder="Адрес или название места (например: Центральный парк, кафе 'Кофехаус')" 
-              required
-            >
+            <div class="location-input-group">
+              <input 
+                type="text" 
+                class="form-input" 
+                id="meeting-location" 
+                placeholder="Адрес или название места (например: Центральный парк, кафе 'Кофехаус')" 
+                required
+              >
+              <!-- Кнопка текущего местоположения -->
+              <button type="button" class="btn-current-location" id="btn-current-location" title="Использовать текущее местоположение">
+                <span class="material-icons">my_location</span>
+              </button>
+            </div>
           </div>
           
           <div class="datetime-group">
@@ -1274,6 +1328,82 @@
     let userPosition = null;
     let geolocationWatchId = null;
     let hasGeolocationPermission = false;
+    
+    // Функция для получения текущего адреса по координатам
+    function getAddressFromCoordinates(coords) {
+      return new Promise((resolve, reject) => {
+        if (typeof ymaps === 'undefined') {
+          resolve('Неизвестное местоположение');
+          return;
+        }
+        
+        ymaps.geocode(coords).then(function (res) {
+          const firstGeoObject = res.geoObjects.get(0);
+          if (firstGeoObject) {
+            const address = firstGeoObject.getAddressLine();
+            resolve(address || 'Неизвестное местоположение');
+          } else {
+            resolve('Неизвестное местоположение');
+          }
+        }).catch(function () {
+          resolve('Неизвестное местоположение');
+        });
+      });
+    }
+    
+    // Функция для использования текущего местоположения в поле адреса
+    function useCurrentLocationForMeeting() {
+      const locationInput = document.getElementById('meeting-location');
+      
+      // Показываем индикатор загрузки
+      locationInput.placeholder = 'Определение вашего местоположения...';
+      locationInput.value = '';
+      
+      if (!navigator.geolocation) {
+        showTempMessage('Геолокация не поддерживается вашим устройством');
+        locationInput.placeholder = 'Адрес или название места (например: Центральный парк, кафе "Кофехаус")';
+        return;
+      }
+      
+      // Если уже есть разрешение, сразу получаем геолокацию
+      if (hasGeolocationPermission) {
+        getUserLocation()
+          .then((coords) => {
+            // Получаем адрес по координатам
+            return getAddressFromCoordinates(coords);
+          })
+          .then((address) => {
+            locationInput.value = address;
+            showTempMessage('Текущее местоположение подставлено в адрес встречи');
+          })
+          .catch(() => {
+            locationInput.placeholder = 'Адрес или название места (например: Центральный парк, кафе "Кофехаус")';
+            showTempMessage('Не удалось определить ваше местоположение');
+          });
+      } else {
+        // Запрашиваем разрешение
+        requestGeolocationPermission().then(permissionGranted => {
+          if (permissionGranted) {
+            hasGeolocationPermission = true;
+            getUserLocation()
+              .then((coords) => {
+                return getAddressFromCoordinates(coords);
+              })
+              .then((address) => {
+                locationInput.value = address;
+                showTempMessage('Текущее местоположение подставлено в адрес встречи');
+              })
+              .catch(() => {
+                locationInput.placeholder = 'Адрес или название места (например: Центральный парк, кафе "Кофехаус")';
+                showTempMessage('Не удалось определить ваше местоположение');
+              });
+          } else {
+            locationInput.placeholder = 'Адрес или название места (например: Центральный парк, кафе "Кофехаус")';
+            showTempMessage('Доступ к геолокации не предоставлен');
+          }
+        });
+      }
+    }
     
     // Функция для открытия модального окна создания встречи
     function openMeetingModal() {
@@ -2629,6 +2759,9 @@
       
       // Кнопка создания встречи - теперь открывает модальное окно
       document.getElementById('btn-create-meeting').addEventListener('click', openMeetingModal);
+      
+      // Кнопка текущего местоположения в форме встречи
+      document.getElementById('btn-current-location').addEventListener('click', useCurrentLocationForMeeting);
       
       // Обработчики для модального окна встречи
       document.getElementById('meeting-modal-close-btn').addEventListener('click', closeMeetingModal);
