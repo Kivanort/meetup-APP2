@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no">
   <title>Профиль — MeetUP</title>
   <!-- Material Icons (Google Fonts) -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -34,16 +34,24 @@
       --telegram-color: #0088cc;
       --telegram-gradient: linear-gradient(135deg, #0088cc, #34b7f1);
     }
+    
+    /* Запрет скролла страницы */
     html, body {
       height: 100%;
       margin: 0;
+      padding: 0;
       font-family: 'Montserrat','Segoe UI', Arial, sans-serif;
       background: var(--bg-main);
       color: var(--text-main);
       min-height: 100vh;
       min-width: 100vw;
       width: 100vw;
-      overflow: auto;
+      overflow: hidden;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
     }
 
     body {
@@ -52,10 +60,35 @@
       justify-content: center;
       min-height: 100vh;
       animation: profile-fadein 0.55s cubic-bezier(.27,.69,.51,1.35);
+      overflow: hidden;
+      position: relative;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: none;
+      touch-action: pan-y;
     }
     @keyframes profile-fadein {
       from { opacity:0; transform:translateY(20px);}
       to { opacity:1; transform:translateY(0);}
+    }
+
+    /* Контейнер для скролла контента */
+    .scroll-container {
+      width: 100%;
+      height: 100vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: none;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    /* Запрет pull-to-refresh */
+    .scroll-container {
+      overscroll-behavior-y: contain;
     }
 
     .profile-card {
@@ -71,6 +104,7 @@
       align-items: center;
       position: relative;
       animation: profile-fadein 0.7s;
+      overflow: visible;
     }
 
     /* Стрелка назад */
@@ -108,6 +142,13 @@
     }
 
     @media (max-width: 768px) {
+      .scroll-container {
+        width: 100vw;
+        height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      
       .profile-card {
         width: 100vw;
         min-width: 0;
@@ -115,6 +156,7 @@
         border-radius: 0;
         margin: 0;
         padding: 24px 11px 24px 11px;
+        overflow: visible;
       }
       .profile-stats-row {
         flex-direction: column;
@@ -816,6 +858,36 @@
       from { opacity: 0; transform: translate(-50%, -40%); }
       to { opacity: 1; transform: translate(-50%, -50%); }
     }
+    
+    /* Фикс для мобильных устройств - предотвращение горизонтального скролла */
+    .scroll-container::-webkit-scrollbar {
+      width: 0;
+      display: none;
+    }
+    
+    .scroll-container {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    
+    /* Предотвращение выделения текста при долгом нажатии */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    /* Разрешаем выделение для текстовых полей */
+    textarea, input {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+    
+    /* Фикс для iOS - предотвращение zoom при фокусе */
+    textarea, input, select {
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
@@ -824,136 +896,138 @@
     <span class="material-icons">arrow_back</span>
   </a>
   
-  <div class="profile-card">
-    <div class="profile-avatar-wrap" id="profile-avatar-wrap">
-      <div class="profile-avatar" id="profile-avatar">
-        <!-- Изображение или базовый силуэт (SVG) -->
-        <img id="avatar-img" src="" alt="Аватар" style="display:none;">
-        <svg class="avatar-placeholder-svg" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="40" cy="40" r="38" fill="#fff"/>
-          <ellipse cx="40" cy="33" rx="18" ry="16" fill="#EEE"/>
-          <ellipse cx="40" cy="62" rx="28" ry="14" fill="#EEE"/>
-          <ellipse cx="40" cy="34" rx="10" ry="10" fill="#fafbfc"/>
-        </svg>
+  <div class="scroll-container">
+    <div class="profile-card">
+      <div class="profile-avatar-wrap" id="profile-avatar-wrap">
+        <div class="profile-avatar" id="profile-avatar">
+          <!-- Изображение или базовый силуэт (SVG) -->
+          <img id="avatar-img" src="" alt="Аватар" style="display:none;">
+          <svg class="avatar-placeholder-svg" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="38" fill="#fff"/>
+            <ellipse cx="40" cy="33" rx="18" ry="16" fill="#EEE"/>
+            <ellipse cx="40" cy="62" rx="28" ry="14" fill="#EEE"/>
+            <ellipse cx="40" cy="34" rx="10" ry="10" fill="#fafbfc"/>
+          </svg>
+        </div>
+        <!-- Кнопка удалить фото -->
+        <button class="btn-remove-avatar" id="btn-remove-avatar" title="Удалить фото" tabindex="0">
+          <span class="material-icons" style="font-size:16px;">close</span>
+        </button>
+        <!-- Кнопка поделиться (под углом 45 градусов) -->
+        <button class="btn-share-avatar" id="btn-share-avatar" title="Поделиться профилем">
+          <span class="material-icons">share</span>
+        </button>
+        <!-- input file (скрытый) -->
+        <input type="file" accept="image/*" id="avatar-upload" style="display:none;">
       </div>
-      <!-- Кнопка удалить фото -->
-      <button class="btn-remove-avatar" id="btn-remove-avatar" title="Удалить фото" tabindex="0">
-        <span class="material-icons" style="font-size:16px;">close</span>
-      </button>
-      <!-- Кнопка поделиться (под углом 45 градусов) -->
-      <button class="btn-share-avatar" id="btn-share-avatar" title="Поделиться профилем">
-        <span class="material-icons">share</span>
-      </button>
-      <!-- input file (скрытый) -->
-      <input type="file" accept="image/*" id="avatar-upload" style="display:none;">
-    </div>
-    <!-- Ник + ID + статус -->
-    <div class="profile-nick" id="nickname">Загрузка...</div>
-    <div class="profile-user-id" id="user-id">ID: ...</div>
-    
-    <!-- Telegram статус -->
-    <div class="telegram-status" id="telegram-status" style="display: none;">
-      <span class="material-icons">telegram</span>
-      <span class="telegram-status-text">
-        Telegram: <span class="telegram-username" id="telegram-username-display">Не подключен</span>
-      </span>
-    </div>
-    
-    <div class="profile-status-row">
-      <span class="profile-status-indicator status-online" id="status-indicator"></span>
-      <span class="profile-status-text" id="status-text">Загрузка...</span>
-    </div>
-    <!-- О себе -->
-    <div class="profile-about-section">
-      <div class="profile-about-title">О себе</div>
-      <div class="profile-about-container">
-        <textarea
-          class="profile-about-textarea"
-          id="about-text"
-          placeholder=""
-          maxlength="140"></textarea>
-        <span
-          class="about-placeholder"
-          id="about-placeholder"
-          style="display:block;"
-        >Расскажите о себе...</span>
-        <span
-          class="profile-about-counter"
-          id="about-counter"
-        >0/140</span>
-      </div>
-    </div>
-    <!-- Статистика -->
-    <div class="profile-stats-row">
-      <div class="profile-stat-card">
-        <div class="stat-value" id="friends-count">0</div>
-        <div class="stat-label">Друзей</div>
-      </div>
-      <div class="profile-stat-card">
-        <div class="stat-value" id="km-this-week">0</div>
-        <div class="stat-label">Пройдено за неделю, км</div>
-      </div>
-      <div class="profile-stat-card">
-        <div class="stat-value" id="online-hours">0</div>
-        <div class="stat-label">Время в онлайне, ч</div>
-      </div>
-    </div>
-    
-    <!-- Реферальная секция -->
-    <div class="referral-section" id="referral-section">
-      <div class="referral-title">
-        <span class="material-icons">person_add</span>
-        Пригласить друзей
+      <!-- Ник + ID + статус -->
+      <div class="profile-nick" id="nickname">Загрузка...</div>
+      <div class="profile-user-id" id="user-id">ID: ...</div>
+      
+      <!-- Telegram статус -->
+      <div class="telegram-status" id="telegram-status" style="display: none;">
+        <span class="material-icons">telegram</span>
+        <span class="telegram-status-text">
+          Telegram: <span class="telegram-username" id="telegram-username-display">Не подключен</span>
+        </span>
       </div>
       
-      <div class="referral-link-container">
-        <input type="text" class="referral-input" id="referral-link" readonly value="https://kivanort.github.io/@Ivan">
-        <button class="copy-btn" id="copy-btn">Копировать</button>
-        <button class="copy-btn qr-btn" id="qr-btn" style="background: linear-gradient(90deg, #FF9800, #FF5722);">
-          <span class="material-icons">qr_code</span>
-          Мой QR
+      <div class="profile-status-row">
+        <span class="profile-status-indicator status-online" id="status-indicator"></span>
+        <span class="profile-status-text" id="status-text">Загрузка...</span>
+      </div>
+      <!-- О себе -->
+      <div class="profile-about-section">
+        <div class="profile-about-title">О себе</div>
+        <div class="profile-about-container">
+          <textarea
+            class="profile-about-textarea"
+            id="about-text"
+            placeholder=""
+            maxlength="140"></textarea>
+          <span
+            class="about-placeholder"
+            id="about-placeholder"
+            style="display:block;"
+          >Расскажите о себе...</span>
+          <span
+            class="profile-about-counter"
+            id="about-counter"
+          >0/140</span>
+        </div>
+      </div>
+      <!-- Статистика -->
+      <div class="profile-stats-row">
+        <div class="profile-stat-card">
+          <div class="stat-value" id="friends-count">0</div>
+          <div class="stat-label">Друзей</div>
+        </div>
+        <div class="profile-stat-card">
+          <div class="stat-value" id="km-this-week">0</div>
+          <div class="stat-label">Пройдено за неделю, км</div>
+        </div>
+        <div class="profile-stat-card">
+          <div class="stat-value" id="online-hours">0</div>
+          <div class="stat-label">Время в онлайне, ч</div>
+        </div>
+      </div>
+      
+      <!-- Реферальная секция -->
+      <div class="referral-section" id="referral-section">
+        <div class="referral-title">
+          <span class="material-icons">person_add</span>
+          Пригласить друзей
+        </div>
+        
+        <div class="referral-link-container">
+          <input type="text" class="referral-input" id="referral-link" readonly value="https://kivanort.github.io/@Ivan">
+          <button class="copy-btn" id="copy-btn">Копировать</button>
+          <button class="copy-btn qr-btn" id="qr-btn" style="background: linear-gradient(90deg, #FF9800, #FF5722);">
+            <span class="material-icons">qr_code</span>
+            Мой QR
+          </button>
+        </div>
+        
+        <div class="referral-info">
+          Отправьте эту ссылку или QR-код друзьям. При регистрации по ссылке они автоматически добавятся к вам в друзья.
+        </div>
+      </div>
+      
+      <!-- Кнопки действий -->
+      <div class="profile-actions-wrap">
+        <button class="btn-action btn-invisible" id="btn-invisible">
+          <span class="material-icons" style="font-size:20px;vertical-align:-3px;">visibility_off</span>
+          Скрыть местоположение
+        </button>
+        <button class="btn-action btn-settings" id="btn-settings">
+          <span class="material-icons" style="font-size:20px;vertical-align:-3px;">settings</span>
+          Настройки профиля
         </button>
       </div>
       
-      <div class="referral-info">
-        Отправьте эту ссылку или QR-код друзьям. При регистрации по ссылке они автоматически добавятся к вам в друзья.
+      <!-- Кнопка Telegram -->
+      <div class="profile-actions-wrap" style="margin-top: 10px;">
+        <button class="btn-action btn-telegram" id="btn-telegram-settings">
+          <span class="material-icons" style="font-size:20px;vertical-align:-3px;">telegram</span>
+          Telegram
+        </button>
       </div>
-    </div>
-    
-    <!-- Кнопки действий -->
-    <div class="profile-actions-wrap">
-      <button class="btn-action btn-invisible" id="btn-invisible">
-        <span class="material-icons" style="font-size:20px;vertical-align:-3px;">visibility_off</span>
-        Скрыть местоположение
-      </button>
-      <button class="btn-action btn-settings" id="btn-settings">
-        <span class="material-icons" style="font-size:20px;vertical-align:-3px;">settings</span>
-        Настройки профиля
-      </button>
-    </div>
-    
-    <!-- Кнопка Telegram -->
-    <div class="profile-actions-wrap" style="margin-top: 10px;">
-      <button class="btn-action btn-telegram" id="btn-telegram-settings">
-        <span class="material-icons" style="font-size:20px;vertical-align:-3px;">telegram</span>
-        Telegram
-      </button>
-    </div>
-    
-    <!-- Разделитель -->
-    <div class="profile-divider"></div>
-    <!-- Доп. сведения -->
-    <div class="profile-extra-wrap">
-      <div class="profile-extra-info" id="registered-at">Дата регистрации: ...</div>
-      <div class="profile-extra-info" id="last-seen">Последний вход: ...</div>
-      <div class="profile-extra-info" id="user-email">Email: ...</div>
-    </div>
-    <!-- Кнопка удалить аккаунт -->
-    <div style="width:100%; margin-top:16px; display:flex; justify-content:center;">
-      <button class="btn-action" id="btn-delete-account" style="background:#FF4444;color:#fff;max-width:270px;">
-        <span class="material-icons" style="font-size:20px;vertical-align:-3px;">delete_forever</span>
-        Удалить аккаунт
-      </button>
+      
+      <!-- Разделитель -->
+      <div class="profile-divider"></div>
+      <!-- Доп. сведения -->
+      <div class="profile-extra-wrap">
+        <div class="profile-extra-info" id="registered-at">Дата регистрации: ...</div>
+        <div class="profile-extra-info" id="last-seen">Последний вход: ...</div>
+        <div class="profile-extra-info" id="user-email">Email: ...</div>
+      </div>
+      <!-- Кнопка удалить аккаунт -->
+      <div style="width:100%; margin-top:16px; display:flex; justify-content:center;">
+        <button class="btn-action" id="btn-delete-account" style="background:#FF4444;color:#fff;max-width:270px;">
+          <span class="material-icons" style="font-size:20px;vertical-align:-3px;">delete_forever</span>
+          Удалить аккаунт
+        </button>
+      </div>
     </div>
   </div>
   
@@ -988,6 +1062,46 @@
   </div>
   
   <script>
+    // Запрет обновления страницы свайпом вниз (pull-to-refresh)
+    document.addEventListener('touchmove', function(e) {
+      if (e.touches.length > 1 || e.scale && e.scale !== 1) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    // Запрет масштабирования
+    document.addEventListener('gesturestart', function(e) {
+      e.preventDefault();
+    });
+
+    // Предотвращение горизонтального скролла
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    document.addEventListener('touchstart', function(e) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    
+    document.addEventListener('touchmove', function(e) {
+      const touchX = e.touches[0].clientX;
+      const touchY = e.touches[0].clientY;
+      const diffX = Math.abs(touchX - touchStartX);
+      const diffY = Math.abs(touchY - touchStartY);
+      
+      // Если горизонтальный скролл больше вертикального - предотвращаем
+      if (diffX > diffY) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    // Предотвращение выделения при долгом нажатии
+    document.addEventListener('contextmenu', function(e) {
+      if (e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+      }
+    });
+
     document.addEventListener('DOMContentLoaded', function() {
       // Проверяем авторизацию
       const currentUser = UserSystem.getCurrentUser();
