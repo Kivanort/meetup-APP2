@@ -843,18 +843,6 @@
       .meeting-modal-actions {padding: 15px 20px 20px;}
       .meeting-modal-btn {padding: 12px;}
     }
-    
-    /* Дополнительные стили для создания встречи (чтобы исправить скролл) */
-    .create-meeting-page {
-      overflow-y: auto;
-      padding-bottom: 100px;
-    }
-    
-    .create-meeting-form {
-      max-height: calc(100vh - 200px);
-      overflow-y: auto;
-      padding: 20px;
-    }
   </style>
 </head>
 <body>
@@ -1201,11 +1189,14 @@
     <div style="text-align: center; padding: 10px;">
       <span class="material-icons" style="font-size: 48px; color: #2CB4FF; margin-bottom: 10px;">location_on</span>
       <h3 style="margin-bottom: 10px;">Доступ к геолокации</h3>
-      <p style="margin-bottom: 20px; font-size: 14px; color: #ccc;">Приложению требуется доступ к вашему местоположению для отображения карты и поиска друзей поблизости.</p>
+      <p style="margin-bottom: 20px; font-size: 14px; color: #ccc;">Для работы карты и поиска друзей поблизости требуется доступ к вашему местоположению.</p>
       <div style="display: flex; gap: 10px;">
         <button id="btn-geolocation-allow" style="flex: 1; padding: 10px; background: #2CB4FF; color: white; border: none; border-radius: 8px; cursor: pointer;">Разрешить</button>
-        <button id="btn-geolocation-deny" style="flex: 1; padding: 10px; background: #666; color: white; border: none; border-radius: 8px; cursor: pointer;">Отказать</button>
+        <button id="btn-geolocation-deny" style="flex: 1; padding: 10px; background: #666; color: white; border: none; border-radius: 8px; cursor: pointer;">Позже</button>
       </div>
+      <p style="font-size: 12px; color: #888; margin-top: 15px;">
+        Вы всегда можете изменить настройки геолокации в настройках браузера
+      </p>
     </div>
   </div>
   
@@ -1244,8 +1235,8 @@
         console.log('🔄 Начинаем загрузку Яндекс Карт...');
         
         const script = document.createElement('script');
-        // Используем публичный тестовый ключ или оставляем поле пустым для локальной разработки
-        script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=';
+        // Используем корректный API-ключ для Яндекс Карт
+        script.src = 'https://api-maps.yandex.ru/2.1/?lang=ru_RU&apikey=ваш_api_ключ_здесь';
         script.async = true;
         
         script.onload = () => {
@@ -1313,6 +1304,11 @@
     
     // Переменная для метки текущего пользователя
     let currentUserPlacemark = null;
+    
+    // Переменные для геолокации
+    let userPosition = null;
+    let geolocationWatchId = null;
+    let hasGeolocationPermission = false;
     
     // Функция для открытия модального окна создания встречи
     function openMeetingModal() {
@@ -1441,46 +1437,187 @@
       console.log('Создана встреча:', meeting);
     }
     
-    // Функция для запроса разрешения на геолокацию
+    // Функция для запроса разрешения на геолокацию (исправленная)
     function requestGeolocationPermission() {
       return new Promise((resolve) => {
         if (!navigator.geolocation) {
+          console.log('Геолокация не поддерживается браузером');
           resolve(false);
           return;
         }
         
+        // Проверяем, был ли уже запрошен доступ
         const permissionAsked = localStorage.getItem('meetup_geolocation_asked');
-        if (permissionAsked === 'true') {
-          resolve(true);
+        
+        // Если уже спрашивали и разрешили, сразу используем геолокацию
+        if (permissionAsked === 'allowed') {
+          console.log('Разрешение на геолокацию уже получено ранее');
+          getUserLocation()
+            .then(() => resolve(true))
+            .catch(() => resolve(false));
           return;
         }
         
+        // Если уже спрашивали и отказали, не спрашиваем снова
+        if (permissionAsked === 'denied') {
+          console.log('Пользователь ранее отказал в доступе к геолокации');
+          resolve(false);
+          return;
+        }
+        
+        // Показываем кастомный диалог для первого запроса
         const dialog = document.getElementById('geolocation-request');
         dialog.style.display = 'block';
         
         document.getElementById('btn-geolocation-allow').onclick = function() {
           dialog.style.display = 'none';
-          localStorage.setItem('meetup_geolocation_asked', 'true');
+          localStorage.setItem('meetup_geolocation_asked', 'allowed');
           
-          navigator.geolocation.getCurrentPosition(
-            () => {
+          getUserLocation()
+            .then(() => {
+              hasGeolocationPermission = true;
               resolve(true);
-            },
-            () => {
-              showTempMessage('Доступ к геолокации отклонен. Вы можете включить его в настройках браузера.');
+            })
+            .catch((error) => {
+              console.error('Ошибка получения геолокации:', error);
+              showTempMessage('Не удалось получить ваше местоположение');
               resolve(false);
-            },
-            { timeout: 10000 }
-          );
+            });
         };
         
         document.getElementById('btn-geolocation-deny').onclick = function() {
           dialog.style.display = 'none';
-          localStorage.setItem('meetup_geolocation_asked', 'true');
+          localStorage.setItem('meetup_geolocation_asked', 'denied');
           showTempMessage('Доступ к геолокации отклонен. Карта будет отображаться без вашего местоположения.');
           resolve(false);
         };
       });
+    }
+    
+    // Функция для получения текущего местоположения пользователя
+    function getUserLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error('Геолокация не поддерживается'));
+          return;
+        }
+        
+        // Опции для запроса геолокации
+        const options = {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 60000
+        };
+        
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const coords = [position.coords.latitude, position.coords.longitude];
+            userPosition = coords;
+            
+            // Обновляем позицию пользователя в системе
+            if (currentUser) {
+              UserSystem.updateUserPosition(currentUser.id, coords);
+              currentUser = UserSystem.getCurrentUser();
+            }
+            
+            // Центрируем карту на пользователе
+            if (map) {
+              centerOnUser(coords);
+            }
+            
+            // Запускаем отслеживание положения
+            startGeolocationTracking();
+            
+            console.log('📍 Получена геолокация:', coords);
+            resolve(coords);
+          },
+          (error) => {
+            console.error('Ошибка получения геолокации:', error);
+            
+            let errorMessage = 'Не удалось определить ваше местоположение';
+            switch(error.code) {
+              case error.PERMISSION_DENIED:
+                errorMessage = 'Доступ к геолокации запрещен. Разрешите доступ в настройках браузера.';
+                localStorage.setItem('meetup_geolocation_asked', 'denied');
+                hasGeolocationPermission = false;
+                break;
+              case error.POSITION_UNAVAILABLE:
+                errorMessage = 'Информация о местоположении недоступна';
+                break;
+              case error.TIMEOUT:
+                errorMessage = 'Время ожидания геолокации истекло';
+                break;
+            }
+            
+            showTempMessage(errorMessage);
+            reject(new Error(errorMessage));
+          },
+          options
+        );
+      });
+    }
+    
+    // Функция для запуска отслеживания геолокации
+    function startGeolocationTracking() {
+      if (!navigator.geolocation || !hasGeolocationPermission) return;
+      
+      // Останавливаем предыдущее отслеживание, если есть
+      if (geolocationWatchId !== null) {
+        navigator.geolocation.clearWatch(geolocationWatchId);
+      }
+      
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 30000,
+        maximumAge: 10000
+      };
+      
+      geolocationWatchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const coords = [position.coords.latitude, position.coords.longitude];
+          userPosition = coords;
+          
+          // Обновляем позицию пользователя в системе
+          if (currentUser) {
+            UserSystem.updateUserPosition(currentUser.id, coords);
+            currentUser = UserSystem.getCurrentUser();
+          }
+          
+          // Обновляем метку на карте
+          updateCurrentUserPlacemark();
+          
+          // Проверяем друзей поблизости
+          checkNearbyFriends();
+          
+          console.log('📍 Обновлена геолокация:', coords);
+        },
+        (error) => {
+          console.error('Ошибка отслеживания геолокации:', error);
+        },
+        options
+      );
+    }
+    
+    // Функция для центрирования карты на пользователе
+    function centerOnUser(coords = null) {
+      if (!map) return;
+      
+      const position = coords || userPosition || (currentUser ? currentUser.position : null);
+      if (!position) return;
+      
+      const TARGET_ZOOM = 15;
+      
+      try {
+        map.setCenter(position, TARGET_ZOOM, {
+          duration: 1000,
+          timingFunction: 'ease-in-out'
+        });
+        
+        highlightUserLocation();
+      } catch (error) {
+        console.error('Ошибка при центрировании:', error);
+        map.setCenter(position, TARGET_ZOOM);
+      }
     }
     
     function initializeMap() {
@@ -1515,13 +1652,37 @@
             let initialCenter = defaultPosition;
             let initialZoom = DEFAULT_ZOOM;
             
+            // ИСПРАВЛЕННАЯ ЧАСТЬ: правильное вычисление зума
             if (positions.length > 1) {
-              const bounds = ymaps.util.bounds.fromPoints(positions);
-              const center = ymaps.util.bounds.getCenter(bounds);
+              // Создаем временную коллекцию для вычисления границ
+              const bounds = new ymaps.util.Bounds();
+              positions.forEach(pos => {
+                bounds.extend(pos);
+              });
+              
+              // Получаем центр
+              const center = bounds.getCenter();
               if (center) initialCenter = center;
-              const mapSize = [ mapElement.offsetWidth, mapElement.offsetHeight ];
-              const zoom = ymaps.util.bounds.getZoom(bounds, mapSize);
-              initialZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom - 0.5));
+              
+              // Вычисляем подходящий зум для отображения всех точек
+              const mapSize = [mapElement.offsetWidth, mapElement.offsetHeight];
+              
+              // Рассчитываем зум на основе размеров карты и границ
+              const worldSize = 256; // Размер тайла в пикселях
+              const latDiff = bounds.getNorth() - bounds.getSouth();
+              const lonDiff = bounds.getEast() - bounds.getWest();
+              
+              // Преобразуем градусы в пиксели на разных уровнях зума
+              for (let zoom = MAX_ZOOM; zoom >= MIN_ZOOM; zoom--) {
+                const pixelsPerDegree = worldSize * Math.pow(2, zoom) / 360;
+                const widthInPixels = lonDiff * pixelsPerDegree;
+                const heightInPixels = latDiff * pixelsPerDegree;
+                
+                if (widthInPixels <= mapSize[0] * 0.8 && heightInPixels <= mapSize[1] * 0.8) {
+                  initialZoom = zoom - 1; // Немного отдаляем для лучшего обзора
+                  break;
+                }
+              }
             }
             
             // Ограничения для области карты
@@ -1548,6 +1709,7 @@
               position: { right: 10, top: 100 }
             });
             
+            // Добавляем геолокацию, но скрываем стандартную кнопку (используем свою)
             map.controls.add('geolocationControl', {
               float: 'none',
               position: { right: 10, top: 150 }
@@ -1574,8 +1736,13 @@
               setTimeout(() => {
                 const friendPositions = friends.filter(f => f.position).map(f => f.position);
                 if (friendPositions.length > 0) {
-                  const bounds = ymaps.util.bounds.fromPoints(friendPositions);
-                  map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 50 });
+                  // Используем правильный метод для установки границ
+                  const bounds = new ymaps.util.Bounds();
+                  friendPositions.forEach(pos => bounds.extend(pos));
+                  
+                  if (bounds.isValid()) {
+                    map.setBounds(bounds.toArray(), { checkZoomRange: true, zoomMargin: 50 });
+                  }
                 }
               }, 1000);
             }
@@ -1584,9 +1751,12 @@
             
             // Запрашиваем геолокацию после инициализации карты
             setTimeout(() => {
-              requestGeolocationPermission().then(hasPermission => {
-                if (hasPermission) {
-                  updateLocation();
+              requestGeolocationPermission().then(permissionGranted => {
+                if (permissionGranted) {
+                  hasGeolocationPermission = true;
+                  console.log('✅ Разрешение на геолокацию получено');
+                } else {
+                  console.log('❌ Разрешение на геолокацию не получено');
                 }
               });
             }, 1000);
@@ -1661,7 +1831,14 @@
       }
       
       // Если пользователь скрыт - не показываем его на карте
-      if (isIncognitoMode || !currentUser.position) {
+      if (isIncognitoMode) {
+        currentUserPlacemark = null;
+        return;
+      }
+      
+      // Используем текущую геопозицию или сохраненную
+      const position = userPosition || currentUser.position;
+      if (!position) {
         currentUserPlacemark = null;
         return;
       }
@@ -1672,7 +1849,7 @@
       const statusText = isIncognitoMode ? 'Скрыт' : 'Ваше местоположение';
       
       currentUserPlacemark = new ymaps.Placemark(
-        currentUser.position,
+        position,
         {
           balloonContent: `
             <div style="padding: 10px; min-width: 200px;">
@@ -1743,7 +1920,10 @@
         if (displaySettings.online && user.status !== 'online') return false;
         
         // Фильтр по расстоянию
-        if (filterSettings.nearby && currentUser.position) {
+        if (filterSettings.nearby && userPosition) {
+          const distance = calculateDistance(userPosition, user.position);
+          if (distance > filterSettings.radius) return false;
+        } else if (filterSettings.nearby && currentUser.position) {
           const distance = calculateDistance(currentUser.position, user.position);
           if (distance > filterSettings.radius) return false;
         }
@@ -1882,7 +2062,7 @@
       console.log('Создание новой встречи...');
       
       // Проверяем, есть ли у пользователя текущее местоположение
-      if (!currentUser || !currentUser.position) {
+      if (!currentUser) {
         showTempMessage('Не удалось определить ваше местоположение. Включите геолокацию.');
         return;
       }
@@ -1903,89 +2083,19 @@
           updateTimer--;
           document.getElementById('update-timer').textContent = updateTimer;
           if (updateTimer <= 0) {
-            updateLocation();
+            // Обновляем карту
+            updateMap();
             updateTimer = 30;
           }
         }, 1000);
       }
     }
     
-    function updateLocation() {
-      if (!currentUser || !navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          const coords = [position.coords.latitude, position.coords.longitude];
-          UserSystem.updateUserPosition(currentUser.id, coords);
-          currentUser = UserSystem.getCurrentUser();
-          checkNearbyFriends();
-          updateMap();
-        },
-        error => {
-          console.log('📍 Геолокация недоступна');
-        },
-        { enableHighAccuracy: false, timeout: 5000 }
-      );
-    }
-    
-    function checkNearbyFriends() {
-      if (!currentUser || !currentUser.position) return;
-      const friends = UserSystem.getUserFriends(currentUser.id);
-      const radius = filterSettings.radius;
-      const nearbyFriends = friends.filter(friend => {
-        if (!friend.position || friend.invisible) return false;
-        const distance = calculateDistance(currentUser.position, friend.position);
-        return distance <= radius;
-      });
-      if (nearbyFriends.length > 0) {
-        showNearbyNotification(nearbyFriends);
-      }
-    }
-    
-    function showNearbyNotification(friends) {
-      const notification = document.createElement('div');
-      notification.className = 'nearby-notification';
-      notification.innerHTML = `
-        <span class="material-icons">group</span>
-        <div>
-          <strong>Друзья поблизости!</strong><br>
-          ${friends.length} ${getRussianPlural(friends.length, ['друг', 'друга', 'друзей'])} рядом с вами
-        </div>
-        <button onclick="this.parentElement.remove()" style="margin-left: auto; background: none; border: none; color: white; cursor: pointer;">
-          <span class="material-icons">close</span>
-        </button>
-      `;
-      document.body.appendChild(notification);
-      setTimeout(() => {
-        if (notification.parentNode) notification.remove();
-      }, 5000);
-    }
-    
-    function getRussianPlural(number, forms) {
-      const cases = [2, 0, 1, 1, 1, 2];
-      return forms[(number % 100 > 4 && number % 100 < 20) ? 2 : cases[Math.min(number % 10, 5)]];
-    }
-    
-    // Функция для центрирования на пользователе
-    function centerOnUser() {
-      if (!currentUser || !currentUser.position || !map) return;
-      
-      const TARGET_ZOOM = 15;
-      
-      try {
-        map.setCenter(currentUser.position, TARGET_ZOOM, {
-          duration: 1000,
-          timingFunction: 'ease-in-out'
-        });
-        
-        highlightUserLocation();
-      } catch (error) {
-        console.error('Ошибка при центрировании:', error);
-        map.setCenter(currentUser.position, TARGET_ZOOM);
-      }
-    }
-    
     function highlightUserLocation() {
-      if (!currentUser || !currentUser.position || !map || typeof ymaps === 'undefined') return;
+      if (!map || typeof ymaps === 'undefined') return;
+      
+      const position = userPosition || (currentUser ? currentUser.position : null);
+      if (!position) return;
       
       // Удаляем предыдущую подсветку
       if (window.locationHighlight) {
@@ -1994,7 +2104,7 @@
       
       try {
         window.locationHighlight = new ymaps.Circle([
-          currentUser.position,
+          position,
           100
         ], {}, {
           fillColor: isIncognitoMode ? '#FF444433' : '#2CB4FF33',
@@ -2056,6 +2166,45 @@
       window.open('userProfile.html', '_blank');
     }
     
+    // Функция для проверки друзей поблизости
+    function checkNearbyFriends() {
+      if (!currentUser || !userPosition) return;
+      const friends = UserSystem.getUserFriends(currentUser.id);
+      const radius = filterSettings.radius;
+      const nearbyFriends = friends.filter(friend => {
+        if (!friend.position || friend.invisible) return false;
+        const distance = calculateDistance(userPosition, friend.position);
+        return distance <= radius;
+      });
+      if (nearbyFriends.length > 0) {
+        showNearbyNotification(nearbyFriends);
+      }
+    }
+    
+    function showNearbyNotification(friends) {
+      const notification = document.createElement('div');
+      notification.className = 'nearby-notification';
+      notification.innerHTML = `
+        <span class="material-icons">group</span>
+        <div>
+          <strong>Друзья поблизости!</strong><br>
+          ${friends.length} ${getRussianPlural(friends.length, ['друг', 'друга', 'друзей'])} рядом с вами
+        </div>
+        <button onclick="this.parentElement.remove()" style="margin-left: auto; background: none; border: none; color: white; cursor: pointer;">
+          <span class="material-icons">close</span>
+        </button>
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => {
+        if (notification.parentNode) notification.remove();
+      }, 5000);
+    }
+    
+    function getRussianPlural(number, forms) {
+      const cases = [2, 0, 1, 1, 1, 2];
+      return forms[(number % 100 > 4 && number % 100 < 20) ? 2 : cases[Math.min(number % 10, 5)]];
+    }
+    
     // Функция для построения маршрута до пользователя
     function buildRouteToUser(userId) {
       const user = UserSystem.getUserById(userId);
@@ -2075,8 +2224,14 @@
     
     // Функция для построения маршрута до позиции
     function buildRouteToPosition(position, name) {
-      if (!map || !currentUser || !currentUser.position || typeof ymaps === 'undefined') {
+      if (!map || typeof ymaps === 'undefined') {
         showTempMessage('Не удалось построить маршрут: данные о местоположении отсутствуют');
+        return;
+      }
+      
+      const startPosition = userPosition || (currentUser ? currentUser.position : null);
+      if (!startPosition) {
+        showTempMessage('Не удалось построить маршрут: ваше местоположение неизвестно');
         return;
       }
       
@@ -2087,7 +2242,7 @@
       try {
         currentRoute = new ymaps.multiRouter.MultiRoute({
           referencePoints: [
-            currentUser.position,
+            startPosition,
             position
           ],
           params: {
@@ -2210,9 +2365,15 @@
       }
       
       const [lat, lon] = selectedMeeting.position;
+      const startPosition = userPosition || (currentUser ? currentUser.position : null);
+      
+      if (!startPosition) {
+        showTempMessage('Не удалось начать навигацию: ваше местоположение неизвестно');
+        return;
+      }
       
       // Проверяем, установлено ли приложение Яндекс.Карты
-      const yandexMapsUrl = `yandexmaps://maps.yandex.ru/?rtext=${currentUser.position[0]},${currentUser.position[1]}~${lat},${lon}&rtt=auto`;
+      const yandexMapsUrl = `yandexmaps://maps.yandex.ru/?rtext=${startPosition[0]},${startPosition[1]}~${lat},${lon}&rtt=auto`;
       const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}&travelmode=driving`;
       
       // Пробуем открыть Яндекс.Карты
@@ -2511,50 +2672,31 @@
         });
       });
       
-      // Исправленная кнопка навигатора для мобильных устройств
+      // Исправленная кнопка геолокации
       document.getElementById('btn-locate').addEventListener('click', function() {
         if (!navigator.geolocation) {
           showTempMessage('Геолокация не поддерживается вашим устройством');
           return;
         }
         
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const coords = [position.coords.latitude, position.coords.longitude];
-            if (currentUser) {
-              UserSystem.updateUserPosition(currentUser.id, coords);
-              currentUser = UserSystem.getCurrentUser();
-            }
-            if (map) {
-              const TARGET_ZOOM = 15;
-              map.setCenter(coords, TARGET_ZOOM, {
-                duration: 1000,
-                timingFunction: 'ease-in-out'
-              });
-              highlightUserLocation();
+        // Если уже есть разрешение, сразу получаем геолокацию
+        if (hasGeolocationPermission) {
+          getUserLocation()
+            .then(() => {
+              showTempMessage('Карта центрирована на вашем местоположении');
+            })
+            .catch(() => {
+              showTempMessage('Не удалось определить ваше местоположение');
+            });
+        } else {
+          // Запрашиваем разрешение
+          requestGeolocationPermission().then(permissionGranted => {
+            if (permissionGranted) {
+              hasGeolocationPermission = true;
               showTempMessage('Карта центрирована на вашем местоположении');
             }
-          },
-          (error) => {
-            console.error('Геолокация ошибка:', error);
-            if (currentUser && currentUser.position && map) {
-              const TARGET_ZOOM = 15;
-              map.setCenter(currentUser.position, TARGET_ZOOM, {
-                duration: 1000,
-                timingFunction: 'ease-in-out'
-              });
-              highlightUserLocation();
-              showTempMessage('Используется последнее известное местоположение');
-            } else {
-              showTempMessage('Не удалось определить ваше местоположение. Проверьте настройки геолокации.');
-            }
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 60000
-          }
-        );
+          });
+        }
       });
       
       // Фильтры (теперь слева сверху)
@@ -2615,6 +2757,7 @@
       
       radiusSlider.addEventListener('change', function() {
         updateMap();
+        checkNearbyFriends();
       });
       
       // Настройки отображения
@@ -2746,6 +2889,17 @@
       window.addEventListener('orientationchange', function() {
         setTimeout(adjustLayout, 300);
       });
+      
+      // Для мобильных устройств в APK: пытаемся сразу запросить геолокацию
+      // при загрузке приложения (только если ранее разрешили)
+      setTimeout(() => {
+        const permissionAsked = localStorage.getItem('meetup_geolocation_asked');
+        if (permissionAsked === 'allowed') {
+          getUserLocation().catch(() => {
+            // Игнорируем ошибки при автоматическом запросе
+          });
+        }
+      }, 2000);
     }
     
     function saveFilterSettings() {
@@ -2756,6 +2910,12 @@
       if (autoUpdateInterval) {
         clearInterval(autoUpdateInterval);
       }
+      
+      // Останавливаем отслеживание геолокации
+      if (geolocationWatchId !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(geolocationWatchId);
+      }
+      
       saveFilterSettings();
       saveDisplaySettings();
     });
