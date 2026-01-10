@@ -633,6 +633,29 @@
     // Переменная для метки текущего пользователя
     let currentUserPlacemark = null;
     
+    // Функции-заглушки для отсутствующих модулей
+    window.ChatSystem = window.ChatSystem || {
+      getUserChats: () => [],
+      getLastMessage: () => ({ text: '', timestamp: Date.now() }),
+      formatTime: () => '',
+      getUnreadCount: () => 0,
+      createChat: () => ({ id: Date.now().toString(), participants: [] })
+    };
+    
+    window.Pedometer = window.Pedometer || {
+      isSupported: () => false,
+      initialize: () => {},
+      getStats: () => ({
+        today: 0,
+        week: 0,
+        month: 0,
+        distanceToday: 0,
+        goal: 10000,
+        goalProgress: 0
+      }),
+      simulateSteps: () => 50
+    };
+    
     function initializeMap() {
       const mapElement = document.getElementById('map');
       const placeholder = document.getElementById('map-placeholder');
@@ -663,15 +686,21 @@
             let initialCenter = defaultPosition;
             let initialZoom = DEFAULT_ZOOM;
             
+            // Упрощенная логика расчета центра и зума
             if (positions.length > 1) {
-              const collection = new ymaps.GeoObjectCollection(null, {}, { preset: 'islands#blueCircleDotIcon' });
-              positions.forEach(pos => { collection.add(new ymaps.Placemark(pos)); });
-              const bounds = ymaps.util.bounds.fromPoints(positions);
-              const mapSize = [ mapElement.offsetWidth, mapElement.offsetHeight ];
-              const center = ymaps.geoQuery(positions).getCenter();
-              if (center) initialCenter = center;
-              const zoom = ymaps.util.bounds.getZoom(bounds, mapSize);
-              initialZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom - 0.5));
+              // Простой расчет центра
+              let sumLat = 0, sumLon = 0;
+              positions.forEach(pos => {
+                sumLat += pos[0];
+                sumLon += pos[1];
+              });
+              initialCenter = [sumLat / positions.length, sumLon / positions.length];
+              
+              // Простой расчет приблизительного зума
+              const latDiff = Math.max(...positions.map(p => p[0])) - Math.min(...positions.map(p => p[0]));
+              const lonDiff = Math.max(...positions.map(p => p[1])) - Math.min(...positions.map(p => p[1]));
+              const maxDiff = Math.max(latDiff, lonDiff);
+              initialZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, DEFAULT_ZOOM - Math.log2(maxDiff * 100)));
             }
             
             // Ограничения для области карты
@@ -755,8 +784,12 @@
               setTimeout(() => {
                 const friendPositions = friends.filter(f => f.position).map(f => f.position);
                 if (friendPositions.length > 0) {
-                  const bounds = ymaps.util.bounds.fromPoints(friendPositions);
-                  map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 50 });
+                  try {
+                    const bounds = ymaps.util.bounds.fromPoints(friendPositions);
+                    map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 50 });
+                  } catch (error) {
+                    console.log('Не удалось установить границы карты:', error);
+                  }
                 }
               }, 1000);
             }
@@ -764,7 +797,6 @@
             console.log('✅ Карта успешно инициализирована');
             startAutoUpdate();
             updateChatNotificationCount();
-            setInterval(updateChatNotificationCount, 30000);
             
           } catch (error) {
             console.error('❌ Ошибка при инициализации карты:', error);
@@ -1262,13 +1294,17 @@
     
     function updateChatNotificationCount() {
       if (!currentUser) return;
-      const unreadCount = ChatSystem.getUnreadCount(currentUser.id);
-      const badge = document.getElementById('chat-notification-badge');
-      if (unreadCount > 0) {
-        badge.textContent = unreadCount;
-        badge.style.display = 'flex';
-      } else {
-        badge.style.display = 'none';
+      try {
+        const unreadCount = ChatSystem.getUnreadCount(currentUser.id);
+        const badge = document.getElementById('chat-notification-badge');
+        if (unreadCount > 0) {
+          badge.textContent = unreadCount;
+          badge.style.display = 'flex';
+        } else {
+          badge.style.display = 'none';
+        }
+      } catch (error) {
+        console.log('ChatSystem не доступен');
       }
     }
     
@@ -1546,11 +1582,11 @@
         const displayPanel = document.getElementById('display-panel');
         const displayBtn = document.getElementById('btn-display-mode');
         
-        if (!filterPanel.contains(event.target)) {
+        if (filterPanel && !filterPanel.contains(event.target)) {
           filterPanel.classList.remove('active');
         }
         
-        if (!displayPanel.contains(event.target) && !displayBtn.contains(event.target)) {
+        if (displayPanel && !displayPanel.contains(event.target) && displayBtn && !displayBtn.contains(event.target)) {
           displayPanel.classList.remove('active');
         }
       });
@@ -1599,7 +1635,6 @@
       setTimeout(initializeMap, 500);
       
       updateChatNotificationCount();
-      setInterval(updateChatNotificationCount, 30000);
       
       window.addEventListener('resize', adjustLayout);
       window.addEventListener('orientationchange', function() {
