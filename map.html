@@ -377,6 +377,170 @@
       margin-bottom: 20px;
     }
     
+    /* Окно создания встречи */
+    .event-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(5px);
+    }
+    .event-overlay.active {
+      display: flex;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .event-container {
+      width: 90%;
+      max-width: 500px;
+      background: var(--container);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .event-header {
+      background: linear-gradient(135deg, #FF9800 0%, #FF5722 100%);
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .event-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: white;
+    }
+    
+    .event-close-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .event-close-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: rotate(90deg);
+    }
+    
+    .event-content {
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    
+    .event-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .form-group label {
+      font-size: 14px;
+      color: var(--text-light);
+      font-weight: 500;
+    }
+    
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: white;
+      font-size: 14px;
+    }
+    
+    .form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    
+    .friends-list {
+      max-height: 150px;
+      overflow-y: auto;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 10px;
+    }
+    
+    .friend-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    
+    .friend-checkbox:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .friend-checkbox input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #FF9800;
+    }
+    
+    .event-actions {
+      display: flex;
+      gap: 15px;
+      padding: 20px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .event-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-cancel {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+    
+    .btn-create {
+      background: linear-gradient(135deg, #FF9800 0%, #FF5722 100%);
+      color: white;
+    }
+    
+    .event-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    
     /* Стиль для метки призрака на карте */
     .ghost-marker {
       filter: grayscale(100%) brightness(150%);
@@ -525,6 +689,11 @@
           <span class="material-icons">person_add</span>
           <span>Добавить друга</span>
         </button>
+        <!-- Оранжевая кнопка создания встречи -->
+        <button class="fab-primary" id="btn-create-event" style="background: linear-gradient(135deg, #FF9800 0%, #FF5722 100%);">
+          <span class="material-icons">event</span>
+          <span>Создать встречу</span>
+        </button>
       </div>
     </div>
   </div>
@@ -565,6 +734,66 @@
           <span class="material-icons">close</span>
           Закрыть
         </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Окно создания встречи -->
+  <div class="event-overlay" id="event-overlay">
+    <div class="event-container">
+      <div class="event-header">
+        <div class="event-title">Создание встречи</div>
+        <button class="event-close-btn" id="event-close-btn">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="event-content">
+        <div class="event-form">
+          <div class="form-group">
+            <label for="event-title">Название встречи</label>
+            <input type="text" id="event-title-input" placeholder="Например: Кофе в центре">
+          </div>
+          <div class="form-group">
+            <label for="event-description">Описание</label>
+            <textarea id="event-description" placeholder="О чем будет встреча?"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="event-date">Дата и время</label>
+            <input type="datetime-local" id="event-date">
+          </div>
+          <div class="form-group">
+            <label for="event-location">Место встречи</label>
+            <input type="text" id="event-location" placeholder="Адрес или место на карте">
+          </div>
+          <div class="form-group">
+            <label for="event-type">Тип встречи</label>
+            <select id="event-type">
+              <option value="casual">Неформальная</option>
+              <option value="business">Деловая</option>
+              <option value="party">Вечеринка</option>
+              <option value="sport">Спорт</option>
+              <option value="education">Образование</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="event-privacy">Приватность</label>
+            <select id="event-privacy">
+              <option value="public">Публичная</option>
+              <option value="friends">Только друзья</option>
+              <option value="private">Приватная</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Пригласить друзей</label>
+            <div id="friends-list" class="friends-list">
+              <!-- Список друзей для выбора -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="event-actions">
+        <button class="event-btn btn-cancel" id="event-cancel-btn">Отмена</button>
+        <button class="event-btn btn-create" id="event-create-btn">Создать встречу</button>
       </div>
     </div>
   </div>
@@ -655,6 +884,80 @@
       }),
       simulateSteps: () => 50
     };
+    
+    // Функция для открытия окна создания встречи
+    function openEventWindow() {
+      const overlay = document.getElementById('event-overlay');
+      overlay.classList.add('active');
+      loadFriendsForEvent();
+    }
+    
+    // Функция для закрытия окна создания встречи
+    function closeEventWindow() {
+      const overlay = document.getElementById('event-overlay');
+      overlay.classList.remove('active');
+    }
+    
+    // Функция для загрузки друзей в окно создания встречи
+    function loadFriendsForEvent() {
+      if (!currentUser) return;
+      
+      const friendsList = document.getElementById('friends-list');
+      const friends = UserSystem.getUserFriends(currentUser.id);
+      
+      if (friends.length === 0) {
+        friendsList.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">У вас пока нет друзей</div>';
+        return;
+      }
+      
+      let friendsHTML = '';
+      friends.forEach(friend => {
+        friendsHTML += `
+          <label class="friend-checkbox">
+            <input type="checkbox" name="invited-friends" value="${friend.id}">
+            <span>${friend.nickname || 'Пользователь'}</span>
+          </label>
+        `;
+      });
+      
+      friendsList.innerHTML = friendsHTML;
+    }
+    
+    // Функция для создания встречи
+    function createEvent() {
+      const title = document.getElementById('event-title-input').value.trim();
+      const description = document.getElementById('event-description').value.trim();
+      const date = document.getElementById('event-date').value;
+      const location = document.getElementById('event-location').value.trim();
+      const type = document.getElementById('event-type').value;
+      const privacy = document.getElementById('event-privacy').value;
+      
+      if (!title || !date || !location) {
+        showTempMessage('Заполните обязательные поля: название, дата и место');
+        return;
+      }
+      
+      // Собираем приглашенных друзей
+      const invitedFriends = [];
+      document.querySelectorAll('input[name="invited-friends"]:checked').forEach(checkbox => {
+        invitedFriends.push(checkbox.value);
+      });
+      
+      // Здесь будет логика сохранения встречи
+      // Например: EventSystem.createEvent({ title, description, date, location, type, privacy, invitedFriends, creatorId: currentUser.id });
+      
+      showTempMessage('Встреча "' + title + '" создана!');
+      closeEventWindow();
+      
+      // Очистка формы
+      document.getElementById('event-title-input').value = '';
+      document.getElementById('event-description').value = '';
+      document.getElementById('event-date').value = '';
+      document.getElementById('event-location').value = '';
+      document.querySelectorAll('input[name="invited-friends"]').forEach(checkbox => {
+        checkbox.checked = false;
+      });
+    }
     
     function initializeMap() {
       const mapElement = document.getElementById('map');
@@ -1460,6 +1763,14 @@
         window.location.href = 'addfriend.html';
       });
       
+      // Кнопка создания встречи
+      document.getElementById('btn-create-event').addEventListener('click', openEventWindow);
+      
+      // Кнопки окна создания встречи
+      document.getElementById('event-close-btn').addEventListener('click', closeEventWindow);
+      document.getElementById('event-cancel-btn').addEventListener('click', closeEventWindow);
+      document.getElementById('event-create-btn').addEventListener('click', createEvent);
+      
       document.getElementById('btn-locate').addEventListener('click', function() {
         if (!navigator.geolocation) { return; }
         navigator.geolocation.getCurrentPosition(
@@ -1581,6 +1892,9 @@
         const filterPanel = document.getElementById('filter-panel');
         const displayPanel = document.getElementById('display-panel');
         const displayBtn = document.getElementById('btn-display-mode');
+        const eventOverlay = document.getElementById('event-overlay');
+        const eventCloseBtn = document.getElementById('event-close-btn');
+        const eventCancelBtn = document.getElementById('event-cancel-btn');
         
         if (filterPanel && !filterPanel.contains(event.target)) {
           filterPanel.classList.remove('active');
@@ -1588,6 +1902,14 @@
         
         if (displayPanel && !displayPanel.contains(event.target) && displayBtn && !displayBtn.contains(event.target)) {
           displayPanel.classList.remove('active');
+        }
+        
+        // Закрытие окна создания встречи при клике вне
+        if (eventOverlay && eventOverlay.classList.contains('active')) {
+          const eventContainer = document.querySelector('.event-container');
+          if (eventContainer && !eventContainer.contains(event.target)) {
+            closeEventWindow();
+          }
         }
       });
     }
