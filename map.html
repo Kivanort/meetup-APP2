@@ -888,6 +888,10 @@
     // Функция для открытия окна создания встречи
     function openEventWindow() {
       const overlay = document.getElementById('event-overlay');
+      if (!overlay) {
+        console.error('Элемент event-overlay не найден!');
+        return;
+      }
       overlay.classList.add('active');
       loadFriendsForEvent();
     }
@@ -895,7 +899,9 @@
     // Функция для закрытия окна создания встречи
     function closeEventWindow() {
       const overlay = document.getElementById('event-overlay');
-      overlay.classList.remove('active');
+      if (overlay) {
+        overlay.classList.remove('active');
+      }
     }
     
     // Функция для загрузки друзей в окно создания встречи
@@ -903,6 +909,8 @@
       if (!currentUser) return;
       
       const friendsList = document.getElementById('friends-list');
+      if (!friendsList) return;
+      
       const friends = UserSystem.getUserFriends(currentUser.id);
       
       if (friends.length === 0) {
@@ -925,12 +933,22 @@
     
     // Функция для создания встречи
     function createEvent() {
-      const title = document.getElementById('event-title-input').value.trim();
-      const description = document.getElementById('event-description').value.trim();
-      const date = document.getElementById('event-date').value;
-      const location = document.getElementById('event-location').value.trim();
-      const type = document.getElementById('event-type').value;
-      const privacy = document.getElementById('event-privacy').value;
+      const titleInput = document.getElementById('event-title-input');
+      const descriptionInput = document.getElementById('event-description');
+      const dateInput = document.getElementById('event-date');
+      const locationInput = document.getElementById('event-location');
+      
+      if (!titleInput || !dateInput || !locationInput) {
+        showTempMessage('Ошибка: некоторые поля формы не найдены');
+        return;
+      }
+      
+      const title = titleInput.value.trim();
+      const description = descriptionInput ? descriptionInput.value.trim() : '';
+      const date = dateInput.value;
+      const location = locationInput.value.trim();
+      const type = document.getElementById('event-type') ? document.getElementById('event-type').value : 'casual';
+      const privacy = document.getElementById('event-privacy') ? document.getElementById('event-privacy').value : 'public';
       
       if (!title || !date || !location) {
         showTempMessage('Заполните обязательные поля: название, дата и место');
@@ -939,7 +957,8 @@
       
       // Собираем приглашенных друзей
       const invitedFriends = [];
-      document.querySelectorAll('input[name="invited-friends"]:checked').forEach(checkbox => {
+      const checkboxes = document.querySelectorAll('input[name="invited-friends"]:checked');
+      checkboxes.forEach(checkbox => {
         invitedFriends.push(checkbox.value);
       });
       
@@ -950,10 +969,10 @@
       closeEventWindow();
       
       // Очистка формы
-      document.getElementById('event-title-input').value = '';
-      document.getElementById('event-description').value = '';
-      document.getElementById('event-date').value = '';
-      document.getElementById('event-location').value = '';
+      titleInput.value = '';
+      if (descriptionInput) descriptionInput.value = '';
+      dateInput.value = '';
+      locationInput.value = '';
       document.querySelectorAll('input[name="invited-friends"]').forEach(checkbox => {
         checkbox.checked = false;
       });
@@ -1145,14 +1164,16 @@
       const btn = document.getElementById('btn-incognito');
       const icon = document.getElementById('incognito-icon');
       
-      if (isIncognitoMode) {
-        btn.classList.add('active');
-        btn.title = 'Режим инкогнито включен';
-        icon.textContent = 'visibility_off'; // Оставляем иконку видимости
-      } else {
-        btn.classList.remove('active');
-        btn.title = 'Режим инкогнито';
-        icon.textContent = 'visibility_off';
+      if (btn && icon) {
+        if (isIncognitoMode) {
+          btn.classList.add('active');
+          btn.title = 'Режим инкогнито включен';
+          icon.textContent = 'visibility_off'; // Оставляем иконку видимости
+        } else {
+          btn.classList.remove('active');
+          btn.title = 'Режим инкогнито';
+          icon.textContent = 'visibility_off';
+        }
       }
     }
     
@@ -1369,11 +1390,17 @@
     function startAutoUpdate() {
       const autoUpdate = localStorage.getItem('meetup_auto_update') !== 'false';
       if (autoUpdate) {
-        document.getElementById('auto-update-indicator').style.display = 'flex';
+        const indicator = document.getElementById('auto-update-indicator');
+        if (indicator) {
+          indicator.style.display = 'flex';
+        }
         updateTimer = 30;
         autoUpdateInterval = setInterval(() => {
           updateTimer--;
-          document.getElementById('update-timer').textContent = updateTimer;
+          const timerEl = document.getElementById('update-timer');
+          if (timerEl) {
+            timerEl.textContent = updateTimer;
+          }
           if (updateTimer <= 0) {
             updateLocation();
             updateTimer = 30;
@@ -1503,18 +1530,22 @@
     
     function openChatsWindow() {
       const overlay = document.getElementById('chat-overlay');
-      overlay.classList.add('active');
-      loadChats();
+      if (overlay) {
+        overlay.classList.add('active');
+        loadChats();
+      }
     }
     
     function closeChatsWindow() {
       const overlay = document.getElementById('chat-overlay');
-      overlay.classList.remove('active');
+      if (overlay) {
+        overlay.classList.remove('active');
+      }
     }
     
     function loadChats() {
       const chatList = document.getElementById('chat-list');
-      if (!currentUser) return;
+      if (!currentUser || !chatList) return;
       
       const chats = ChatSystem.getUserChats(currentUser.id);
       const friends = UserSystem.getUserFriends(currentUser.id);
@@ -1600,11 +1631,13 @@
       try {
         const unreadCount = ChatSystem.getUnreadCount(currentUser.id);
         const badge = document.getElementById('chat-notification-badge');
-        if (unreadCount > 0) {
-          badge.textContent = unreadCount;
-          badge.style.display = 'flex';
-        } else {
-          badge.style.display = 'none';
+        if (badge) {
+          if (unreadCount > 0) {
+            badge.textContent = unreadCount;
+            badge.style.display = 'flex';
+          } else {
+            badge.style.display = 'none';
+          }
         }
       } catch (error) {
         console.log('ChatSystem не доступен');
@@ -1614,6 +1647,8 @@
     function openPedometerWindow() {
       const overlay = document.getElementById('pedometer-overlay');
       const content = document.getElementById('pedometer-content');
+      
+      if (!overlay || !content) return;
       
       // Проверяем поддержку шагомера
       if (!Pedometer.isSupported()) {
@@ -1682,20 +1717,29 @@
       overlay.classList.add('active');
       
       // Обработчики кнопок шагомера
-      document.getElementById('pedometer-start-btn')?.addEventListener('click', function() {
-        showTempMessage('Шагомер запущен. Носите устройство с собой для отслеживания шагов.');
-      });
+      const startBtn = document.getElementById('pedometer-start-btn');
+      const simulateBtn = document.getElementById('pedometer-simulate-btn');
+      const closeBtn = document.getElementById('pedometer-close-btn');
       
-      document.getElementById('pedometer-simulate-btn')?.addEventListener('click', function() {
-        const steps = Pedometer.simulateSteps();
-        showTempMessage(`Добавлено ${steps} тестовых шагов`);
-        updatePedometerStats();
-      });
+      if (startBtn) {
+        startBtn.addEventListener('click', function() {
+          showTempMessage('Шагомер запущен. Носите устройство с собой для отслеживания шагов.');
+        });
+      }
       
-      // Обработчик закрытия шагомера
-      document.getElementById('pedometer-close-btn').addEventListener('click', function() {
-        closePedometerWindow();
-      });
+      if (simulateBtn) {
+        simulateBtn.addEventListener('click', function() {
+          const steps = Pedometer.simulateSteps();
+          showTempMessage(`Добавлено ${steps} тестовых шагов`);
+          updatePedometerStats();
+        });
+      }
+      
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+          closePedometerWindow();
+        });
+      }
       
       // Обновляем статистику каждые 5 секунд
       window.addEventListener('pedometerUpdate', updatePedometerStats);
@@ -1726,7 +1770,9 @@
     
     function closePedometerWindow() {
       const overlay = document.getElementById('pedometer-overlay');
-      overlay.classList.remove('active');
+      if (overlay) {
+        overlay.classList.remove('active');
+      }
       window.removeEventListener('pedometerUpdate', updatePedometerStats);
     }
     
@@ -1740,152 +1786,240 @@
         displaySettings = { ...displaySettings, ...JSON.parse(saved) };
         
         // Применяем настройки к элементам
-        document.getElementById('display-all').checked = displaySettings.all;
-        document.getElementById('display-friends').checked = displaySettings.friends;
-        document.getElementById('display-online').checked = displaySettings.online;
-        document.getElementById('display-new').checked = displaySettings.new;
-        
+        const displayAll = document.getElementById('display-all');
+        const displayFriends = document.getElementById('display-friends');
+        const displayOnline = document.getElementById('display-online');
+        const displayNew = document.getElementById('display-new');
         const markerSelect = document.getElementById('friend-marker-select');
+        
+        if (displayAll) displayAll.checked = displaySettings.all;
+        if (displayFriends) displayFriends.checked = displaySettings.friends;
+        if (displayOnline) displayOnline.checked = displaySettings.online;
+        if (displayNew) displayNew.checked = displaySettings.new;
+        
         if (markerSelect) {
           markerSelect.value = displaySettings.friendMarker;
-          document.getElementById('friend-marker-style').textContent = 
-            markerSelect.options[markerSelect.selectedIndex].text;
+          const markerStyle = document.getElementById('friend-marker-style');
+          if (markerStyle) {
+            markerStyle.textContent = markerSelect.options[markerSelect.selectedIndex].text;
+          }
         }
       }
     }
     
     function initializeEventHandlers() {
-      document.getElementById('btn-profile').addEventListener('click', function() {
-        window.location.href = 'profile.html';
-      });
+      // Кнопка профиля
+      const btnProfile = document.getElementById('btn-profile');
+      if (btnProfile) {
+        btnProfile.addEventListener('click', function() {
+          window.location.href = 'profile.html';
+        });
+      }
       
-      document.getElementById('btn-add-friend').addEventListener('click', function() {
-        window.location.href = 'addfriend.html';
-      });
+      // Кнопка добавления друга
+      const btnAddFriend = document.getElementById('btn-add-friend');
+      if (btnAddFriend) {
+        btnAddFriend.addEventListener('click', function() {
+          window.location.href = 'addfriend.html';
+        });
+      }
       
-      // Кнопка создания встречи
-      document.getElementById('btn-create-event').addEventListener('click', openEventWindow);
+      // Кнопка создания встречи - ОСНОВНОЙ ИСПРАВЛЕНИЕ!
+      const btnCreateEvent = document.getElementById('btn-create-event');
+      if (btnCreateEvent) {
+        btnCreateEvent.addEventListener('click', function() {
+          console.log('Кнопка создания встречи нажата!');
+          openEventWindow();
+        });
+      } else {
+        console.error('Кнопка btn-create-event не найдена!');
+      }
       
       // Кнопки окна создания встречи
-      document.getElementById('event-close-btn').addEventListener('click', closeEventWindow);
-      document.getElementById('event-cancel-btn').addEventListener('click', closeEventWindow);
-      document.getElementById('event-create-btn').addEventListener('click', createEvent);
+      const eventCloseBtn = document.getElementById('event-close-btn');
+      if (eventCloseBtn) {
+        eventCloseBtn.addEventListener('click', closeEventWindow);
+      }
       
-      document.getElementById('btn-locate').addEventListener('click', function() {
-        if (!navigator.geolocation) { return; }
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const coords = [position.coords.latitude, position.coords.longitude];
-            if (currentUser) {
-              UserSystem.updateUserPosition(currentUser.id, coords);
-              currentUser = UserSystem.getCurrentUser();
+      const eventCancelBtn = document.getElementById('event-cancel-btn');
+      if (eventCancelBtn) {
+        eventCancelBtn.addEventListener('click', closeEventWindow);
+      }
+      
+      const eventCreateBtn = document.getElementById('event-create-btn');
+      if (eventCreateBtn) {
+        eventCreateBtn.addEventListener('click', createEvent);
+      }
+      
+      // Кнопка геолокации
+      const btnLocate = document.getElementById('btn-locate');
+      if (btnLocate) {
+        btnLocate.addEventListener('click', function() {
+          if (!navigator.geolocation) { return; }
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const coords = [position.coords.latitude, position.coords.longitude];
+              if (currentUser) {
+                UserSystem.updateUserPosition(currentUser.id, coords);
+                currentUser = UserSystem.getCurrentUser();
+              }
+              if (map) {
+                const TARGET_ZOOM = 15;
+                map.setCenter(coords, TARGET_ZOOM, {
+                  duration: 1000,
+                  timingFunction: 'ease-in-out'
+                });
+                highlightUserLocation();
+              }
+            },
+            (error) => {
+              if (currentUser && currentUser.position && map) {
+                const TARGET_ZOOM = 15;
+                map.setCenter(currentUser.position, TARGET_ZOOM, {
+                  duration: 1000,
+                  timingFunction: 'ease-in-out'
+                });
+                highlightUserLocation();
+              }
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 60000
             }
-            if (map) {
-              const TARGET_ZOOM = 15;
-              map.setCenter(coords, TARGET_ZOOM, {
-                duration: 1000,
-                timingFunction: 'ease-in-out'
-              });
-              highlightUserLocation();
-            }
-          },
-          (error) => {
-            if (currentUser && currentUser.position && map) {
-              const TARGET_ZOOM = 15;
-              map.setCenter(currentUser.position, TARGET_ZOOM, {
-                duration: 1000,
-                timingFunction: 'ease-in-out'
-              });
-              highlightUserLocation();
-            }
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 60000
-          }
-        );
-      });
+          );
+        });
+      }
       
       // Чаты
-      document.getElementById('btn-chat').addEventListener('click', openChatsWindow);
-      document.getElementById('chat-close-btn').addEventListener('click', closeChatsWindow);
+      const btnChat = document.getElementById('btn-chat');
+      if (btnChat) {
+        btnChat.addEventListener('click', openChatsWindow);
+      }
       
-      // Шагомер - исправленная кнопка с человечком
-      document.getElementById('btn-pedometer').addEventListener('click', openPedometerWindow);
+      const chatCloseBtn = document.getElementById('chat-close-btn');
+      if (chatCloseBtn) {
+        chatCloseBtn.addEventListener('click', closeChatsWindow);
+      }
       
-      // Инкогнито (исправлено)
-      document.getElementById('btn-incognito').addEventListener('click', toggleIncognitoMode);
+      // Шагомер
+      const btnPedometer = document.getElementById('btn-pedometer');
+      if (btnPedometer) {
+        btnPedometer.addEventListener('click', openPedometerWindow);
+      }
+      
+      // Инкогнито
+      const btnIncognito = document.getElementById('btn-incognito');
+      if (btnIncognito) {
+        btnIncognito.addEventListener('click', toggleIncognitoMode);
+      }
       
       // Отображение
-      document.getElementById('btn-display-mode').addEventListener('click', function() {
-        const panel = document.getElementById('display-panel');
-        panel.classList.toggle('active');
-      });
+      const btnDisplayMode = document.getElementById('btn-display-mode');
+      if (btnDisplayMode) {
+        btnDisplayMode.addEventListener('click', function() {
+          const panel = document.getElementById('display-panel');
+          if (panel) {
+            panel.classList.toggle('active');
+          }
+        });
+      }
       
       // Фильтры
-      document.getElementById('filter-friends').addEventListener('change', function() {
-        filterSettings.friends = this.checked;
-        updateMap();
-      });
+      const filterFriends = document.getElementById('filter-friends');
+      if (filterFriends) {
+        filterFriends.addEventListener('change', function() {
+          filterSettings.friends = this.checked;
+          updateMap();
+        });
+      }
       
-      document.getElementById('filter-online').addEventListener('change', function() {
-        filterSettings.online = this.checked;
-        updateMap();
-      });
+      const filterOnline = document.getElementById('filter-online');
+      if (filterOnline) {
+        filterOnline.addEventListener('change', function() {
+          filterSettings.online = this.checked;
+          updateMap();
+        });
+      }
       
-      document.getElementById('filter-nearby').addEventListener('change', function() {
-        filterSettings.nearby = this.checked;
-        updateMap();
-      });
+      const filterNearby = document.getElementById('filter-nearby');
+      if (filterNearby) {
+        filterNearby.addEventListener('change', function() {
+          filterSettings.nearby = this.checked;
+          updateMap();
+        });
+      }
       
-      document.getElementById('filter-new').addEventListener('change', function() {
-        filterSettings.new = this.checked;
-        updateMap();
-      });
+      const filterNew = document.getElementById('filter-new');
+      if (filterNew) {
+        filterNew.addEventListener('change', function() {
+          filterSettings.new = this.checked;
+          updateMap();
+        });
+      }
       
       const radiusSlider = document.getElementById('radius-slider');
       const radiusValue = document.getElementById('radius-value');
-      radiusSlider.addEventListener('input', function() {
-        radiusValue.textContent = this.value;
-        filterSettings.radius = parseInt(this.value);
-      });
-      
-      radiusSlider.addEventListener('change', function() {
-        updateMap();
-      });
+      if (radiusSlider && radiusValue) {
+        radiusSlider.addEventListener('input', function() {
+          radiusValue.textContent = this.value;
+          filterSettings.radius = parseInt(this.value);
+        });
+        
+        radiusSlider.addEventListener('change', function() {
+          updateMap();
+        });
+      }
       
       // Настройки отображения
-      document.getElementById('display-all').addEventListener('change', function() {
-        displaySettings.all = this.checked;
-        updateMap();
-        saveDisplaySettings();
-      });
+      const displayAll = document.getElementById('display-all');
+      if (displayAll) {
+        displayAll.addEventListener('change', function() {
+          displaySettings.all = this.checked;
+          updateMap();
+          saveDisplaySettings();
+        });
+      }
       
-      document.getElementById('display-friends').addEventListener('change', function() {
-        displaySettings.friends = this.checked;
-        updateMap();
-        saveDisplaySettings();
-      });
+      const displayFriends = document.getElementById('display-friends');
+      if (displayFriends) {
+        displayFriends.addEventListener('change', function() {
+          displaySettings.friends = this.checked;
+          updateMap();
+          saveDisplaySettings();
+        });
+      }
       
-      document.getElementById('display-online').addEventListener('change', function() {
-        displaySettings.online = this.checked;
-        updateMap();
-        saveDisplaySettings();
-      });
+      const displayOnline = document.getElementById('display-online');
+      if (displayOnline) {
+        displayOnline.addEventListener('change', function() {
+          displaySettings.online = this.checked;
+          updateMap();
+          saveDisplaySettings();
+        });
+      }
       
-      document.getElementById('display-new').addEventListener('change', function() {
-        displaySettings.new = this.checked;
-        updateMap();
-        saveDisplaySettings();
-      });
+      const displayNew = document.getElementById('display-new');
+      if (displayNew) {
+        displayNew.addEventListener('change', function() {
+          displaySettings.new = this.checked;
+          updateMap();
+          saveDisplaySettings();
+        });
+      }
       
-      document.getElementById('friend-marker-select').addEventListener('change', function() {
-        displaySettings.friendMarker = this.value;
-        document.getElementById('friend-marker-style').textContent = this.options[this.selectedIndex].text;
-        updateMap();
-        saveDisplaySettings();
-      });
+      const friendMarkerSelect = document.getElementById('friend-marker-select');
+      if (friendMarkerSelect) {
+        friendMarkerSelect.addEventListener('change', function() {
+          displaySettings.friendMarker = this.value;
+          const markerStyle = document.getElementById('friend-marker-style');
+          if (markerStyle) {
+            markerStyle.textContent = this.options[this.selectedIndex].text;
+          }
+          updateMap();
+          saveDisplaySettings();
+        });
+      }
       
       // Закрытие панелей при клике вне
       document.addEventListener('click', function(event) {
@@ -1893,15 +2027,17 @@
         const displayPanel = document.getElementById('display-panel');
         const displayBtn = document.getElementById('btn-display-mode');
         const eventOverlay = document.getElementById('event-overlay');
-        const eventCloseBtn = document.getElementById('event-close-btn');
-        const eventCancelBtn = document.getElementById('event-cancel-btn');
         
+        // Закрытие панели фильтров
         if (filterPanel && !filterPanel.contains(event.target)) {
           filterPanel.classList.remove('active');
         }
         
-        if (displayPanel && !displayPanel.contains(event.target) && displayBtn && !displayBtn.contains(event.target)) {
-          displayPanel.classList.remove('active');
+        // Закрытие панели отображения
+        if (displayPanel && displayBtn) {
+          if (!displayPanel.contains(event.target) && !displayBtn.contains(event.target)) {
+            displayPanel.classList.remove('active');
+          }
         }
         
         // Закрытие окна создания встречи при клике вне
@@ -1938,12 +2074,19 @@
       const savedFilters = localStorage.getItem('meetup_map_filters');
       if (savedFilters) {
         filterSettings = { ...filterSettings, ...JSON.parse(savedFilters) };
-        document.getElementById('filter-friends').checked = filterSettings.friends;
-        document.getElementById('filter-online').checked = filterSettings.online;
-        document.getElementById('filter-nearby').checked = filterSettings.nearby;
-        document.getElementById('filter-new').checked = filterSettings.new;
-        document.getElementById('radius-slider').value = filterSettings.radius;
-        document.getElementById('radius-value').textContent = filterSettings.radius;
+        const filterFriends = document.getElementById('filter-friends');
+        const filterOnline = document.getElementById('filter-online');
+        const filterNearby = document.getElementById('filter-nearby');
+        const filterNew = document.getElementById('filter-new');
+        const radiusSlider = document.getElementById('radius-slider');
+        const radiusValue = document.getElementById('radius-value');
+        
+        if (filterFriends) filterFriends.checked = filterSettings.friends;
+        if (filterOnline) filterOnline.checked = filterSettings.online;
+        if (filterNearby) filterNearby.checked = filterSettings.nearby;
+        if (filterNew) filterNew.checked = filterSettings.new;
+        if (radiusSlider) radiusSlider.value = filterSettings.radius;
+        if (radiusValue) radiusValue.textContent = filterSettings.radius;
       }
       
       // Загружаем настройки отображения
