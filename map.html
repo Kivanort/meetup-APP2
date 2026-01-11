@@ -618,17 +618,17 @@
         <button class="map-filter-btn" id="btn-pedometer" title="Шагомер">
           <span class="material-icons">directions_walk</span>
         </button>
+        
+        <button class="map-filter-btn" id="btn-incognito" title="Режим инкогнито">
+          <span class="material-icons" id="incognito-icon">visibility_off</span>
+        </button>
+        
+        <button class="map-filter-btn" id="btn-display-mode" title="Отображение пользователей">
+          <span class="material-icons">people</span>
+        </button>
       </div>
       
-      <!-- Контролы карты слева (фильтры и обновление) -->
-      <div class="map-controls-top">
-        <button class="map-filter-btn-left" id="btn-filter" title="Фильтры карты">
-          <span class="material-icons">filter_list</span>
-        </button>
-        <button class="map-filter-btn-left" id="btn-refresh" title="Обновить карту">
-          <span class="material-icons">refresh</span>
-        </button>
-      </div>
+      <!-- Контролы карты слева (фильтры и обновление) - УДАЛЕНЫ -->
       
       <!-- Панель фильтров -->
       <div class="filter-panel" id="filter-panel">
@@ -654,6 +654,39 @@
             Радиус поиска: <span id="radius-value">5</span> км
           </label>
           <input type="range" id="radius-slider" min="1" max="50" value="5" style="width: 100%;">
+        </div>
+      </div>
+      
+      <!-- Панель отображения -->
+      <div class="display-panel" id="display-panel">
+        <h4 style="margin: 0 0 15px 0; color: var(--text-light);">Отображение пользователей</h4>
+        <label class="filter-option">
+          <input type="checkbox" id="display-all" checked>
+          <span>Все пользователи</span>
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" id="display-friends" checked>
+          <span>Только друзья</span>
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" id="display-online" checked>
+          <span>Только онлайн</span>
+        </label>
+        <label class="filter-option">
+          <input type="checkbox" id="display-new" checked>
+          <span>Новые пользователи</span>
+        </label>
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">
+            Маркеры друзей: <span id="friend-marker-style">синий</span>
+          </label>
+          <select id="friend-marker-select" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--container); color: white; border: 1px solid var(--primary);">
+            <option value="blue">Синий</option>
+            <option value="green">Зеленый</option>
+            <option value="red">Красный</option>
+            <option value="purple">Фиолетовый</option>
+            <option value="gold">Золотой</option>
+          </select>
         </div>
       </div>
       
@@ -1901,17 +1934,9 @@
         );
       });
       
-      // Фильтры (теперь слева сверху)
-      document.getElementById('btn-filter').addEventListener('click', function() {
-        const panel = document.getElementById('filter-panel');
-        panel.classList.toggle('active');
-      });
+      // Фильтры (теперь слева сверху) - УДАЛЕНЫ
       
-      // Обновление карты (теперь слева сверху)
-      document.getElementById('btn-refresh').addEventListener('click', function() {
-        updateMap();
-        showTempMessage('Карта обновлена');
-      });
+      // Обновление карты (теперь слева сверху) - УДАЛЕНО
       
       // Чаты
       document.getElementById('btn-chat').addEventListener('click', openChatsWindow);
@@ -1919,6 +1944,19 @@
       
       // Шагомер
       document.getElementById('btn-pedometer').addEventListener('click', openPedometerWindow);
+      
+      // Инкогнито (исправлено)
+      document.getElementById('btn-incognito').addEventListener('click', toggleIncognitoMode);
+      
+      // Отображение
+      document.getElementById('btn-display-mode').addEventListener('click', function() {
+        const panel = document.getElementById('display-panel');
+        panel.classList.toggle('active');
+      });
+      
+      // Обработчики для окна создания встречи
+      document.getElementById('meetup-cancel-btn').addEventListener('click', closeMeetupWindow);
+      document.getElementById('meetup-create-btn').addEventListener('click', createMeetup);
       
       // Закрытие окна встречи при клике вне его
       document.getElementById('meetup-overlay').addEventListener('click', function(e) {
@@ -1959,14 +1997,52 @@
         updateMap();
       });
       
+      // Настройки отображения
+      document.getElementById('display-all').addEventListener('change', function() {
+        displaySettings.all = this.checked;
+        updateMap();
+        saveDisplaySettings();
+      });
+      
+      document.getElementById('display-friends').addEventListener('change', function() {
+        displaySettings.friends = this.checked;
+        updateMap();
+        saveDisplaySettings();
+      });
+      
+      document.getElementById('display-online').addEventListener('change', function() {
+        displaySettings.online = this.checked;
+        updateMap();
+        saveDisplaySettings();
+      });
+      
+      document.getElementById('display-new').addEventListener('change', function() {
+        displaySettings.new = this.checked;
+        updateMap();
+        saveDisplaySettings();
+      });
+      
+      document.getElementById('friend-marker-select').addEventListener('change', function() {
+        displaySettings.friendMarker = this.value;
+        document.getElementById('friend-marker-style').textContent = this.options[this.selectedIndex].text;
+        updateMap();
+        saveDisplaySettings();
+      });
+      
       // Закрытие панелей при клике вне
       document.addEventListener('click', function(event) {
         const filterPanel = document.getElementById('filter-panel');
         const filterBtn = document.getElementById('btn-filter');
+        const displayPanel = document.getElementById('display-panel');
+        const displayBtn = document.getElementById('btn-display-mode');
         const meetupOverlay = document.getElementById('meetup-overlay');
         
         if (!filterPanel.contains(event.target) && !filterBtn.contains(event.target)) {
           filterPanel.classList.remove('active');
+        }
+        
+        if (!displayPanel.contains(event.target) && !displayBtn.contains(event.target)) {
+          displayPanel.classList.remove('active');
         }
       });
     }
@@ -2005,6 +2081,9 @@
       
       // Загружаем настройки отображения
       loadDisplaySettings();
+      
+      // Инициализируем кнопку инкогнито
+      updateIncognitoButton();
       
       adjustLayout();
       initializeEventHandlers();
