@@ -19,6 +19,7 @@
       --meetup-orange: linear-gradient(135deg, #FFA500 0%, #FF6B6B 100%); /* Оранжевый градиент для встреч */
       --meetup-green: linear-gradient(135deg, #34eb89 0%, #08e7bd 100%); /* Зеленый градиент для публичных встреч */
       --meetup-blue: linear-gradient(135deg, #2CB4FF 0%, #B970FE 100%); /* Синий градиент для друзей онлайн */
+      --route-color: #34eb89; /* Цвет маршрутов */
       --neon-glow: #00FFFF;
       --text-light: #fff;
       --text-muted: #9FAFD4;
@@ -51,7 +52,18 @@
     #map { width: 100%; height: 100%; background: #131827; }
     .map-placeholder { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #131827; color: var(--text-muted); gap: 15px; position: absolute; top: 0; left: 0; z-index: 20;}
     .map-placeholder.hidden { display: none;}
-    .floating-buttons { position: absolute; bottom: 20px; left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 15px; padding: 0 20px; z-index: 5; }
+    .floating-buttons { 
+      position: absolute; 
+      bottom: 20px; 
+      left: 0; 
+      right: 0; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      gap: 15px; 
+      padding: 0 20px; 
+      z-index: 100; /* Увеличил z-index */
+    }
     .fab-primary { padding: 16px 20px; background: var(--primary-gradient); border: none; border-radius: 16px; color: white; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 20px rgba(44,180,255,0.4); transition: all 0.2s ease; min-height: 54px; white-space: nowrap;}
     .fab-primary:hover { transform: scale(1.05); box-shadow: 0 6px 25px rgba(44,180,255,0.6);}
     .fab-primary:active { transform: scale(0.95);}
@@ -666,6 +678,139 @@
       background: rgba(52,235,137,0.3);
     }
     
+    /* Стили для маршрутов */
+    .route-controls {
+      position: absolute;
+      bottom: 100px;
+      left: 20px;
+      z-index: 99; /* Уменьшил z-index */
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .route-btn {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--container);
+      border: 2px solid var(--route-color);
+      color: var(--route-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    
+    .route-btn:hover {
+      background: var(--route-color);
+      color: white;
+      transform: scale(1.1);
+    }
+    
+    .route-btn.active {
+      background: var(--route-color);
+      color: white;
+    }
+    
+    .route-info-panel {
+      position: absolute;
+      bottom: 170px;
+      left: 20px;
+      background: var(--container);
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      z-index: 98; /* Уменьшил z-index */
+      display: none;
+      min-width: 250px;
+      max-width: 300px;
+    }
+    
+    .route-info-panel.active {
+      display: block;
+      animation: slideIn 0.3s ease;
+    }
+    
+    .route-info-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .route-info-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .route-info-label {
+      color: var(--text-muted);
+    }
+    
+    .route-info-value {
+      color: var(--route-color);
+      font-weight: 500;
+    }
+    
+    .route-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .route-action-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(52,235,137,0.2);
+      color: var(--route-color);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    
+    .route-action-btn:hover {
+      background: rgba(52,235,137,0.3);
+      transform: translateY(-2px);
+    }
+    
+    .route-action-btn.share {
+      background: rgba(44,180,255,0.2);
+      color: var(--primary);
+    }
+    
+    .route-action-btn.share:hover {
+      background: rgba(44,180,255,0.3);
+    }
+    
+    .friend-routes-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .friend-routes-toggle label {
+      font-size: 14px;
+      color: var(--text-light);
+      cursor: pointer;
+    }
+    
     @media (max-width: 768px) {
       .header-content {padding: 12px 15px;}
       .app-logo {font-size: 20px;}
@@ -682,6 +827,9 @@
       .display-panel {top: 60px; right: 15px; min-width: 180px;}
       .meetup-content {padding: 20px;}
       .invite-methods {flex-direction: column;}
+      .route-controls {bottom: 90px; left: 15px;}
+      .route-btn {width: 50px; height: 50px;}
+      .route-info-panel {bottom: 150px; left: 15px; min-width: 200px; max-width: 250px;}
     }
     @media (max-width: 480px) {
       .header-content {padding: 10px 12px;}
@@ -701,6 +849,10 @@
       .pedometer-content {padding: 20px;}
       .stat-value {font-size: 28px;}
       .meetup-actions {flex-direction: column;}
+      .route-controls {bottom: 80px; left: 10px;}
+      .route-btn {width: 45px; height: 45px;}
+      .route-info-panel {bottom: 135px; left: 10px; min-width: 180px; max-width: 220px;}
+      .route-actions {flex-direction: column;}
     }
   </style>
 </head>
@@ -747,7 +899,49 @@
         </button>
       </div>
       
-      <!-- Контролы карты слева (фильтры и обновление) - УДАЛЕНЫ -->
+      <!-- Контролы для маршрутов (слева снизу) -->
+      <div class="route-controls">
+        <button class="route-btn" id="btn-show-routes" title="Показать маршруты друзей">
+          <span class="material-icons">route</span>
+        </button>
+        <button class="route-btn" id="btn-clear-route" title="Очистить маршрут" style="display: none;">
+          <span class="material-icons">clear</span>
+        </button>
+      </div>
+      
+      <!-- Панель информации о маршруте -->
+      <div class="route-info-panel" id="route-info-panel">
+        <div class="route-info-title">
+          <span class="material-icons">route</span>
+          <span>Информация о маршруте</span>
+        </div>
+        <div class="route-info-item">
+          <span class="route-info-label">Куда:</span>
+          <span class="route-info-value" id="route-to">-</span>
+        </div>
+        <div class="route-info-item">
+          <span class="route-info-label">Расстояние:</span>
+          <span class="route-info-value" id="route-distance">-</span>
+        </div>
+        <div class="route-info-item">
+          <span class="route-info-label">Время:</span>
+          <span class="route-info-value" id="route-time">-</span>
+        </div>
+        <div class="friend-routes-toggle">
+          <input type="checkbox" id="show-friend-routes" checked>
+          <label for="show-friend-routes">Показывать маршруты друзей</label>
+        </div>
+        <div class="route-actions">
+          <button class="route-action-btn share" id="btn-share-route">
+            <span class="material-icons">share</span>
+            Поделиться
+          </button>
+          <button class="route-action-btn" id="btn-close-route-info">
+            <span class="material-icons">close</span>
+            Закрыть
+          </button>
+        </div>
+      </div>
       
       <!-- Панель фильтров -->
       <div class="filter-panel" id="filter-panel">
@@ -1033,6 +1227,13 @@
     // Переменные для создания встречи
     let meetupType = 'private'; // private, public, friends_online
     
+    // Переменные для маршрутов
+    let currentRoute = null;
+    let routePolyline = null;
+    let routeMultiRoute = null;
+    let friendRoutes = new Map(); // Map<friendId, routeObject>
+    let showFriendRoutes = true;
+    
     // Переменная для метки текущего пользователя
     let currentUserPlacemark = null;
     
@@ -1226,6 +1427,9 @@
             startAutoUpdate();
             updateChatNotificationCount();
             setInterval(updateChatNotificationCount, 30000);
+            
+            // Загружаем маршруты друзей
+            loadFriendRoutes();
             
           } catch (error) {
             console.error('❌ Ошибка при инициализации карты:', error);
@@ -1441,7 +1645,7 @@
           user.position,
           {
             balloonContent: `
-              <div style="padding: 10px; min-width: 200px;">
+              <div style="padding: 10px; min-width: 250px;">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                   <div style="width: 40px; height: 40px; border-radius: 50%; background: #2a2a3a; display: flex; align-items: center; justify-content: center;">
                     <span class="material-icons" style="color: ${isFriend ? iconColor : '#888'};">person</span>
@@ -1454,7 +1658,7 @@
                   </div>
                 </div>
                 ${user.about ? `<p style="color: #aaa; font-size: 13px; margin: 10px 0;">${user.about}</p>` : ''}
-                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
                   ${!isFriend ? 
                     `<button onclick="addFriend('${user.id}')" style="flex: 1; padding: 8px; background: #2CB4FF; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
                       Добавить в друзья
@@ -1462,6 +1666,12 @@
                     `<button onclick="openChat('${user.id}')" style="flex: 1; padding: 8px; background: #34eb89; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
                       Написать
                     </button>`
+                  }
+                  ${isFriend ? 
+                    `<button onclick="showRouteToFriend('${user.id}')" style="flex: 1; padding: 8px; background: var(--route-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                      <span class="material-icons" style="font-size: 14px;">route</span>
+                      Маршрут
+                    </button>` : ''
                   }
                   <button onclick="showUserProfile('${user.id}')" style="flex: 1; padding: 8px; background: #555; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
                     Профиль
@@ -1488,6 +1698,241 @@
       
       map.geoObjects.add(friendsClusterer);
       map.geoObjects.add(usersClusterer);
+      
+      // Обновляем маршруты друзей
+      updateFriendRoutes();
+    }
+    
+    // Функции для работы с маршрутами
+    function showRouteToFriend(friendId) {
+      if (!map || !currentUser || !currentUser.position || typeof ymaps === 'undefined') {
+        showTempMessage('Не удалось построить маршрут');
+        return;
+      }
+      
+      const friend = UserSystem.getUserById(friendId);
+      if (!friend || !friend.position) {
+        showTempMessage('Друг не найден или у него не указано местоположение');
+        return;
+      }
+      
+      // Очищаем текущий маршрут
+      clearRoute();
+      
+      // Строим маршрут от текущего пользователя к другу
+      const startPoint = currentUser.position;
+      const endPoint = friend.position;
+      
+      buildRoute(startPoint, endPoint, friend.nickname || 'Друг');
+      
+      // Показываем информацию о маршруте
+      showRouteInfo(friend.nickname || 'Друг');
+      
+      showTempMessage(`Строим маршрут до ${friend.nickname}`);
+    }
+    
+    function buildRoute(startPoint, endPoint, destinationName) {
+      if (!map || typeof ymaps === 'undefined') return;
+      
+      // Создаем мультимаршрут
+      routeMultiRoute = new ymaps.multiRouter.MultiRoute({
+        referencePoints: [startPoint, endPoint],
+        params: {
+          routingMode: 'auto'
+        }
+      }, {
+        boundsAutoApply: true,
+        routeActiveStrokeWidth: 6,
+        routeActiveStrokeColor: '#34eb89',
+        routeStrokeWidth: 4,
+        routeStrokeColor: '#34eb8999',
+        pinIconFillColor: '#34eb89'
+      });
+      
+      // Добавляем маршрут на карту
+      map.geoObjects.add(routeMultiRoute);
+      
+      // Сохраняем информацию о маршруте
+      currentRoute = {
+        start: startPoint,
+        end: endPoint,
+        destination: destinationName,
+        type: 'friend'
+      };
+      
+      // Показываем кнопку очистки маршрута
+      document.getElementById('btn-clear-route').style.display = 'flex';
+      
+      // Обновляем информацию о маршруте при получении данных
+      routeMultiRoute.model.events.add('requestsuccess', function() {
+        const activeRoute = routeMultiRoute.getActiveRoute();
+        if (activeRoute) {
+          const distance = activeRoute.properties.get('distance');
+          const duration = activeRoute.properties.get('duration');
+          
+          // Форматируем расстояние
+          let distanceText;
+          if (distance.value < 1000) {
+            distanceText = `${distance.text}`;
+          } else {
+            distanceText = `${(distance.value / 1000).toFixed(1)} км`;
+          }
+          
+          // Форматируем время
+          const hours = Math.floor(duration.value / 3600);
+          const minutes = Math.floor((duration.value % 3600) / 60);
+          let timeText = '';
+          if (hours > 0) {
+            timeText += `${hours} ч `;
+          }
+          timeText += `${minutes} мин`;
+          
+          document.getElementById('route-distance').textContent = distanceText;
+          document.getElementById('route-time').textContent = timeText;
+        }
+      });
+    }
+    
+    function clearRoute() {
+      if (routeMultiRoute) {
+        map.geoObjects.remove(routeMultiRoute);
+        routeMultiRoute = null;
+      }
+      
+      if (routePolyline) {
+        map.geoObjects.remove(routePolyline);
+        routePolyline = null;
+      }
+      
+      currentRoute = null;
+      
+      // Скрываем кнопку очистки маршрута
+      document.getElementById('btn-clear-route').style.display = 'none';
+      
+      // Скрываем панель информации
+      document.getElementById('route-info-panel').classList.remove('active');
+    }
+    
+    function showRouteInfo(destinationName) {
+      document.getElementById('route-to').textContent = destinationName;
+      document.getElementById('route-info-panel').classList.add('active');
+    }
+    
+    function loadFriendRoutes() {
+      if (!currentUser) return;
+      
+      // Загружаем сохраненные маршруты друзей из localStorage
+      const savedRoutes = JSON.parse(localStorage.getItem('meetup_friend_routes') || '{}');
+      
+      // Очищаем текущие маршруты друзей
+      friendRoutes.clear();
+      
+      // Загружаем маршруты для каждого друга
+      const friends = UserSystem.getUserFriends(currentUser.id);
+      friends.forEach(friend => {
+        if (savedRoutes[friend.id]) {
+          friendRoutes.set(friend.id, savedRoutes[friend.id]);
+        }
+      });
+      
+      // Обновляем отображение маршрутов
+      updateFriendRoutes();
+    }
+    
+    function updateFriendRoutes() {
+      if (!map || typeof ymaps === 'undefined' || !showFriendRoutes) return;
+      
+      // Удаляем все маршруты друзей с карты
+      friendRoutes.forEach((routeData, friendId) => {
+        if (routeData.polyline && map.geoObjects.indexOf(routeData.polyline) !== -1) {
+          map.geoObjects.remove(routeData.polyline);
+        }
+      });
+      
+      // Если показ маршрутов друзей отключен, выходим
+      if (!showFriendRoutes) return;
+      
+      // Добавляем маршруты друзей на карту
+      const friends = UserSystem.getUserFriends(currentUser.id);
+      friends.forEach(friend => {
+        if (friend.id === currentUser.id || !friend.position || !friend.routeTo) return;
+        
+        // Создаем полилинию маршрута
+        const polyline = new ymaps.Polyline(
+          [friend.position, friend.routeTo],
+          {},
+          {
+            strokeColor: '#34eb8944', // Полупрозрачный зеленый
+            strokeWidth: 3,
+            strokeOpacity: 0.7,
+            hintContent: `Маршрут ${friend.nickname}`
+          }
+        );
+        
+        // Сохраняем полилинию в данных маршрута
+        if (friendRoutes.has(friend.id)) {
+          friendRoutes.get(friend.id).polyline = polyline;
+        } else {
+          friendRoutes.set(friend.id, {
+            polyline: polyline,
+            destination: friend.routeToName || 'Неизвестно'
+          });
+        }
+        
+        // Добавляем на карту
+        map.geoObjects.add(polyline);
+      });
+    }
+    
+    function shareCurrentRoute() {
+      if (!currentRoute) {
+        showTempMessage('Нет активного маршрута для sharing');
+        return;
+      }
+      
+      // Сохраняем маршрут текущего пользователя
+      if (currentUser) {
+        const userData = UserSystem.getUsers();
+        const userIndex = userData.findIndex(u => u.id === currentUser.id);
+        
+        if (userIndex !== -1) {
+          userData[userIndex].routeTo = currentRoute.end;
+          userData[userIndex].routeToName = currentRoute.destination;
+          UserSystem.saveUsers(userData);
+          
+          // Обновляем локальные данные
+          currentUser = userData[userIndex];
+        }
+        
+        // Сохраняем маршрут в localStorage для друзей
+        const savedRoutes = JSON.parse(localStorage.getItem('meetup_friend_routes') || '{}');
+        savedRoutes[currentUser.id] = {
+          destination: currentRoute.destination,
+          timestamp: new Date().toISOString()
+        };
+        localStorage.setItem('meetup_friend_routes', JSON.stringify(savedRoutes));
+      }
+      
+      showTempMessage('Маршрут доступен вашим друзьям!');
+      updateFriendRoutes();
+    }
+    
+    function toggleFriendRoutes() {
+      showFriendRoutes = !showFriendRoutes;
+      document.getElementById('show-friend-routes').checked = showFriendRoutes;
+      
+      if (showFriendRoutes) {
+        updateFriendRoutes();
+        showTempMessage('Маршруты друзей включены');
+      } else {
+        // Удаляем все маршруты друзей с карты
+        friendRoutes.forEach((routeData, friendId) => {
+          if (routeData.polyline && map.geoObjects.indexOf(routeData.polyline) !== -1) {
+            map.geoObjects.remove(routeData.polyline);
+          }
+        });
+        showTempMessage('Маршруты друзей выключены');
+      }
     }
     
     function calculateDistance(pos1, pos2) {
@@ -1543,6 +1988,7 @@
           currentUser = UserSystem.getCurrentUser();
           checkNearbyFriends();
           updateMap();
+          updateFriendRoutes();
         },
         error => {
           console.log('📍 Геолокация недоступна');
@@ -2311,6 +2757,25 @@
         });
       });
       
+      // Обработчики для маршрутов
+      document.getElementById('btn-show-routes').addEventListener('click', function() {
+        showFriendRoutes = !showFriendRoutes;
+        this.classList.toggle('active', showFriendRoutes);
+        toggleFriendRoutes();
+      });
+      
+      document.getElementById('btn-clear-route').addEventListener('click', clearRoute);
+      
+      document.getElementById('btn-share-route').addEventListener('click', shareCurrentRoute);
+      
+      document.getElementById('btn-close-route-info').addEventListener('click', function() {
+        document.getElementById('route-info-panel').classList.remove('active');
+      });
+      
+      document.getElementById('show-friend-routes').addEventListener('change', function() {
+        toggleFriendRoutes();
+      });
+      
       // Закрытие окна встречи при клике вне его
       document.getElementById('meetup-overlay').addEventListener('click', function(e) {
         if (e.target === this) {
@@ -2389,6 +2854,7 @@
         const displayPanel = document.getElementById('display-panel');
         const displayBtn = document.getElementById('btn-display-mode');
         const meetupOverlay = document.getElementById('meetup-overlay');
+        const routeInfoPanel = document.getElementById('route-info-panel');
         
         if (!filterPanel.contains(event.target) && !filterBtn.contains(event.target)) {
           filterPanel.classList.remove('active');
@@ -2396,6 +2862,10 @@
         
         if (!displayPanel.contains(event.target) && !displayBtn.contains(event.target)) {
           displayPanel.classList.remove('active');
+        }
+        
+        if (!routeInfoPanel.contains(event.target)) {
+          routeInfoPanel.classList.remove('active');
         }
       });
     }
@@ -2438,6 +2908,10 @@
       // Инициализируем кнопку инкогнито
       updateIncognitoButton();
       
+      // Загружаем настройки маршрутов
+      showFriendRoutes = localStorage.getItem('meetup_show_friend_routes') !== 'false';
+      document.getElementById('show-friend-routes').checked = showFriendRoutes;
+      
       adjustLayout();
       initializeEventHandlers();
       setTimeout(initializeMap, 500);
@@ -2461,6 +2935,7 @@
       }
       saveFilterSettings();
       saveDisplaySettings();
+      localStorage.setItem('meetup_show_friend_routes', showFriendRoutes);
     });
     
     document.addEventListener('DOMContentLoaded', function() {
