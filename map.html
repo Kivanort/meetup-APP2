@@ -903,23 +903,37 @@
               
               if (validPositions.length > 0) {
                 try {
-                  const collection = new ymaps.GeoObjectCollection();
+                  // Создаем коллекцию Placemark объектов для geoQuery
+                  const placemarks = [];
                   validPositions.forEach(pos => { 
                     if (pos && pos[0] && pos[1]) {
-                      collection.add(new ymaps.Placemark(pos));
+                      placemarks.push(new ymaps.Placemark(pos));
                     }
                   });
                   
-                  if (collection.getLength() > 0) {
+                  if (placemarks.length > 0) {
                     const bounds = ymaps.util.bounds.fromPoints(validPositions);
                     const mapSize = [ mapElement.offsetWidth, mapElement.offsetHeight ];
-                    const geoQueryResult = ymaps.geoQuery(validPositions);
-                    const center = geoQueryResult.getCenter();
                     
-                    if (center && Array.isArray(center) && center.length === 2) {
+                    // Вычисляем центр вручную, если geoQuery не работает
+                    let center = [0, 0];
+                    let count = 0;
+                    
+                    validPositions.forEach(pos => {
+                      if (pos && pos[0] && pos[1]) {
+                        center[0] += pos[0];
+                        center[1] += pos[1];
+                        count++;
+                      }
+                    });
+                    
+                    if (count > 0) {
+                      center[0] /= count;
+                      center[1] /= count;
                       initialCenter = center;
                     }
                     
+                    // Вычисляем зум на основе границ
                     const zoom = ymaps.util.bounds.getZoom(bounds, mapSize);
                     if (!isNaN(zoom)) {
                       initialZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom - 0.5));
