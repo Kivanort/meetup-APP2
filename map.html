@@ -17,6 +17,8 @@
       --primary: #2CB4FF;
       --primary-gradient: linear-gradient(135deg, #2CB4FF 0%, #B970FE 100%);
       --meetup-orange: linear-gradient(135deg, #FFA500 0%, #FF6B6B 100%); /* Оранжевый градиент для встреч */
+      --meetup-green: linear-gradient(135deg, #34eb89 0%, #08e7bd 100%); /* Зеленый градиент для публичных встреч */
+      --meetup-blue: linear-gradient(135deg, #2CB4FF 0%, #B970FE 100%); /* Синий градиент для друзей онлайн */
       --neon-glow: #00FFFF;
       --text-light: #fff;
       --text-muted: #9FAFD4;
@@ -548,6 +550,122 @@
       box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     }
     
+    /* Новые стили для выбора типа встречи */
+    .meetup-type-selector {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .meetup-type-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 15px;
+      background: rgba(255,255,255,0.05);
+      border: 2px solid transparent;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .meetup-type-option:hover {
+      background: rgba(255,255,255,0.1);
+      transform: translateY(-2px);
+    }
+    
+    .meetup-type-option.active {
+      border-color: var(--primary);
+      background: rgba(44,180,255,0.1);
+    }
+    
+    .meetup-type-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: white;
+    }
+    
+    .meetup-type-info {
+      flex: 1;
+    }
+    
+    .meetup-type-title {
+      font-weight: 600;
+      color: white;
+      margin-bottom: 3px;
+    }
+    
+    .meetup-type-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    
+    /* Стили для статуса друзей */
+    .friend-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-left: 8px;
+      font-size: 12px;
+    }
+    
+    .online-status {
+      color: #34eb89;
+    }
+    
+    .offline-status {
+      color: var(--text-muted);
+    }
+    
+    .friends-invite-section {
+      background: rgba(255,255,255,0.03);
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 10px;
+    }
+    
+    .invite-methods {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    
+    .invite-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(44,180,255,0.2);
+      color: var(--primary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    
+    .invite-btn:hover {
+      background: rgba(44,180,255,0.3);
+      transform: translateY(-2px);
+    }
+    
+    .invite-btn.chat {
+      background: rgba(52,235,137,0.2);
+      color: #34eb89;
+    }
+    
+    .invite-btn.chat:hover {
+      background: rgba(52,235,137,0.3);
+    }
+    
     @media (max-width: 768px) {
       .header-content {padding: 12px 15px;}
       .app-logo {font-size: 20px;}
@@ -563,6 +681,7 @@
       .filter-panel {top: 60px; right: 15px; min-width: 180px;}
       .display-panel {top: 60px; right: 15px; min-width: 180px;}
       .meetup-content {padding: 20px;}
+      .invite-methods {flex-direction: column;}
     }
     @media (max-width: 480px) {
       .header-content {padding: 10px 12px;}
@@ -774,10 +893,65 @@
           <input type="datetime-local" class="meetup-input" id="meetup-datetime">
         </div>
         
+        <!-- Выбор типа встречи -->
         <div class="meetup-form-group">
+          <label class="meetup-label">Тип встречи</label>
+          <div class="meetup-type-selector" id="meetup-type-selector">
+            <div class="meetup-type-option" data-type="private">
+              <div class="meetup-type-icon" style="background: var(--meetup-orange);">
+                <span class="material-icons">lock</span>
+              </div>
+              <div class="meetup-type-info">
+                <div class="meetup-type-title">Приватная</div>
+                <div class="meetup-type-desc">Только для выбранных друзей</div>
+              </div>
+            </div>
+            
+            <div class="meetup-type-option" data-type="public">
+              <div class="meetup-type-icon" style="background: var(--meetup-green);">
+                <span class="material-icons">public</span>
+              </div>
+              <div class="meetup-type-info">
+                <div class="meetup-type-title">Публичная</div>
+                <div class="meetup-type-desc">Видна всем пользователям на карте</div>
+              </div>
+            </div>
+            
+            <div class="meetup-type-option" data-type="friends_online">
+              <div class="meetup-type-icon" style="background: var(--meetup-blue);">
+                <span class="material-icons">group</span>
+              </div>
+              <div class="meetup-type-info">
+                <div class="meetup-type-title">Для друзей онлайн</div>
+                <div class="meetup-type-desc">Все друзья в сети автоматически приглашаются</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Приглашение друзей (показывается только для приватных встреч) -->
+        <div class="meetup-form-group" id="friends-invite-section">
           <label class="meetup-label">Пригласить друзей</label>
-          <div class="meetup-checkbox-group" id="friends-list">
-            <!-- Список друзей будет загружен динамически -->
+          <div class="friends-invite-section">
+            <div class="meetup-checkbox-group" id="friends-list">
+              <!-- Список друзей будет загружен динамически -->
+            </div>
+            
+            <!-- Кнопки для приглашения -->
+            <div class="invite-methods" id="invite-methods" style="display: none;">
+              <button class="invite-btn" id="invite-selected-btn">
+                <span class="material-icons">send</span>
+                Пригласить выбранных
+              </button>
+              <button class="invite-btn chat" id="invite-chat-btn">
+                <span class="material-icons">chat</span>
+                Отправить в чаты
+              </button>
+              <button class="invite-btn" id="select-all-friends-btn">
+                <span class="material-icons">check_circle</span>
+                Выбрать всех
+              </button>
+            </div>
           </div>
         </div>
         
@@ -855,6 +1029,9 @@
       new: true,
       friendMarker: 'blue'
     };
+    
+    // Переменные для создания встречи
+    let meetupType = 'private'; // private, public, friends_online
     
     // Переменная для метки текущего пользователя
     let currentUserPlacemark = null;
@@ -1720,6 +1897,9 @@
       if (currentUser && currentUser.position) {
         document.getElementById('meetup-location').value = 'Ваше текущее местоположение';
       }
+      
+      // Устанавливаем тип встречи по умолчанию (приватная)
+      setMeetupType('private');
     }
     
     function closeMeetupWindow() {
@@ -1730,6 +1910,9 @@
     
     function loadFriendsForMeetup() {
       const friendsList = document.getElementById('friends-list');
+      const friendsInviteSection = document.getElementById('friends-invite-section');
+      const inviteMethods = document.getElementById('invite-methods');
+      
       if (!currentUser) return;
       
       const friends = UserSystem.getUserFriends(currentUser.id);
@@ -1740,39 +1923,175 @@
             У вас пока нет друзей. Добавьте друзей, чтобы пригласить их на встречу.
           </div>
         `;
+        inviteMethods.style.display = 'none';
         return;
       }
       
       let friendsHTML = '';
+      let onlineFriendsCount = 0;
+      
       friends.forEach(friend => {
+        const isOnline = friend.status === 'online';
+        if (isOnline) onlineFriendsCount++;
+        
         friendsHTML += `
           <label class="meetup-checkbox">
-            <input type="checkbox" class="friend-checkbox" value="${friend.id}">
-            <span>${friend.nickname || 'Пользователь'} ${friend.status === 'online' ? '🟢' : '⚫'}</span>
+            <input type="checkbox" class="friend-checkbox" value="${friend.id}" ${meetupType === 'friends_online' && isOnline ? 'checked' : ''}>
+            <span>
+              ${friend.nickname || 'Пользователь'}
+              <span class="friend-status ${isOnline ? 'online-status' : 'offline-status'}">
+                <span class="material-icons" style="font-size: 14px;">${isOnline ? 'circle' : 'radio_button_unchecked'}</span>
+                ${isOnline ? 'В сети' : 'Не в сети'}
+              </span>
+            </span>
           </label>
         `;
       });
       
-      // Добавляем опцию "Выбрать всех"
-      friendsHTML = `
-        <label class="meetup-checkbox">
-          <input type="checkbox" id="select-all-friends">
-          <span><strong>Выбрать всех друзей</strong></span>
-        </label>
-        <div style="margin-top: 10px; margin-bottom: 5px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
-        </div>
-        ${friendsHTML}
-      `;
-      
       friendsList.innerHTML = friendsHTML;
+      inviteMethods.style.display = 'flex';
       
-      // Обработчик для "Выбрать всех"
-      document.getElementById('select-all-friends').addEventListener('change', function() {
+      // Обновляем информацию о друзьях онлайн
+      if (meetupType === 'friends_online') {
+        const onlineInfo = document.createElement('div');
+        onlineInfo.style.fontSize = '13px';
+        onlineInfo.style.color = '#2CB4FF';
+        onlineInfo.style.marginTop = '10px';
+        onlineInfo.innerHTML = `<span class="material-icons" style="font-size: 16px; vertical-align: middle;">info</span> Автоматически выбраны ${onlineFriendsCount} друзей онлайн`;
+        friendsList.appendChild(onlineInfo);
+      }
+      
+      // Обработчики для кнопок приглашения
+      document.getElementById('select-all-friends-btn').addEventListener('click', function() {
         const checkboxes = document.querySelectorAll('.friend-checkbox');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
         checkboxes.forEach(checkbox => {
-          checkbox.checked = this.checked;
+          checkbox.checked = !allChecked;
         });
+        
+        showTempMessage(allChecked ? 'Все друзья сняты с выбора' : 'Все друзья выбраны');
       });
+      
+      document.getElementById('invite-selected-btn').addEventListener('click', function() {
+        const selectedFriends = getSelectedFriends();
+        if (selectedFriends.length === 0) {
+          showTempMessage('Выберите друзей для приглашения');
+          return;
+        }
+        
+        showTempMessage(`Приглашения отправлены ${selectedFriends.length} друзьям`);
+        // Здесь будет реальная логика отправки приглашений
+      });
+      
+      document.getElementById('invite-chat-btn').addEventListener('click', function() {
+        const selectedFriends = getSelectedFriends();
+        if (selectedFriends.length === 0) {
+          showTempMessage('Выберите друзей для приглашения в чат');
+          return;
+        }
+        
+        sendInvitesToChat(selectedFriends);
+      });
+    }
+    
+    function getSelectedFriends() {
+      const selectedFriends = [];
+      document.querySelectorAll('.friend-checkbox:checked').forEach(checkbox => {
+        selectedFriends.push(checkbox.value);
+      });
+      return selectedFriends;
+    }
+    
+    function setMeetupType(type) {
+      meetupType = type;
+      
+      // Обновляем активный класс у вариантов
+      document.querySelectorAll('.meetup-type-option').forEach(option => {
+        option.classList.remove('active');
+        if (option.getAttribute('data-type') === type) {
+          option.classList.add('active');
+        }
+      });
+      
+      // Обновляем видимость раздела приглашения друзей
+      const friendsInviteSection = document.getElementById('friends-invite-section');
+      const inviteMethods = document.getElementById('invite-methods');
+      
+      if (type === 'private') {
+        friendsInviteSection.style.display = 'block';
+        inviteMethods.style.display = 'flex';
+        
+        // Сбрасываем выбор друзей
+        document.querySelectorAll('.friend-checkbox').forEach(checkbox => {
+          checkbox.checked = false;
+        });
+      } else if (type === 'public') {
+        friendsInviteSection.style.display = 'block';
+        inviteMethods.style.display = 'none';
+        
+        // Выбираем всех друзей для публичной встречи
+        document.querySelectorAll('.friend-checkbox').forEach(checkbox => {
+          checkbox.checked = true;
+        });
+      } else if (type === 'friends_online') {
+        friendsInviteSection.style.display = 'block';
+        inviteMethods.style.display = 'flex';
+        
+        // Выбираем только друзей онлайн
+        document.querySelectorAll('.friend-checkbox').forEach(checkbox => {
+          const friendId = checkbox.value;
+          const friend = UserSystem.getUserById(friendId);
+          checkbox.checked = friend && friend.status === 'online';
+        });
+      }
+      
+      // Перезагружаем список друзей, чтобы обновить информацию
+      loadFriendsForMeetup();
+    }
+    
+    function sendInvitesToChat(friendIds) {
+      if (!currentUser) return;
+      
+      const title = document.getElementById('meetup-title').value.trim();
+      const location = document.getElementById('meetup-location').value.trim();
+      const datetime = document.getElementById('meetup-datetime').value;
+      
+      if (!title || !location || !datetime) {
+        showTempMessage('Заполните основные поля встречи перед отправкой приглашений');
+        return;
+      }
+      
+      let invitedCount = 0;
+      
+      friendIds.forEach(friendId => {
+        const friend = UserSystem.getUserById(friendId);
+        if (!friend) return;
+        
+        // Создаем или получаем чат с другом
+        let chat = ChatSystem.getChatByParticipants(currentUser.id, friendId);
+        if (!chat) {
+          chat = ChatSystem.createChat(currentUser.id, friendId);
+        }
+        
+        // Создаем сообщение с приглашением
+        const meetupDate = new Date(datetime);
+        const formattedDate = meetupDate.toLocaleDateString('ru-RU', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        const invitationMessage = `🎉 Приглашаю вас на встречу "${title}"!\n\n📅 Когда: ${formattedDate}\n📍 Где: ${location}\n\nХотите присоединиться?`;
+        
+        ChatSystem.sendMessage(chat.id, currentUser.id, invitationMessage);
+        invitedCount++;
+      });
+      
+      showTempMessage(`Приглашения отправлены в чаты ${invitedCount} друзьям`);
     }
     
     function createMeetup() {
@@ -1797,15 +2116,23 @@
         return;
       }
       
-      // Получаем выбранных друзей
-      const selectedFriends = [];
-      document.querySelectorAll('.friend-checkbox:checked').forEach(checkbox => {
-        selectedFriends.push(checkbox.value);
-      });
+      // Получаем выбранных друзей в зависимости от типа встречи
+      let selectedFriends = [];
       
-      if (selectedFriends.length === 0) {
-        showTempMessage('Выберите хотя бы одного друга для приглашения');
-        return;
+      if (meetupType === 'private') {
+        selectedFriends = getSelectedFriends();
+        if (selectedFriends.length === 0) {
+          showTempMessage('Выберите хотя бы одного друга для приглашения');
+          return;
+        }
+      } else if (meetupType === 'public') {
+        // Для публичной встречи выбираем всех друзей
+        const friends = UserSystem.getUserFriends(currentUser.id);
+        selectedFriends = friends.map(f => f.id);
+      } else if (meetupType === 'friends_online') {
+        // Для друзей онлайн выбираем только онлайн друзей
+        const friends = UserSystem.getUserFriends(currentUser.id);
+        selectedFriends = friends.filter(f => f.status === 'online').map(f => f.id);
       }
       
       // Создаем объект встречи
@@ -1815,10 +2142,12 @@
         description: description,
         location: location,
         datetime: datetime,
+        type: meetupType,
         createdBy: currentUser.id,
         createdAt: new Date().toISOString(),
         participants: [currentUser.id, ...selectedFriends],
-        status: 'planned'
+        status: 'planned',
+        visibility: meetupType === 'public' ? 'public' : 'private'
       };
       
       // Сохраняем встречу в localStorage
@@ -1826,26 +2155,46 @@
       meetups.push(meetup);
       localStorage.setItem('meetup_meetups', JSON.stringify(meetups));
       
-      // Отправляем уведомления друзьям
-      selectedFriends.forEach(friendId => {
-        const notification = {
-          id: 'notification_' + Date.now(),
-          userId: friendId,
-          type: 'meetup_invitation',
-          title: 'Приглашение на встречу',
-          message: `${currentUser.nickname} приглашает вас на встречу "${title}"`,
+      // Отправляем уведомления выбранным друзьям
+      if (selectedFriends.length > 0) {
+        selectedFriends.forEach(friendId => {
+          const notification = {
+            id: 'notification_' + Date.now(),
+            userId: friendId,
+            type: 'meetup_invitation',
+            title: 'Приглашение на встречу',
+            message: `${currentUser.nickname} приглашает вас на встречу "${title}"`,
+            data: { meetupId: meetup.id },
+            timestamp: new Date().toISOString(),
+            read: false
+          };
+          
+          // Сохраняем уведомление
+          let notifications = JSON.parse(localStorage.getItem('meetup_notifications') || '[]');
+          notifications.push(notification);
+          localStorage.setItem('meetup_notifications', JSON.stringify(notifications));
+        });
+      }
+      
+      // Если встреча публичная, также создаем уведомление для всех пользователей
+      if (meetupType === 'public') {
+        const publicNotification = {
+          id: 'notification_public_' + Date.now(),
+          type: 'public_meetup',
+          title: 'Новая публичная встреча',
+          message: `Пользователь ${currentUser.nickname} создал публичную встречу "${title}"`,
           data: { meetupId: meetup.id },
           timestamp: new Date().toISOString(),
-          read: false
+          broadcast: true
         };
         
-        // Сохраняем уведомление
-        let notifications = JSON.parse(localStorage.getItem('meetup_notifications') || '[]');
-        notifications.push(notification);
-        localStorage.setItem('meetup_notifications', JSON.stringify(notifications));
-      });
+        // Сохраняем публичное уведомление
+        let publicNotifications = JSON.parse(localStorage.getItem('meetup_public_notifications') || '[]');
+        publicNotifications.push(publicNotification);
+        localStorage.setItem('meetup_public_notifications', JSON.stringify(publicNotifications));
+      }
       
-      showTempMessage('Встреча создана! Уведомления отправлены друзьям.');
+      showTempMessage(`Встреча "${title}" создана! ${selectedFriends.length > 0 ? `Уведомления отправлены ${selectedFriends.length} друзьям` : 'Публичная встреча создана'}`);
       closeMeetupWindow();
       
       // Очищаем форму
@@ -1934,10 +2283,6 @@
         );
       });
       
-      // Фильтры (теперь слева сверху) - УДАЛЕНЫ
-      
-      // Обновление карты (теперь слева сверху) - УДАЛЕНО
-      
       // Чаты
       document.getElementById('btn-chat').addEventListener('click', openChatsWindow);
       document.getElementById('chat-close-btn').addEventListener('click', closeChatsWindow);
@@ -1957,6 +2302,14 @@
       // Обработчики для окна создания встречи
       document.getElementById('meetup-cancel-btn').addEventListener('click', closeMeetupWindow);
       document.getElementById('meetup-create-btn').addEventListener('click', createMeetup);
+      
+      // Обработчики выбора типа встречи
+      document.querySelectorAll('.meetup-type-option').forEach(option => {
+        option.addEventListener('click', function() {
+          const type = this.getAttribute('data-type');
+          setMeetupType(type);
+        });
+      });
       
       // Закрытие окна встречи при клике вне его
       document.getElementById('meetup-overlay').addEventListener('click', function(e) {
