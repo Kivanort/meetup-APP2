@@ -889,19 +889,47 @@
           
           try {
             const allUsers = UserSystem.getUsers();
-            const positions = allUsers.filter(user => user.position && Array.isArray(user.position)).map(user => user.position);
+            const positions = allUsers.filter(user => user.position && Array.isArray(user.position) && user.position.length === 2).map(user => user.position);
             let initialCenter = defaultPosition;
             let initialZoom = DEFAULT_ZOOM;
             
             if (positions.length > 1) {
-              const collection = new ymaps.GeoObjectCollection(null, {}, { preset: 'islands#blueCircleDotIcon' });
-              positions.forEach(pos => { collection.add(new ymaps.Placemark(pos)); });
-              const bounds = ymaps.util.bounds.fromPoints(positions);
-              const mapSize = [ mapElement.offsetWidth, mapElement.offsetHeight ];
-              const center = ymaps.geoQuery(positions).getCenter();
-              if (center) initialCenter = center;
-              const zoom = ymaps.util.bounds.getZoom(bounds, mapSize);
-              initialZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom - 0.5));
+              const validPositions = positions.filter(pos => 
+                Array.isArray(pos) && pos.length === 2 && 
+                !isNaN(pos[0]) && !isNaN(pos[1]) &&
+                pos[0] >= -90 && pos[0] <= 90 &&
+                pos[1] >= -180 && pos[1] <= 180
+              );
+              
+              if (validPositions.length > 0) {
+                try {
+                  const collection = new ymaps.GeoObjectCollection();
+                  validPositions.forEach(pos => { 
+                    if (pos && pos[0] && pos[1]) {
+                      collection.add(new ymaps.Placemark(pos));
+                    }
+                  });
+                  
+                  if (collection.getLength() > 0) {
+                    const bounds = ymaps.util.bounds.fromPoints(validPositions);
+                    const mapSize = [ mapElement.offsetWidth, mapElement.offsetHeight ];
+                    const geoQueryResult = ymaps.geoQuery(validPositions);
+                    const center = geoQueryResult.getCenter();
+                    
+                    if (center && Array.isArray(center) && center.length === 2) {
+                      initialCenter = center;
+                    }
+                    
+                    const zoom = ymaps.util.bounds.getZoom(bounds, mapSize);
+                    if (!isNaN(zoom)) {
+                      initialZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom - 0.5));
+                    }
+                  }
+                } catch (e) {
+                  console.warn('Ошибка при расчете центра и зума:', e);
+                  // Используем значения по умолчанию
+                }
+              }
             }
             
             // Ограничения для области карты
@@ -983,10 +1011,26 @@
             const friends = UserSystem.getUserFriends(currentUser.id);
             if (friends.length > 0) {
               setTimeout(() => {
-                const friendPositions = friends.filter(f => f.position).map(f => f.position);
+                const friendPositions = friends
+                  .filter(f => f.position && Array.isArray(f.position) && f.position.length === 2)
+                  .map(f => f.position);
+                
                 if (friendPositions.length > 0) {
-                  const bounds = ymaps.util.bounds.fromPoints(friendPositions);
-                  map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 50 });
+                  const validFriendPositions = friendPositions.filter(pos => 
+                    Array.isArray(pos) && pos.length === 2 && 
+                    !isNaN(pos[0]) && !isNaN(pos[1]) &&
+                    pos[0] >= -90 && pos[0] <= 90 &&
+                    pos[1] >= -180 && pos[1] <= 180
+                  );
+                  
+                  if (validFriendPositions.length > 0) {
+                    try {
+                      const bounds = ymaps.util.bounds.fromPoints(validFriendPositions);
+                      map.setBounds(bounds, { checkZoomRange: true, zoomMargin: 50 });
+                    } catch (e) {
+                      console.warn('Ошибка при установке границ для друзей:', e);
+                    }
+                  }
                 }
               }, 1000);
             }
@@ -1001,6 +1045,7 @@
             placeholder.innerHTML = `
               <span class="material-icons" style="font-size: 64px; opacity: 0.5;">error</span>
               <div>Ошибка загрузки карты</div>
+              <div style="font-size: 12px; color: #888; margin-top: 10px;">${error.message}</div>
               <button onclick="location.reload()" style="
                 margin-top: 15px;
                 padding: 10px 20px;
@@ -1066,13 +1111,24 @@
         return;
       }
       
+      // Проверяем валидность позиции
+      const position = currentUser.position;
+      if (!Array.isArray(position) || position.length !== 2 || 
+          isNaN(position[0]) || isNaN(position[1]) ||
+          position[0] < -90 || position[0] > 90 ||
+          position[1] < -180 || position[1] > 180) {
+        console.warn('Некорректная позиция пользователя:', position);
+        currentUserPlacemark = null;
+        return;
+      }
+      
       // Создаем новую метку
       const iconColor = isIncognitoMode ? '#FF4444' : '#2CB4FF'; // Красная при инкогнито
       const preset = isIncognitoMode ? 'islands#redCircleDotIcon' : 'islands#blueCircleDotIcon';
       const statusText = isIncognitoMode ? 'Скрыт' : 'Ваше местоположение';
       
       currentUserPlacemark = new ymaps.Placemark(
-        currentUser.position,
+        position,
         {
           balloonContent: `
             <div style="padding: 10px; min-width: 200px;">
@@ -1127,6 +1183,15 @@
       const filteredUsers = allUsers.filter(user => {
         if (user.id === currentUser.id || !user.position) return false;
         if (user.invisible && !isIncognitoMode) return false;
+        
+        // Проверяем валидность позиции
+        const position = user.position;
+        if (!Array.isArray(position) || position.length !== 2 || 
+            isNaN(position[0]) || isNaN(position[1]) ||
+            position[0] < -90 || position[0] > 90 ||
+            position[1] < -180 || position[1] > 180) {
+          return false;
+        }
         
         const isFriend = friendIds.includes(user.id);
         
@@ -1239,8 +1304,13 @@
     }
     
     function calculateDistance(pos1, pos2) {
+      if (!pos1 || !pos2 || !Array.isArray(pos1) || !Array.isArray(pos2)) return Infinity;
+      
       const [lat1, lon1] = pos1;
       const [lat2, lon2] = pos2;
+      
+      if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) return Infinity;
+      
       const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLon = (lon2 - lon1) * Math.PI / 180;
