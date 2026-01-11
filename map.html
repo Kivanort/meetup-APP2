@@ -2341,7 +2341,26 @@
       
       // Если есть текущая позиция пользователя, используем ее для местоположения
       if (currentUser && currentUser.position) {
-        document.getElementById('meetup-location').value = 'Ваше текущее местоположение';
+        // Пробуем получить адрес по координатам
+        if (typeof ymaps !== 'undefined') {
+          try {
+            ymaps.geocode(currentUser.position).then(function(res) {
+              const firstGeoObject = res.geoObjects.get(0);
+              if (firstGeoObject) {
+                const address = firstGeoObject.getAddressLine();
+                document.getElementById('meetup-location').value = address;
+              } else {
+                document.getElementById('meetup-location').value = 'Ваше текущее местоположение';
+              }
+            }).catch(function() {
+              document.getElementById('meetup-location').value = 'Ваше текущее местоположение';
+            });
+          } catch (e) {
+            document.getElementById('meetup-location').value = 'Ваше текущее местоположение';
+          }
+        } else {
+          document.getElementById('meetup-location').value = 'Ваше текущее местоположение';
+        }
       }
       
       // Устанавливаем тип встречи по умолчанию (приватная)
@@ -2590,6 +2609,7 @@
         datetime: datetime,
         type: meetupType,
         createdBy: currentUser.id,
+        createdByNickname: currentUser.nickname,
         createdAt: new Date().toISOString(),
         participants: [currentUser.id, ...selectedFriends],
         status: 'planned',
@@ -2640,7 +2660,9 @@
         localStorage.setItem('meetup_public_notifications', JSON.stringify(publicNotifications));
       }
       
-      showTempMessage(`Встреча "${title}" создана! ${selectedFriends.length > 0 ? `Уведомления отправлены ${selectedFriends.length} друзьям` : 'Публичная встреча создана'}`);
+      showTempMessage(`Встреча "${title}" успешно создана! ${selectedFriends.length > 0 ? `Уведомления отправлены ${selectedFriends.length} друзьям` : 'Публичная встреча создана'}`);
+      
+      // Закрываем окно создания встречи
       closeMeetupWindow();
       
       // Очищаем форму
@@ -2648,10 +2670,28 @@
       document.getElementById('meetup-description').value = '';
       document.getElementById('meetup-location').value = '';
       
-      // Перенаправляем на страницу встреч
+      // НЕ перенаправляем на другую страницу, остаемся на карте
+      // Вместо этого показываем информацию о созданной встрече
+      showMeetupCreatedNotification(meetup);
+    }
+    
+    function showMeetupCreatedNotification(meetup) {
+      const notification = document.createElement('div');
+      notification.className = 'nearby-notification';
+      notification.innerHTML = `
+        <span class="material-icons">event_available</span>
+        <div>
+          <strong>Встреча создана!</strong><br>
+          "${meetup.title}" успешно создана
+        </div>
+        <button onclick="this.parentElement.remove()" style="margin-left: auto; background: none; border: none; color: white; cursor: pointer;">
+          <span class="material-icons">close</span>
+        </button>
+      `;
+      document.body.appendChild(notification);
       setTimeout(() => {
-        window.location.href = 'meetups.html';
-      }, 1500);
+        if (notification.parentNode) notification.remove();
+      }, 5000);
     }
     
     function saveDisplaySettings() {
@@ -2783,89 +2823,13 @@
         }
       });
       
-      // Фильтры
-      document.getElementById('filter-friends').addEventListener('change', function() {
-        filterSettings.friends = this.checked;
-        updateMap();
-      });
-      
-      document.getElementById('filter-online').addEventListener('change', function() {
-        filterSettings.online = this.checked;
-        updateMap();
-      });
-      
-      document.getElementById('filter-nearby').addEventListener('change', function() {
-        filterSettings.nearby = this.checked;
-        updateMap();
-      });
-      
-      document.getElementById('filter-new').addEventListener('change', function() {
-        filterSettings.new = this.checked;
-        updateMap();
-      });
-      
-      const radiusSlider = document.getElementById('radius-slider');
-      const radiusValue = document.getElementById('radius-value');
-      radiusSlider.addEventListener('input', function() {
-        radiusValue.textContent = this.value;
-        filterSettings.radius = parseInt(this.value);
-      });
-      
-      radiusSlider.addEventListener('change', function() {
-        updateMap();
-      });
-      
-      // Настройки отображения
-      document.getElementById('display-all').addEventListener('change', function() {
-        displaySettings.all = this.checked;
-        updateMap();
-        saveDisplaySettings();
-      });
-      
-      document.getElementById('display-friends').addEventListener('change', function() {
-        displaySettings.friends = this.checked;
-        updateMap();
-        saveDisplaySettings();
-      });
-      
-      document.getElementById('display-online').addEventListener('change', function() {
-        displaySettings.online = this.checked;
-        updateMap();
-        saveDisplaySettings();
-      });
-      
-      document.getElementById('display-new').addEventListener('change', function() {
-        displaySettings.new = this.checked;
-        updateMap();
-        saveDisplaySettings();
-      });
-      
-      document.getElementById('friend-marker-select').addEventListener('change', function() {
-        displaySettings.friendMarker = this.value;
-        document.getElementById('friend-marker-style').textContent = this.options[this.selectedIndex].text;
-        updateMap();
-        saveDisplaySettings();
-      });
-      
-      // Закрытие панелей при клике вне
-      document.addEventListener('click', function(event) {
-        const filterPanel = document.getElementById('filter-panel');
-        const filterBtn = document.getElementById('btn-filter');
-        const displayPanel = document.getElementById('display-panel');
-        const displayBtn = document.getElementById('btn-display-mode');
-        const meetupOverlay = document.getElementById('meetup-overlay');
-        const routeInfoPanel = document.getElementById('route-info-panel');
-        
-        if (!filterPanel.contains(event.target) && !filterBtn.contains(event.target)) {
-          filterPanel.classList.remove('active');
-        }
-        
-        if (!displayPanel.contains(event.target) && !displayBtn.contains(event.target)) {
-          displayPanel.classList.remove('active');
-        }
-        
-        if (!routeInfoPanel.contains(event.target)) {
-          routeInfoPanel.classList.remove('active');
+      // Закрытие окна встречи при нажатии Escape
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          const meetupOverlay = document.getElementById('meetup-overlay');
+          if (meetupOverlay.classList.contains('active')) {
+            closeMeetupWindow();
+          }
         }
       });
     }
