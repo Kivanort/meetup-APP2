@@ -40,11 +40,11 @@
         /* Звезды - случайное расположение */
         .star {
             position: fixed;
-            font-size: 28px;
             z-index: 0;
             animation: star-float 4s ease-in-out infinite;
             filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5));
             opacity: 0.8;
+            pointer-events: none;
         }
 
         @keyframes star-float {
@@ -433,10 +433,6 @@
                 width: 120px;
                 height: 120px;
             }
-            
-            .star {
-                font-size: 22px;
-            }
         }
         
         @media (min-width: 481px) and (max-width: 768px) {
@@ -539,34 +535,52 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Создаем 7 случайно расположенных звезд
+            // Создаем 12 случайно расположенных звезд
             function createStars() {
                 const starsContainer = document.body;
-                const starCount = 7;
+                const starCount = 12;
+                const starCharacters = ['⭐', '🌟', '✨', '💫', '☀️'];
                 
                 for (let i = 0; i < starCount; i++) {
                     const star = document.createElement('div');
                     star.className = 'star';
-                    star.innerHTML = '⭐';
                     
-                    // Случайные координаты
-                    const left = Math.random() * 95;
-                    const top = Math.random() * 95;
+                    // Случайный символ звезды
+                    const randomChar = starCharacters[Math.floor(Math.random() * starCharacters.length)];
+                    star.innerHTML = randomChar;
                     
-                    // Случайный размер
-                    const size = 20 + Math.random() * 20;
+                    // Случайные координаты (избегаем краев экрана)
+                    const margin = 5;
+                    const left = margin + Math.random() * (100 - 2 * margin);
+                    const top = margin + Math.random() * (100 - 2 * margin);
+                    
+                    // Случайный размер (20-45px)
+                    const size = 20 + Math.random() * 25;
                     
                     // Случайная задержка анимации
-                    const delay = Math.random() * 4;
+                    const delay = Math.random() * 5;
                     
                     // Случайная продолжительность анимации
-                    const duration = 3 + Math.random() * 3;
+                    const duration = 3 + Math.random() * 4;
+                    
+                    // Случайная прозрачность
+                    const opacity = 0.5 + Math.random() * 0.5;
+                    
+                    // Случайный тип анимации
+                    const animationType = Math.random() > 0.5 ? 'star-float' : 'star-float';
                     
                     star.style.left = `${left}%`;
                     star.style.top = `${top}%`;
                     star.style.fontSize = `${size}px`;
                     star.style.animationDelay = `${delay}s`;
                     star.style.animationDuration = `${duration}s`;
+                    star.style.opacity = opacity;
+                    star.style.animationName = animationType;
+                    
+                    // Случайное направление вращения
+                    if (Math.random() > 0.5) {
+                        star.style.animationDirection = 'alternate-reverse';
+                    }
                     
                     starsContainer.appendChild(star);
                 }
