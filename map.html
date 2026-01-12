@@ -2144,6 +2144,29 @@
         build: function() {
           this.constructor.superclass.build.call(this);
           this.getParentElement().style.cursor = 'pointer';
+          // Добавляем обработчик клика на всю область маркера
+          this.getParentElement().onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Закрываем все открытые балуны
+            map.balloon.close();
+            
+            // Показываем выезжающее меню
+            showBalloonMenu(user);
+            
+            // Немного смещаем карту к метке, если она близко к краю
+            const pixelPosition = map.getPixelBounds(user.position);
+            const mapSize = map.container.getSize();
+            
+            if (pixelPosition[0] < 100 || pixelPosition[0] > mapSize[0] - 100 ||
+                pixelPosition[1] < 150 || pixelPosition[1] > mapSize[1] - 150) {
+              map.panTo(user.position, {
+                duration: 300,
+                timingFunction: 'ease-in-out'
+              });
+            }
+          };
         }
       });
       
@@ -2461,6 +2484,14 @@
         build: function() {
           this.constructor.superclass.build.call(this);
           this.getParentElement().style.cursor = 'pointer';
+          // Добавляем обработчик клика на всю область маркера
+          this.getParentElement().onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            showUserCard(currentUser);
+            map.balloon.close();
+          };
         }
       });
       
