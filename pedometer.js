@@ -1,10 +1,8 @@
-// Шагомер для MeetUP
+// Шагомер для MeetUP с обновлением в реальном времени
 
 const Pedometer = {
     isSupported: function() {
-        return 'DeviceMotionEvent' in window && 
-               typeof DeviceMotionEvent.requestPermission === 'function' ? true : 
-               'ondevicemotion' in window;
+        return 'DeviceMotionEvent' in window || 'ondevicemotion' in window;
     },
     
     // Статистика шагов
@@ -15,50 +13,112 @@ const Pedometer = {
         totalDistance: 0,
         lastUpdate: Date.now(),
         goal: 10000, // цель по умолчанию: 10,000 шагов
-        lastDayReset: null
+        activeSteps: 0, // Активные шаги с момента запуска
+        isRunning: false
     },
     
-    // Состояние отслеживания
-    isTracking: false,
-    lastAcceleration: null,
-    stepCount: 0,
-    lastStepTime: 0,
-    
-    // Константы
-    THRESHOLD: 10, // Порог для обнаружения шага
-    STEP_DELAY: 300, // Минимальная задержка между шагами (мс)
-    STEP_LENGTH: 0.00076, // Длина шага в километрах (0.76 метра)
-    CALORIES_PER_STEP: 0.04, // Калории на шаг
+    // Настройки детектора шагов
+    stepDetector: {
+        threshold: 12, // Порог для обнаружения шага
+        stepDelay: 300, // Минимальная задержка между шагами (мс)
+        smoothing: 5, // Сглаживание данных
+        lastAcceleration: null,
+        lastStepTime: 0,
+        buffer: [],
+        stepCount: 0,
+        worker: null
+    },
     
     // Инициализация шагомера
     initialize: function() {
         if (!this.isSupported()) {
             console.warn('Шагомер не поддерживается этим устройством');
-            return Promise.resolve(false);
+            return false;
         }
         
         this.loadStats();
         
-        // Для iOS 13+ требуется разрешение
+        // Запускаем фоновый процессор шагов через Web Worker
+        this.initStepWorker();
+        
+        // Запрашиваем разрешение на доступ к датчикам (для iOS)
         if (typeof DeviceMotionEvent.requestPermission === 'function') {
-            return DeviceMotionEvent.requestPermission()
+            DeviceMotionEvent.requestPermission()
                 .then(permissionState => {
                     if (permissionState === 'granted') {
                         this.startTracking();
-                        return true;
-                    } else {
-                        console.warn('Доступ к датчикам отклонен');
-                        return false;
                     }
                 })
-                .catch(error => {
-                    console.error('Ошибка при запросе разрешения:', error);
-                    return false;
-                });
+                .catch(console.error);
         } else {
-            // Для Android и других устройств
             this.startTracking();
-            return Promise.resolve(true);
+        }
+        
+        return true;
+    },
+    
+    // Инициализация Web Worker для обработки шагов
+    initStepWorker: function() {
+        // Создаем Web Worker для обработки данных акселерометра
+        const workerCode = `
+            let stepCount = 0;
+            let lastAcceleration = null;
+            let lastStepTime = 0;
+            const threshold = 12;
+            const stepDelay = 300;
+            const smoothing = 5;
+            let buffer = [];
+            
+            self.onmessage = function(e) {
+                const { acceleration, timestamp } = e.data;
+                
+                if (!acceleration) return;
+                
+                // Вычисляем общее ускорение
+                const totalAcceleration = Math.sqrt(
+                    Math.pow(acceleration.x, 2) + 
+                    Math.pow(acceleration.y, 2) + 
+                    Math.pow(acceleration.z, 2)
+                );
+                
+                // Сглаживание данных
+                buffer.push(totalAcceleration);
+                if (buffer.length > smoothing) {
+                    buffer.shift();
+                }
+                
+                const smoothedAcceleration = buffer.reduce((a, b) => a + b, 0) / buffer.length;
+                
+                if (lastAcceleration !== null) {
+                    const delta = Math.abs(smoothedAcceleration - lastAcceleration);
+                    
+                    // Обнаружение шага
+                    if (delta > threshold && (timestamp - lastStepTime) > stepDelay) {
+                        stepCount++;
+                        lastStepTime = timestamp;
+                        
+                        // Отправляем шаги основному потоку
+                        self.postMessage({ steps: 1, stepCount });
+                    }
+                }
+                
+                lastAcceleration = smoothedAcceleration;
+            };
+        `;
+        
+        try {
+            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            this.stepDetector.worker = new Worker(URL.createObjectURL(blob));
+            
+            // Обработчик сообщений от Worker
+            this.stepDetector.worker.onmessage = (e) => {
+                const { steps } = e.data;
+                if (steps > 0 && this.stats.isRunning) {
+                    this.addSteps(steps);
+                }
+            };
+        } catch (e) {
+            console.log('Web Worker не поддерживается, используем основной поток');
         }
     },
     
@@ -66,188 +126,212 @@ const Pedometer = {
     loadStats: function() {
         const saved = localStorage.getItem('meetup_pedometer_stats');
         if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                const now = new Date();
-                const lastUpdate = new Date(parsed.lastUpdate);
-                
-                // Сбрасываем сегодняшние шаги если это новый день
-                if (lastUpdate.getDate() !== now.getDate() || 
-                    lastUpdate.getMonth() !== now.getMonth() || 
-                    lastUpdate.getFullYear() !== now.getFullYear()) {
-                    parsed.today = 0;
-                }
-                
-                // Сбрасываем недельную статистику если прошла неделя
-                const weekAgo = new Date();
-                weekAgo.setDate(weekAgo.getDate() - 7);
-                if (lastUpdate < weekAgo) {
-                    parsed.week = 0;
-                }
-                
-                // Сбрасываем месячную статистику если прошел месяц
-                const monthAgo = new Date();
-                monthAgo.setMonth(monthAgo.getMonth() - 1);
-                if (lastUpdate < monthAgo) {
-                    parsed.month = 0;
-                }
-                
-                this.stats = { ...this.stats, ...parsed };
-            } catch (error) {
-                console.error('Ошибка при загрузке статистики:', error);
-                this.resetStats();
+            const parsed = JSON.parse(saved);
+            
+            // Проверяем, нужно ли сбросить дневную статистику
+            const lastUpdate = new Date(parsed.lastUpdate);
+            const today = new Date();
+            
+            if (lastUpdate.getDate() !== today.getDate() || 
+                lastUpdate.getMonth() !== today.getMonth() || 
+                lastUpdate.getFullYear() !== today.getFullYear()) {
+                // Новый день - сбрасываем сегодняшние шаги
+                parsed.today = 0;
+                parsed.activeSteps = 0;
             }
+            
+            // Проверяем сброс недельной статистики
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            if (lastUpdate < weekAgo) {
+                parsed.week = 0;
+            }
+            
+            // Проверяем сброс месячной статистики
+            const monthAgo = new Date();
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            if (lastUpdate < monthAgo) {
+                parsed.month = 0;
+            }
+            
+            this.stats = { ...this.stats, ...parsed };
         }
     },
     
     // Сохранение статистики
     saveStats: function() {
-        try {
-            this.stats.lastUpdate = Date.now();
-            localStorage.setItem('meetup_pedometer_stats', JSON.stringify(this.stats));
-        } catch (error) {
-            console.error('Ошибка при сохранении статистики:', error);
-        }
+        this.stats.lastUpdate = Date.now();
+        localStorage.setItem('meetup_pedometer_stats', JSON.stringify(this.stats));
     },
     
     // Начало отслеживания
     startTracking: function() {
-        if (this.isTracking) {
-            return;
-        }
+        this.stats.isRunning = true;
+        this.stats.activeSteps = 0;
         
-        const motionHandler = (event) => {
+        let lastTimestamp = 0;
+        
+        const handleMotion = (event) => {
+            if (!this.stats.isRunning) return;
+            
             const acceleration = event.accelerationIncludingGravity;
+            const timestamp = event.timeStamp || Date.now();
             
-            if (!acceleration || acceleration.x === null || 
-                acceleration.y === null || acceleration.z === null) {
-                return;
+            // Ограничиваем частоту обработки (макс 30 раз в секунду)
+            if (timestamp - lastTimestamp < 33) return;
+            lastTimestamp = timestamp;
+            
+            if (this.stepDetector.worker) {
+                // Отправляем данные в Web Worker
+                this.stepDetector.worker.postMessage({
+                    acceleration,
+                    timestamp
+                });
+            } else {
+                // Обработка в основном потоке (запасной вариант)
+                this.processStepInMainThread(acceleration, timestamp);
             }
-            
-            // Вычисляем общее ускорение
-            const totalAcceleration = Math.sqrt(
-                acceleration.x * acceleration.x + 
-                acceleration.y * acceleration.y + 
-                acceleration.z * acceleration.z
-            );
-            
-            if (this.lastAcceleration !== null) {
-                const delta = Math.abs(totalAcceleration - this.lastAcceleration);
-                const currentTime = Date.now();
-                
-                // Обнаружение шага
-                if (delta > this.THRESHOLD && 
-                    (currentTime - this.lastStepTime) > this.STEP_DELAY) {
-                    this.stepCount++;
-                    this.lastStepTime = currentTime;
-                    
-                    // Обновляем статистику каждые 10 шагов для производительности
-                    if (this.stepCount >= 10) {
-                        this.addSteps(this.stepCount);
-                        this.stepCount = 0;
-                    }
-                }
-            }
-            
-            this.lastAcceleration = totalAcceleration;
         };
         
-        // Добавляем обработчик с флагом passive для производительности
-        window.addEventListener('devicemotion', motionHandler, { passive: true });
+        window.addEventListener('devicemotion', handleMotion, { passive: true });
         
-        // Сохраняем ссылку на обработчик для удаления
-        this.motionHandler = motionHandler;
-        this.isTracking = true;
+        // Сохраняем обработчик для последующего удаления
+        this.stepDetector.motionHandler = handleMotion;
+    },
+    
+    // Обработка шагов в основном потоке
+    processStepInMainThread: function(acceleration, timestamp) {
+        if (!acceleration) return;
         
-        console.log('Отслеживание шагов начато');
+        const totalAcceleration = Math.sqrt(
+            Math.pow(acceleration.x, 2) + 
+            Math.pow(acceleration.y, 2) + 
+            Math.pow(acceleration.z, 2)
+        );
+        
+        // Сглаживание данных
+        this.stepDetector.buffer.push(totalAcceleration);
+        if (this.stepDetector.buffer.length > this.stepDetector.smoothing) {
+            this.stepDetector.buffer.shift();
+        }
+        
+        const smoothedAcceleration = this.stepDetector.buffer.reduce((a, b) => a + b, 0) / this.stepDetector.buffer.length;
+        
+        if (this.stepDetector.lastAcceleration !== null) {
+            const delta = Math.abs(smoothedAcceleration - this.stepDetector.lastAcceleration);
+            
+            // Обнаружение шага
+            if (delta > this.stepDetector.threshold && 
+                (timestamp - this.stepDetector.lastStepTime) > this.stepDetector.stepDelay) {
+                
+                this.stepDetector.lastStepTime = timestamp;
+                this.stepDetector.stepCount++;
+                
+                // Обновляем каждые 5 шагов для производительности
+                if (this.stepDetector.stepCount >= 5) {
+                    if (this.stats.isRunning) {
+                        this.addSteps(this.stepDetector.stepCount);
+                    }
+                    this.stepDetector.stepCount = 0;
+                }
+            }
+        }
+        
+        this.stepDetector.lastAcceleration = smoothedAcceleration;
     },
     
     // Остановка отслеживания
     stopTracking: function() {
-        if (this.motionHandler) {
-            window.removeEventListener('devicemotion', this.motionHandler);
-            this.motionHandler = null;
+        this.stats.isRunning = false;
+        
+        if (this.stepDetector.motionHandler) {
+            window.removeEventListener('devicemotion', this.stepDetector.motionHandler);
         }
-        this.isTracking = false;
-        this.lastAcceleration = null;
-        console.log('Отслеживание шагов остановлено');
+        
+        // Сохраняем оставшиеся шаги
+        if (this.stepDetector.stepCount > 0 && this.stats.isRunning) {
+            this.addSteps(this.stepDetector.stepCount);
+            this.stepDetector.stepCount = 0;
+        }
     },
     
     // Добавление шагов
     addSteps: function(steps) {
         if (steps <= 0) return;
         
-        // Проверяем, не нужно ли сбросить дневную статистику
-        this.checkAndResetDailyStats();
-        
         this.stats.today += steps;
         this.stats.week += steps;
         this.stats.month += steps;
+        this.stats.activeSteps += steps;
         
-        // Расчет расстояния
-        const distance = steps * this.STEP_LENGTH;
+        // Расчет расстояния (средний шаг = 0.76 метра)
+        const distance = steps * 0.00076; // в километрах
         this.stats.totalDistance += distance;
         
         this.saveStats();
         
         // Отправляем событие об обновлении
-        try {
-            const event = new CustomEvent('pedometerUpdate', { detail: this.getStats() });
-            window.dispatchEvent(event);
-        } catch (error) {
-            console.error('Ошибка при отправке события:', error);
-        }
-    },
-    
-    // Проверка и сброс дневной статистики
-    checkAndResetDailyStats: function() {
-        const now = new Date();
-        const lastUpdate = new Date(this.stats.lastUpdate);
+        const event = new CustomEvent('pedometerUpdate', { 
+            detail: this.getStats() 
+        });
+        window.dispatchEvent(event);
         
-        if (lastUpdate.getDate() !== now.getDate() || 
-            lastUpdate.getMonth() !== now.getMonth() || 
-            lastUpdate.getFullYear() !== now.getFullYear()) {
-            this.stats.today = 0;
+        // Также отправляем отдельное событие для каждого шага для анимации
+        if (steps === 1) {
+            const stepEvent = new CustomEvent('pedometerStep', { 
+                detail: { step: this.stats.today }
+            });
+            window.dispatchEvent(stepEvent);
         }
     },
     
     // Ручное добавление шагов (для тестирования)
     addStepsManually: function(steps) {
-        if (typeof steps !== 'number' || steps <= 0) {
-            console.error('Некорректное количество шагов:', steps);
-            return this.getStats();
+        if (!this.stats.isRunning) {
+            this.stats.isRunning = true;
         }
-        
         this.addSteps(steps);
-        return this.getStats();
+        return this.stats;
     },
     
     // Получение статистики
     getStats: function() {
-        this.checkAndResetDailyStats();
+        const today = new Date();
+        const lastUpdate = new Date(this.stats.lastUpdate);
         
-        const goalProgress = this.stats.goal > 0 ? 
-            Math.min(100, (this.stats.today / this.stats.goal) * 100) : 0;
+        // Сброс статистики при новом дне
+        if (lastUpdate.getDate() !== today.getDate() || 
+            lastUpdate.getMonth() !== today.getMonth() || 
+            lastUpdate.getFullYear() !== today.getFullYear()) {
+            this.stats.today = 0;
+            this.stats.activeSteps = 0;
+            this.saveStats();
+        }
+        
+        const goalProgress = Math.min(100, (this.stats.today / this.stats.goal) * 100);
         
         return {
             today: this.stats.today,
             week: this.stats.week,
             month: this.stats.month,
-            totalDistance: parseFloat(this.stats.totalDistance.toFixed(2)),
+            totalDistance: this.stats.totalDistance,
+            activeSteps: this.stats.activeSteps,
+            isRunning: this.stats.isRunning,
             goal: this.stats.goal,
-            lastUpdate: this.stats.lastUpdate,
-            calories: Math.round(this.stats.today * this.CALORIES_PER_STEP),
-            distanceToday: parseFloat((this.stats.today * this.STEP_LENGTH).toFixed(2)),
-            goalProgress: parseFloat(goalProgress.toFixed(1)),
-            isTracking: this.isTracking
+            calories: Math.round(this.stats.today * 0.04), // Примерные калории
+            distanceToday: this.stats.today * 0.00076,
+            goalProgress: goalProgress,
+            remainingSteps: Math.max(0, this.stats.goal - this.stats.today),
+            progressPercent: goalProgress.toFixed(1)
         };
     },
     
     // Сброс статистики
-    resetStats: function(type = 'all') {
+    resetStats: function(type = 'today') {
         switch(type) {
             case 'today':
                 this.stats.today = 0;
+                this.stats.activeSteps = 0;
                 break;
             case 'week':
                 this.stats.week = 0;
@@ -256,86 +340,82 @@ const Pedometer = {
                 this.stats.month = 0;
                 break;
             case 'all':
-            default:
-                this.stats = {
-                    today: 0,
-                    week: 0,
-                    month: 0,
-                    totalDistance: 0,
-                    lastUpdate: Date.now(),
-                    goal: this.stats.goal || 10000
-                };
+                this.stats.today = 0;
+                this.stats.week = 0;
+                this.stats.month = 0;
+                this.stats.totalDistance = 0;
+                this.stats.activeSteps = 0;
                 break;
         }
         
         this.saveStats();
         
-        // Отправляем событие о сбросе
-        try {
-            const event = new CustomEvent('pedometerReset', { detail: { type } });
-            window.dispatchEvent(event);
-        } catch (error) {
-            console.error('Ошибка при отправке события:', error);
-        }
+        // Отправляем событие об обновлении
+        const event = new CustomEvent('pedometerUpdate', { 
+            detail: this.getStats() 
+        });
+        window.dispatchEvent(event);
         
-        return this.getStats();
+        return this.stats;
     },
     
     // Установка цели
     setGoal: function(steps) {
-        if (typeof steps !== 'number' || steps <= 0) {
-            console.error('Некорректная цель:', steps);
-            return false;
-        }
-        
-        this.stats.goal = Math.floor(steps);
+        this.stats.goal = steps;
         this.saveStats();
         
-        // Отправляем событие об изменении цели
-        try {
-            const event = new CustomEvent('pedometerGoalChanged', { detail: { goal: this.stats.goal } });
-            window.dispatchEvent(event);
-        } catch (error) {
-            console.error('Ошибка при отправке события:', error);
-        }
-        
-        return true;
+        // Отправляем событие об обновлении
+        const event = new CustomEvent('pedometerUpdate', { 
+            detail: this.getStats() 
+        });
+        window.dispatchEvent(event);
     },
     
     // Имитация шагов для устройств без датчиков
-    simulateSteps: function(min = 50, max = 150) {
-        const steps = Math.floor(Math.random() * (max - min + 1)) + min;
-        this.addSteps(steps);
+    simulateSteps: function(count = 50) {
+        if (!this.stats.isRunning) {
+            this.stats.isRunning = true;
+        }
         
-        console.log(`Симулировано ${steps} шагов`);
-        return steps;
+        // Добавляем шаги с небольшой задержкой для реалистичности
+        const addStepsWithDelay = (remaining) => {
+            if (remaining <= 0) return;
+            
+            const batch = Math.min(5, remaining); // По 5 шагов за раз
+            this.addSteps(batch);
+            
+            // Анимация для каждого шага
+            for (let i = 0; i < batch; i++) {
+                setTimeout(() => {
+                    const stepEvent = new CustomEvent('pedometerStep', { 
+                        detail: { step: this.stats.today, simulated: true }
+                    });
+                    window.dispatchEvent(stepEvent);
+                }, i * 100);
+            }
+            
+            if (remaining > batch) {
+                setTimeout(() => addStepsWithDelay(remaining - batch), 500);
+            }
+        };
+        
+        addStepsWithDelay(count);
+        return count;
     },
     
-    // Проверка достижения цели
-    isGoalAchieved: function() {
-        return this.stats.today >= this.stats.goal;
-    },
-    
-    // Получение оставшихся шагов до цели
-    getRemainingSteps: function() {
-        return Math.max(0, this.stats.goal - this.stats.today);
-    },
-    
-    // Экспорт статистики
-    exportStats: function() {
-        return JSON.stringify(this.getStats(), null, 2);
-    },
-    
-    // Импорт статистики
-    importStats: function(jsonString) {
-        try {
-            const imported = JSON.parse(jsonString);
-            this.stats = { ...this.stats, ...imported };
-            this.saveStats();
-            return true;
-        } catch (error) {
-            console.error('Ошибка при импорте статистики:', error);
+    // Переключение состояния отслеживания
+    toggleTracking: function() {
+        if (this.stats.isRunning) {
+            this.stopTracking();
             return false;
+        } else {
+            this.startTracking();
+            return true;
         }
     }
 };
+
+// Экспорт для использования в других файлах
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Pedometer;
+}
