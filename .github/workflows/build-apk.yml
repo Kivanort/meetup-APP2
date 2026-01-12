@@ -1,0 +1,36 @@
+name: Build MeetUp APK
+
+on:
+  push:
+    tags:
+      - 'v*'  # Запускается только при создании тегов v1.0, v1.1 и т.д.
+  workflow_dispatch:  # Добавьте эту строку для ручного запуска
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Build APK
+      uses: DroidZed/webview-apk-builder-action@v1
+      with:
+        # ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL!
+        url: 'https://kivanort.github.io/meetup-APP2/'
+        name: 'MeetUp App'
+        package: 'com.meetup.app2'
+        permissions: 'INTERNET,ACCESS_NETWORK_STATE'
+        
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: meetup-app-release
+        path: app/build/outputs/apk/release/*.apk
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: app/build/outputs/apk/release/*.apk
