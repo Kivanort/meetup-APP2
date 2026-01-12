@@ -66,7 +66,8 @@ const NotificationSystem = (function() {
         pushSubscription: null,
         notificationQueue: [],
         lastNotificationTime: 0,
-        notificationCount: 0
+        notificationCount: 0,
+        swRegistrationAttempted: false
     };
     
     // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
@@ -663,18 +664,44 @@ const NotificationSystem = (function() {
     
     // Инициализация Service Worker
     async function initializeServiceWorker() {
-        if (!isPushSupported()) {
-            console.log('PUSH уведомления не поддерживаются');
+        if (!isPushSupported() || state.swRegistrationAttempted) {
+            console.log('PUSH уведомления не поддерживаются или регистрация уже предпринималась');
             return null;
         }
         
+        state.swRegistrationAttempted = true;
+        
         try {
-            const registration = await navigator.serviceWorker.register('/sw-notifications.js', {
+            // Проверяем существование файла Service Worker
+            const swUrl = '/sw-notifications.js';
+            const swExists = await checkIfFileExists(swUrl);
+            
+            if (!swExists) {
+                console.warn(`Service Worker файл не найден по адресу: ${swUrl}`);
+                console.info('Для использования PUSH уведомлений необходимо создать файл sw-notifications.js');
+                return null;
+            }
+            
+            const registration = await navigator.serviceWorker.register(swUrl, {
                 scope: '/'
             });
             
             state.serviceWorker = registration;
             console.log('Service Worker зарегистрирован:', registration);
+            
+            // Ждем активации Service Worker
+            if (registration.active) {
+                console.log('Service Worker активен');
+            } else if (registration.installing) {
+                await new Promise(resolve => {
+                    registration.installing.addEventListener('statechange', (e) => {
+                        if (e.target.state === 'activated') {
+                            console.log('Service Worker активирован');
+                            resolve();
+                        }
+                    });
+                });
+            }
             
             // Проверяем существующую подписку
             const subscription = await registration.pushManager.getSubscription();
@@ -686,7 +713,18 @@ const NotificationSystem = (function() {
             return registration;
         } catch (error) {
             console.error('Ошибка регистрации Service Worker:', error);
+            console.info('Это нормально, если файл sw-notifications.js отсутствует. Браузерные уведомления будут работать.');
             return null;
+        }
+    }
+    
+    // Проверка существования файла
+    async function checkIfFileExists(url) {
+        try {
+            const response = await fetch(url, { method: 'HEAD' });
+            return response.ok;
+        } catch (error) {
+            return false;
         }
     }
     
@@ -852,9 +890,14 @@ const NotificationSystem = (function() {
         // Проверяем разрешение
         getPermission();
         
-        // Инициализируем Service Worker для PUSH уведомлений
+        // Инициализируем Service Worker для PUSH уведомлений (если поддерживается)
         if (isPushSupported()) {
-            await initializeServiceWorker();
+            try {
+                await initializeServiceWorker();
+            } catch (error) {
+                console.warn('Не удалось инициализировать Service Worker:', error);
+                console.info('Браузерные уведомления будут работать без PUSH функций');
+            }
         }
         
         // Очищаем старые уведомления
