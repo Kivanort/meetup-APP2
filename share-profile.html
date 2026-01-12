@@ -37,23 +37,19 @@
             overflow: hidden;
         }
 
-        /* Звезды по углам */
+        /* Звезды - случайное расположение */
         .star {
             position: fixed;
-            font-size: 32px;
+            font-size: 28px;
             z-index: 0;
             animation: star-float 4s ease-in-out infinite;
             filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5));
+            opacity: 0.8;
         }
-
-        .star:nth-child(1) { top: 30px; left: 30px; animation-delay: 0s; }
-        .star:nth-child(2) { top: 30px; right: 30px; animation-delay: 1s; }
-        .star:nth-child(3) { bottom: 30px; left: 30px; animation-delay: 2s; }
-        .star:nth-child(4) { bottom: 30px; right: 30px; animation-delay: 3s; }
 
         @keyframes star-float {
             0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-10px) rotate(5deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
         }
 
         /* Основной контейнер */
@@ -248,33 +244,38 @@
         /* Кнопки социальных сетей */
         .social-share {
             display: flex;
-            gap: 15px;
+            flex-wrap: wrap;
+            gap: 12px;
             margin-top: 25px;
         }
 
         .social-btn {
             flex: 1;
-            padding: 16px;
+            padding: 16px 12px;
             border-radius: 12px;
             border: none;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
             color: white;
+            min-width: 0;
+            white-space: nowrap;
         }
 
         .social-btn .material-icons {
-            font-size: 24px;
+            font-size: 22px;
+            flex-shrink: 0;
         }
 
         .btn-share-simple {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            flex-basis: 100%;
         }
 
         .btn-share-simple:hover {
@@ -284,6 +285,7 @@
 
         .btn-telegram {
             background: var(--button-telegram);
+            flex: 1;
         }
 
         .btn-telegram:hover {
@@ -294,6 +296,7 @@
 
         .btn-whatsapp {
             background: var(--button-whatsapp);
+            flex: 1;
         }
 
         .btn-whatsapp:hover {
@@ -411,6 +414,17 @@
                 flex-direction: column;
             }
             
+            .social-btn {
+                width: 100%;
+                padding: 16px;
+            }
+            
+            .btn-telegram,
+            .btn-whatsapp {
+                flex: 1;
+                min-width: 100%;
+            }
+            
             .logo {
                 font-size: 36px;
             }
@@ -421,17 +435,28 @@
             }
             
             .star {
-                font-size: 24px;
+                font-size: 22px;
+            }
+        }
+        
+        @media (min-width: 481px) and (max-width: 768px) {
+            .social-share {
+                gap: 10px;
+            }
+            
+            .social-btn {
+                font-size: 14px;
+                padding: 14px 10px;
+            }
+            
+            .social-btn .material-icons {
+                font-size: 20px;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Звезды по углам -->
-    <div class="star">⭐</div>
-    <div class="star">⭐</div>
-    <div class="star">⭐</div>
-    <div class="star">⭐</div>
+    <!-- Звезды будут созданы через JavaScript -->
 
     <!-- Основной контейнер -->
     <div class="share-container">
@@ -477,7 +502,7 @@
         <div class="social-share">
             <button class="social-btn btn-share-simple" id="btn-share-simple">
                 <span class="material-icons">share</span>
-                Поделиться
+                Поделиться просто
             </button>
             <button class="social-btn btn-telegram" id="btn-share-telegram">
                 <span class="material-icons">telegram</span>
@@ -514,6 +539,42 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Создаем 7 случайно расположенных звезд
+            function createStars() {
+                const starsContainer = document.body;
+                const starCount = 7;
+                
+                for (let i = 0; i < starCount; i++) {
+                    const star = document.createElement('div');
+                    star.className = 'star';
+                    star.innerHTML = '⭐';
+                    
+                    // Случайные координаты
+                    const left = Math.random() * 95;
+                    const top = Math.random() * 95;
+                    
+                    // Случайный размер
+                    const size = 20 + Math.random() * 20;
+                    
+                    // Случайная задержка анимации
+                    const delay = Math.random() * 4;
+                    
+                    // Случайная продолжительность анимации
+                    const duration = 3 + Math.random() * 3;
+                    
+                    star.style.left = `${left}%`;
+                    star.style.top = `${top}%`;
+                    star.style.fontSize = `${size}px`;
+                    star.style.animationDelay = `${delay}s`;
+                    star.style.animationDuration = `${duration}s`;
+                    
+                    starsContainer.appendChild(star);
+                }
+            }
+            
+            // Создаем звезды
+            createStars();
+            
             // Получаем текущего пользователя
             const currentUser = UserSystem.getCurrentUser();
             
@@ -736,5 +797,4 @@
         });
     </script>
 </body>
-
 </html>
