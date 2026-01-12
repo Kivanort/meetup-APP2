@@ -1107,6 +1107,141 @@
       box-shadow: 0 4px 12px rgba(52,235,137,0.3);
     }
     
+    /* НОВЫЕ СТИЛИ ДЛЯ ВЫЕЗЖАЮЩЕГО МЕНЮ */
+    .balloon-menu {
+      position: fixed;
+      bottom: -120px;
+      left: 0;
+      right: 0;
+      background: var(--container);
+      border-radius: 20px 20px 0 0;
+      padding: 20px;
+      box-shadow: 0 -5px 30px rgba(0,0,0,0.5);
+      z-index: 1001;
+      transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      transform: translateY(100%);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    .balloon-menu.active {
+      transform: translateY(-120px);
+      bottom: 0;
+    }
+    
+    .balloon-menu-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+    
+    .balloon-menu-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+    }
+    
+    .balloon-menu-close {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .balloon-menu-close:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    
+    .balloon-menu-content {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .balloon-menu-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--primary-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    
+    .balloon-menu-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .balloon-menu-user-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 5px;
+    }
+    
+    .balloon-menu-distance {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    
+    .balloon-menu-distance-value {
+      color: var(--route-color);
+      font-weight: 600;
+    }
+    
+    .balloon-menu-route-btn {
+      padding: 12px 20px;
+      background: var(--route-color);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    
+    .balloon-menu-route-btn:hover {
+      background: #2BD489;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(52,235,137,0.3);
+    }
+    
+    .balloon-menu-route-btn:active {
+      transform: translateY(0);
+    }
+    
+    .balloon-menu-swipe-handle {
+      width: 40px;
+      height: 4px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 2px;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    
     @media (max-width: 768px) {
       .header-content {padding: 12px 15px;}
       .app-logo {font-size: 20px;}
@@ -1130,6 +1265,10 @@
       .user-card-avatar {width: 50px; height: 50px;}
       .user-card-name {font-size: 16px;}
       .user-card-actions {flex-direction: column;}
+      .balloon-menu {padding: 15px; max-width: 100%;}
+      .balloon-menu-content {gap: 12px;}
+      .balloon-menu-icon {width: 45px; height: 45px; font-size: 20px;}
+      .balloon-menu-route-btn {padding: 10px 15px; font-size: 13px;}
     }
     
     @media (max-width: 480px) {
@@ -1157,6 +1296,10 @@
       .route-type-content {padding: 15px;}
       .route-type-option {padding: 12px;}
       .user-card {padding: 12px; border-radius: 12px;}
+      .balloon-menu {padding: 12px;}
+      .balloon-menu-content {flex-direction: column; text-align: center;}
+      .balloon-menu-info {text-align: center;}
+      .balloon-menu-route-btn {width: 100%;}
     }
   </style>
 </head>
@@ -1352,6 +1495,34 @@
           <button class="user-card-btn btn-profile" id="user-card-profile-btn">
             <span class="material-icons">person</span>
             Профиль
+          </button>
+        </div>
+      </div>
+      
+      <!-- Выезжающее меню при нажатии на балун -->
+      <div class="balloon-menu" id="balloon-menu">
+        <div class="balloon-menu-swipe-handle"></div>
+        <div class="balloon-menu-header">
+          <div class="balloon-menu-title">Быстрые действия</div>
+          <button class="balloon-menu-close" id="balloon-menu-close">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <div class="balloon-menu-content">
+          <div class="balloon-menu-icon">
+            <span class="material-icons">chat</span>
+          </div>
+          <div class="balloon-menu-info">
+            <div class="balloon-menu-user-name" id="balloon-menu-user-name">Иван Иванов</div>
+            <div class="balloon-menu-distance">
+              <span class="material-icons">straight</span>
+              <span class="balloon-menu-distance-value" id="balloon-menu-distance-value">850 м</span>
+              <span>от вас</span>
+            </div>
+          </div>
+          <button class="balloon-menu-route-btn" id="balloon-menu-route-btn">
+            <span class="material-icons">directions</span>
+            Маршрут
           </button>
         </div>
       </div>
@@ -1611,6 +1782,13 @@
     let selectedRouteType = 'auto'; // auto, pedestrian, masstransit, taxi
     let routeToUserId = null;
     
+    // Переменные для выезжающего меню
+    let balloonMenuUser = null;
+    let balloonMenuDistance = 0;
+    let balloonMenuIsSwiping = false;
+    let balloonMenuStartY = 0;
+    let balloonMenuStartHeight = 0;
+    
     // Тестовый пользователь для демонстрации
     const testUser = {
       id: 'test_user_001',
@@ -1815,6 +1993,9 @@
             // Загружаем маршруты друзей
             loadFriendRoutes();
             
+            // Инициализируем свайп для меню
+            initBalloonMenuSwipe();
+            
           } catch (error) {
             console.error('❌ Ошибка при инициализации карты:', error);
             placeholder.innerHTML = `
@@ -1990,10 +2171,12 @@
       // Добавляем обработчик клика на метку
       placemark.events.add('click', function(e) {
         e.preventDefault();
-        showUserCard(user);
         
         // Закрываем все открытые балуны
         map.balloon.close();
+        
+        // Показываем выезжающее меню
+        showBalloonMenu(user);
         
         // Немного смещаем карту к метке, если она близко к краю
         const pixelPosition = map.getPixelBounds(user.position);
@@ -2024,6 +2207,17 @@
       const initials = user.initials || getInitials(user.nickname);
       const avatarColor = user.avatarColor || getAvatarColor(user.nickname);
       const isOnline = user.status === 'online';
+      
+      // Вычисляем расстояние до пользователя
+      let distanceText = '...';
+      if (currentUser && currentUser.position) {
+        const distance = calculateDistance(currentUser.position, user.position);
+        if (distance < 1) {
+          distanceText = `${Math.round(distance * 1000)} м`;
+        } else {
+          distanceText = `${distance.toFixed(1)} км`;
+        }
+      }
       
       return `
         <div style="padding: 15px; min-width: 280px; max-width: 320px;">
@@ -2060,6 +2254,11 @@
                 ${isFriend ? '<span style="color: #2CB4FF; font-size: 12px;">• Друг</span>' : ''}
               </div>
             </div>
+          </div>
+          
+          <div style="color: #aaa; font-size: 13px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+            <span class="material-icons" style="font-size: 14px;">straight</span>
+            <span>${distanceText} от вас</span>
           </div>
           
           ${user.about ? `
@@ -2381,6 +2580,171 @@
           </div>
         </div>
       `;
+    }
+    
+    // ============================================
+    // ФУНКЦИИ ДЛЯ ВЫЕЗЖАЮЩЕГО МЕНЮ
+    // ============================================
+    
+    function showBalloonMenu(user) {
+      balloonMenuUser = user;
+      
+      // Вычисляем расстояние до пользователя
+      if (currentUser && currentUser.position && user.position) {
+        balloonMenuDistance = calculateDistance(currentUser.position, user.position);
+      } else {
+        balloonMenuDistance = 0;
+      }
+      
+      // Обновляем информацию в меню
+      document.getElementById('balloon-menu-user-name').textContent = user.nickname || 'Пользователь';
+      
+      if (balloonMenuDistance < 1) {
+        document.getElementById('balloon-menu-distance-value').textContent = `${Math.round(balloonMenuDistance * 1000)} м`;
+      } else {
+        document.getElementById('balloon-menu-distance-value').textContent = `${balloonMenuDistance.toFixed(1)} км`;
+      }
+      
+      // Показываем меню с анимацией
+      const menu = document.getElementById('balloon-menu');
+      menu.classList.add('active');
+      
+      // Добавляем обработчик клика вне меню
+      setTimeout(() => {
+        document.addEventListener('click', closeBalloonMenuOnClickOutside);
+      }, 10);
+    }
+    
+    function hideBalloonMenu() {
+      const menu = document.getElementById('balloon-menu');
+      menu.classList.remove('active');
+      balloonMenuUser = null;
+      
+      // Удаляем обработчик клика вне меню
+      document.removeEventListener('click', closeBalloonMenuOnClickOutside);
+    }
+    
+    function closeBalloonMenuOnClickOutside(event) {
+      const menu = document.getElementById('balloon-menu');
+      if (menu && !menu.contains(event.target)) {
+        hideBalloonMenu();
+      }
+    }
+    
+    function initBalloonMenuSwipe() {
+      const menu = document.getElementById('balloon-menu');
+      const swipeHandle = menu.querySelector('.balloon-menu-swipe-handle');
+      
+      if (!menu || !swipeHandle) return;
+      
+      // Обработчики для свайпа вниз
+      menu.addEventListener('touchstart', handleTouchStart);
+      menu.addEventListener('touchmove', handleTouchMove);
+      menu.addEventListener('touchend', handleTouchEnd);
+      
+      // Также для мыши
+      menu.addEventListener('mousedown', handleMouseDown);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      function handleTouchStart(e) {
+        if (e.target === swipeHandle || e.target.closest('.balloon-menu-swipe-handle')) {
+          balloonMenuIsSwiping = true;
+          balloonMenuStartY = e.touches[0].clientY;
+          balloonMenuStartHeight = menu.offsetHeight;
+          menu.style.transition = 'none';
+          e.preventDefault();
+        }
+      }
+      
+      function handleTouchMove(e) {
+        if (!balloonMenuIsSwiping) return;
+        
+        const currentY = e.touches[0].clientY;
+        const deltaY = currentY - balloonMenuStartY;
+        
+        if (deltaY > 0) { // Свайп вниз
+          menu.style.transform = `translateY(${deltaY}px)`;
+        }
+        
+        e.preventDefault();
+      }
+      
+      function handleTouchEnd(e) {
+        if (!balloonMenuIsSwiping) return;
+        
+        balloonMenuIsSwiping = false;
+        menu.style.transition = 'transform 0.3s ease';
+        
+        const currentY = e.changedTouches[0].clientY;
+        const deltaY = currentY - balloonMenuStartY;
+        
+        // Если свайпнули достаточно далеко вниз, закрываем меню
+        if (deltaY > 50) {
+          hideBalloonMenu();
+        } else {
+          // Возвращаем на место
+          menu.style.transform = 'translateY(0)';
+        }
+        
+        e.preventDefault();
+      }
+      
+      function handleMouseDown(e) {
+        if (e.target === swipeHandle || e.target.closest('.balloon-menu-swipe-handle')) {
+          balloonMenuIsSwiping = true;
+          balloonMenuStartY = e.clientY;
+          balloonMenuStartHeight = menu.offsetHeight;
+          menu.style.transition = 'none';
+          e.preventDefault();
+        }
+      }
+      
+      function handleMouseMove(e) {
+        if (!balloonMenuIsSwiping) return;
+        
+        const currentY = e.clientY;
+        const deltaY = currentY - balloonMenuStartY;
+        
+        if (deltaY > 0) { // Свайп вниз
+          menu.style.transform = `translateY(${deltaY}px)`;
+        }
+        
+        e.preventDefault();
+      }
+      
+      function handleMouseUp(e) {
+        if (!balloonMenuIsSwiping) return;
+        
+        balloonMenuIsSwiping = false;
+        menu.style.transition = 'transform 0.3s ease';
+        
+        const currentY = e.clientY;
+        const deltaY = currentY - balloonMenuStartY;
+        
+        // Если свайпнули достаточно далеко вниз, закрываем меню
+        if (deltaY > 50) {
+          hideBalloonMenu();
+        } else {
+          // Возвращаем на место
+          menu.style.transform = 'translateY(0)';
+        }
+        
+        e.preventDefault();
+      }
+    }
+    
+    function buildRouteFromBalloonMenu() {
+      if (!balloonMenuUser) {
+        showTempMessage('Пользователь не выбран');
+        return;
+      }
+      
+      // Закрываем меню
+      hideBalloonMenu();
+      
+      // Открываем окно выбора типа маршрута
+      openRouteTypeSelector(balloonMenuUser.id);
     }
     
     // ============================================
@@ -3457,7 +3821,7 @@
       document.getElementById('meetup-location').value = '';
       
       // НЕ перенаправляем на другую страницу, остаемся на карте
-      // Вместо этого показываем информацию о созданной встрече
+      // Вместо этого показываем информацию о созданной встречи
       showMeetupCreatedNotification(meetup);
     }
     
@@ -3774,6 +4138,10 @@
         }
       });
       
+      // Обработчики для выезжающего меню
+      document.getElementById('balloon-menu-close').addEventListener('click', hideBalloonMenu);
+      document.getElementById('balloon-menu-route-btn').addEventListener('click', buildRouteFromBalloonMenu);
+      
       // Обработчики для окна выбора типа маршрута
       document.getElementById('route-type-cancel-btn').addEventListener('click', closeRouteTypeSelector);
       document.getElementById('route-type-build-btn').addEventListener('click', buildRouteToUser);
@@ -3807,6 +4175,11 @@
           const userCard = document.getElementById('user-card');
           if (userCard.classList.contains('active')) {
             hideUserCard();
+          }
+          
+          const balloonMenu = document.getElementById('balloon-menu');
+          if (balloonMenu.classList.contains('active')) {
+            hideBalloonMenu();
           }
         }
       });
