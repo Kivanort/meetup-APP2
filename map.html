@@ -2236,17 +2236,21 @@
     function getUserAvatar(user) {
       // Проверяем, есть ли у пользователя аватар
       if (user.avatar) {
-        // Проверяем, является ли аватар валидным URL или путем к файлу
-        if (typeof user.avatar === 'string' && 
-            (user.avatar.startsWith('http') || 
-             user.avatar.startsWith('data:image') || 
-             user.avatar.startsWith('/') ||
-             user.avatar.startsWith('./'))) {
-          return user.avatar;
+        // Проверяем, является ли аватар валидной строкой URL или путем к файлу
+        if (typeof user.avatar === 'string' && user.avatar.trim() !== '') {
+          // Проверяем различные форматы URL/путей
+          if (user.avatar.startsWith('http://') || 
+              user.avatar.startsWith('https://') || 
+              user.avatar.startsWith('data:image') || 
+              user.avatar.startsWith('/') ||
+              user.avatar.startsWith('./') ||
+              user.avatar.startsWith('../')) {
+            return user.avatar;
+          }
         }
       }
       
-      // Если аватара нет, возвращаем null
+      // Если аватара нет или он невалиден, возвращаем null
       return null;
     }
     
@@ -2276,12 +2280,13 @@
       // Получаем аватар пользователя
       const userAvatar = getUserAvatar(user);
       const avatarColor = user.avatarColor || getAvatarColor(user.nickname);
+      const initials = user.initials || getInitials(user.nickname);
       
       // Создаем HTML для маркера
       let markerHtml;
       
       if (userAvatar) {
-        // Если есть аватар, показываем его
+        // Если есть аватар, показываем его с обработкой ошибки загрузки
         markerHtml = `
           <div style="
             width: 44px;
@@ -2299,13 +2304,16 @@
             cursor: pointer;
             transition: all 0.3s ease;
             overflow: hidden;
+            position: relative;
           ">
-            <img src="${userAvatar}" alt="${user.nickname || 'Пользователь'}" style="width: 100%; height: 100%; object-fit: cover;">
+            <img src="${userAvatar}" 
+                 alt="${user.nickname || 'Пользователь'}" 
+                 style="width: 100%; height: 100%; object-fit: cover;"
+                 onerror="this.style.display='none'; this.parentElement.innerHTML='${initials}'; this.parentElement.style.display='flex'; this.parentElement.style.alignItems='center'; this.parentElement.style.justifyContent='center';">
           </div>
         `;
       } else {
         // Если аватара нет, показываем инициалы
-        const initials = user.initials || getInitials(user.nickname);
         markerHtml = `
           <div style="
             width: 44px;
@@ -2397,6 +2405,7 @@
       const userAvatar = getUserAvatar(user);
       const avatarColor = user.avatarColor || getAvatarColor(user.nickname);
       const isOnline = user.status === 'online';
+      const initials = user.initials || getInitials(user.nickname);
       
       // Вычисляем расстояние до пользователя
       let distanceText = '...';
@@ -2427,11 +2436,13 @@
             flex-shrink: 0;
             overflow: hidden;
           ">
-            <img src="${userAvatar}" alt="${user.nickname || 'Пользователь'}" style="width: 100%; height: 100%; object-fit: cover;">
+            <img src="${userAvatar}" 
+                 alt="${user.nickname || 'Пользователь'}" 
+                 style="width: 100%; height: 100%; object-fit: cover;"
+                 onerror="this.style.display='none'; this.parentElement.innerHTML='${initials}'; this.parentElement.style.display='flex'; this.parentElement.style.alignItems='center'; this.parentElement.style.justifyContent='center';">
           </div>
         `;
       } else {
-        const initials = user.initials || getInitials(user.nickname);
         avatarHtml = `
           <div style="
             width: 50px;
@@ -2637,11 +2648,12 @@
       const userAvatar = getUserAvatar(currentUser);
       const avatarColor = getAvatarColor(currentUser.nickname);
       const markerColor = isIncognitoMode ? '#FF4444' : '#2CB4FF';
+      const initials = getInitials(currentUser.nickname);
       
       let markerHtml;
       
       if (userAvatar) {
-        // Если есть аватар, показываем его
+        // Если есть аватар, показываем его с обработкой ошибки
         markerHtml = `
           <div style="
             width: 50px;
@@ -2660,7 +2672,10 @@
             position: relative;
             overflow: hidden;
           ">
-            <img src="${userAvatar}" alt="${currentUser.nickname || 'Вы'}" style="width: 100%; height: 100%; object-fit: cover;">
+            <img src="${userAvatar}" 
+                 alt="${currentUser.nickname || 'Вы'}" 
+                 style="width: 100%; height: 100%; object-fit: cover;"
+                 onerror="this.style.display='none'; this.parentElement.innerHTML='${initials}'; this.parentElement.style.display='flex'; this.parentElement.style.alignItems='center'; this.parentElement.style.justifyContent='center';">
             ${isIncognitoMode ? `
               <div style="
                 position: absolute;
@@ -2681,7 +2696,6 @@
         `;
       } else {
         // Если аватара нет, показываем инициалы
-        const initials = getInitials(currentUser.nickname);
         markerHtml = `
           <div style="
             width: 50px;
@@ -2760,6 +2774,7 @@
       // Получаем аватар текущего пользователя
       const userAvatar = getUserAvatar(currentUser);
       const avatarColor = getAvatarColor(currentUser.nickname);
+      const initials = getInitials(currentUser.nickname);
       
       // HTML для аватара/инициалов
       let avatarHtml;
@@ -2779,11 +2794,13 @@
             flex-shrink: 0;
             overflow: hidden;
           ">
-            <img src="${userAvatar}" alt="${currentUser.nickname || 'Вы'}" style="width: 100%; height: 100%; object-fit: cover;">
+            <img src="${userAvatar}" 
+                 alt="${currentUser.nickname || 'Вы'}" 
+                 style="width: 100%; height: 100%; object-fit: cover;"
+                 onerror="this.style.display='none'; this.parentElement.innerHTML='${initials}'; this.parentElement.style.display='flex'; this.parentElement.style.alignItems='center'; this.parentElement.style.justifyContent='center';">
           </div>
         `;
       } else {
-        const initials = getInitials(currentUser.nickname);
         avatarHtml = `
           <div style="
             width: 50px;
@@ -2901,11 +2918,37 @@
       const menuIcon = document.querySelector('.balloon-menu-icon');
       const userAvatar = getUserAvatar(user);
       const avatarColor = user.avatarColor || getAvatarColor(user.nickname);
+      const initials = getInitials(user.nickname);
       
       if (userAvatar) {
-        menuIcon.innerHTML = `<img src="${userAvatar}" alt="${user.nickname}" style="width: 100%; height: 100%; object-fit: cover;">`;
+        // Создаем изображение с обработкой ошибки
+        const img = document.createElement('img');
+        img.src = userAvatar;
+        img.alt = user.nickname || 'Пользователь';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        
+        img.onerror = function() {
+          // Если изображение не загрузилось, показываем инициалы
+          menuIcon.innerHTML = '';
+          const initialsDiv = document.createElement('div');
+          initialsDiv.style.width = '100%';
+          initialsDiv.style.height = '100%';
+          initialsDiv.style.display = 'flex';
+          initialsDiv.style.alignItems = 'center';
+          initialsDiv.style.justifyContent = 'center';
+          initialsDiv.style.background = avatarColor;
+          initialsDiv.style.color = 'white';
+          initialsDiv.style.fontWeight = '600';
+          initialsDiv.style.fontSize = '18px';
+          initialsDiv.textContent = initials;
+          menuIcon.appendChild(initialsDiv);
+        };
+        
+        menuIcon.innerHTML = '';
+        menuIcon.appendChild(img);
       } else {
-        const initials = getInitials(user.nickname);
         menuIcon.innerHTML = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: ${avatarColor}; color: white; font-weight: 600; font-size: 18px;">${initials}</div>`;
       }
       
@@ -3067,21 +3110,42 @@
       // Получаем аватар пользователя
       const userAvatar = getUserAvatar(user);
       const avatarColor = user.avatarColor || getAvatarColor(user.nickname);
+      const initials = user.initials || getInitials(user.nickname);
       
       // Очищаем содержимое аватара
       avatar.innerHTML = '';
+      avatar.style.background = avatarColor;
       
       if (userAvatar) {
-        // Если есть аватар, показываем его
+        // Если есть аватар, создаем изображение с обработкой ошибки
         const img = document.createElement('img');
         img.src = userAvatar;
         img.alt = user.nickname || 'Пользователь';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        
+        img.onerror = function() {
+          // Если изображение не загрузилось, показываем инициалы
+          avatar.innerHTML = initials;
+          avatar.style.display = 'flex';
+          avatar.style.alignItems = 'center';
+          avatar.style.justifyContent = 'center';
+          avatar.style.fontSize = '24px';
+          avatar.style.fontWeight = '600';
+          avatar.style.color = 'white';
+        };
+        
         avatar.appendChild(img);
       } else {
         // Если аватара нет, показываем инициалы
-        const initials = user.initials || getInitials(user.nickname);
         avatar.textContent = initials;
-        avatar.style.background = avatarColor;
+        avatar.style.display = 'flex';
+        avatar.style.alignItems = 'center';
+        avatar.style.justifyContent = 'center';
+        avatar.style.fontSize = '24px';
+        avatar.style.fontWeight = '600';
+        avatar.style.color = 'white';
       }
       
       // Устанавливаем имя
