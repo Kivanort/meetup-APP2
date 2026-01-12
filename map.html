@@ -2876,6 +2876,39 @@
     }
     
     // ============================================
+    // ФУНКЦИИ ДЛЯ ЧАТОВ
+    // ============================================
+    
+    function openChatWithUser(userId) {
+      if (!currentUser) {
+        showTempMessage('Вы не авторизованы');
+        return;
+      }
+      
+      const user = UserSystem.getUserById(userId);
+      if (!user) {
+        showTempMessage('Пользователь не найден');
+        return;
+      }
+      
+      // Проверяем, существует ли уже чат с этим пользователем
+      let chat = ChatSystem.getChatByParticipants(currentUser.id, userId);
+      
+      // Если чат не существует, создаем его
+      if (!chat) {
+        chat = ChatSystem.createChat(currentUser.id, userId);
+      }
+      
+      // Сохраняем информацию о текущем чате
+      localStorage.setItem('current_chat_id', chat.id);
+      localStorage.setItem('current_chat_user_id', userId);
+      localStorage.setItem('current_chat_user_name', user.nickname);
+      
+      // Открываем страницу чата
+      window.location.href = 'chats.html';
+    }
+    
+    // ============================================
     // ФУНКЦИИ ДЛЯ ПОСТРОЕНИЯ МАРШРУТОВ
     // ============================================
     
@@ -3001,8 +3034,6 @@
       const endPoint = user.position;
       
       buildRouteWithYmaps(startPoint, endPoint, routingMode, user.nickname || 'Пользователь');
-      
-      // Показываем информацию о маршруте
       showRouteInfo(user.nickname || 'Пользователь');
       
       // Скрываем карточку пользователя, если она открыта
@@ -3267,12 +3298,7 @@
     }
     
     function openChat(userId) {
-      const user = UserSystem.getUserById(userId);
-      if (!user) return;
-      
-      showTempMessage('Открывается чат с ' + user.nickname);
-      // В будущем здесь будет открытие отдельной страницы чата
-      // window.location.href = `chat.html?userId=${userId}`;
+      openChatWithUser(userId);
     }
     
     function showUserProfile(userId) {
@@ -3364,11 +3390,10 @@
           
           if (chatId) {
             // Открываем существующий чат
-            window.location.href = `chat.html?chatId=${chatId}&userId=${userId}`;
+            openChatWithUser(userId);
           } else {
             // Создаем новый чат и открываем его
-            const chat = ChatSystem.createChat(currentUser.id, userId);
-            window.location.href = `chat.html?chatId=${chat.id}&userId=${userId}`;
+            openChatWithUser(userId);
           }
         });
       });
@@ -4147,7 +4172,7 @@
       
       document.getElementById('user-card-chat-btn').addEventListener('click', function() {
         if (currentSelectedUser) {
-          openChat(currentSelectedUser.id);
+          openChatWithUser(currentSelectedUser.id);
           hideUserCard();
         }
       });
