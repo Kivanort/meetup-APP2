@@ -3808,29 +3808,6 @@
       return forms[(number % 100 > 4 && number % 100 < 20) ? 2 : cases[Math.min(number % 10, 5)]];
     }
     
-    function highlightUserLocation() {
-      if (!currentUser || !currentUser.position || !map || typeof ymaps === 'undefined') return;
-      if (window.locationHighlight) {
-        map.geoObjects.remove(window.locationHighlight);
-      }
-      window.locationHighlight = new ymaps.Circle([
-        currentUser.position,
-        100
-      ], {}, {
-        fillColor: isIncognitoMode ? '#FF444433' : '#2CB4FF33',
-        strokeColor: isIncognitoMode ? '#FF4444' : '#2CB4FF',
-        strokeWidth: 2,
-        strokeOpacity: 0.8
-      });
-      map.geoObjects.add(window.locationHighlight);
-      setTimeout(() => {
-        if (window.locationHighlight && map) {
-          map.geoObjects.remove(window.locationHighlight);
-          window.locationHighlight = null;
-        }
-      }, 5000);
-    }
-    
     function toggleIncognitoMode() {
       isIncognitoMode = !isIncognitoMode;
       
@@ -4586,7 +4563,6 @@
                 duration: 1000,
                 timingFunction: 'ease-in-out'
               });
-              highlightUserLocation();
             }
           },
           (error) => {
@@ -4596,7 +4572,6 @@
                 duration: 1000,
                 timingFunction: 'ease-in-out'
               });
-              highlightUserLocation();
             }
           },
           {
