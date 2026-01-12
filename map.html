@@ -1843,8 +1843,8 @@
             if (positions.length > 1) {
               const validPositions = positions.filter(pos => 
                 Array.isArray(pos) && pos.length === 2 && 
-                !isNaN(pos[0]) && !isNaN(pos[1]) &&
-                pos[0] >= -90 && pos[0] <= 90 &&
+                !isNaN(pos[0]) || !isNaN(pos[1]) ||
+                pos[0] >= -90 && pos[0] <= 90 ||
                 pos[1] >= -180 && pos[1] <= 180
               );
               
@@ -2144,29 +2144,6 @@
         build: function() {
           this.constructor.superclass.build.call(this);
           this.getParentElement().style.cursor = 'pointer';
-          // Добавляем обработчик клика на всю область маркера
-          this.getParentElement().onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Закрываем все открытые балуны
-            map.balloon.close();
-            
-            // Показываем выезжающее меню
-            showBalloonMenu(user);
-            
-            // Немного смещаем карту к метке, если она близко к краю
-            const pixelPosition = map.getPixelBounds(user.position);
-            const mapSize = map.container.getSize();
-            
-            if (pixelPosition[0] < 100 || pixelPosition[0] > mapSize[0] - 100 ||
-                pixelPosition[1] < 150 || pixelPosition[1] > mapSize[1] - 150) {
-              map.panTo(user.position, {
-                duration: 300,
-                timingFunction: 'ease-in-out'
-              });
-            }
-          };
         }
       });
       
@@ -2484,14 +2461,6 @@
         build: function() {
           this.constructor.superclass.build.call(this);
           this.getParentElement().style.cursor = 'pointer';
-          // Добавляем обработчик клика на всю область маркера
-          this.getParentElement().onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            showUserCard(currentUser);
-            map.balloon.close();
-          };
         }
       });
       
@@ -2876,39 +2845,6 @@
     }
     
     // ============================================
-    // ФУНКЦИИ ДЛЯ ЧАТОВ
-    // ============================================
-    
-    function openChatWithUser(userId) {
-      if (!currentUser) {
-        showTempMessage('Вы не авторизованы');
-        return;
-      }
-      
-      const user = UserSystem.getUserById(userId);
-      if (!user) {
-        showTempMessage('Пользователь не найден');
-        return;
-      }
-      
-      // Проверяем, существует ли уже чат с этим пользователем
-      let chat = ChatSystem.getChatByParticipants(currentUser.id, userId);
-      
-      // Если чат не существует, создаем его
-      if (!chat) {
-        chat = ChatSystem.createChat(currentUser.id, userId);
-      }
-      
-      // Сохраняем информацию о текущем чате
-      localStorage.setItem('current_chat_id', chat.id);
-      localStorage.setItem('current_chat_user_id', userId);
-      localStorage.setItem('current_chat_user_name', user.nickname);
-      
-      // Открываем страницу чата
-      window.location.href = 'chat.html';
-    }
-    
-    // ============================================
     // ФУНКЦИИ ДЛЯ ПОСТРОЕНИЯ МАРШРУТОВ
     // ============================================
     
@@ -3034,6 +2970,8 @@
       const endPoint = user.position;
       
       buildRouteWithYmaps(startPoint, endPoint, routingMode, user.nickname || 'Пользователь');
+      
+      // Показываем информацию о маршруте
       showRouteInfo(user.nickname || 'Пользователь');
       
       // Скрываем карточку пользователя, если она открыта
@@ -3126,6 +3064,249 @@
         case 'taxi': return '#06D6A0';
         default: return '#FF6B6B';
       }
+    }
+    
+    // ============================================
+    // ФУНКЦИИ ДЛЯ ШАГОМЕРА С ОБНОВЛЕНИЕМ В РЕАЛЬНОМ ВРЕМЕНИ
+    // ============================================
+    
+    function openPedometerWindow() {
+      const overlay = document.getElementById('pedometer-overlay');
+      const content = document.getElementById('pedometer-content');
+      
+      // Проверяем поддержку шагомера
+      if (!Pedometer.isSupported()) {
+        content.innerHTML = `
+          <div class="pedometer-not-supported">
+            <span class="material-icons">directions_walk_off</span>
+            <div>Шагомер не поддерживается вашим устройством</div>
+            <div style="font-size: 12px; margin-top: 10px; color: #666;">
+              Для работы шагомера требуется устройство с акселерометром
+            </div>
+          </div>
+        `;
+        overlay.classList.add('active');
+        return;
+      }
+      
+      // Инициализируем шагомер
+      Pedometer.initialize();
+      const stats = Pedometer.getStats();
+      
+      content.innerHTML = `
+        <div class="pedometer-stats" id="pedometer-stats">
+          <div class="pedometer-stat">
+            <div class="stat-value" id="today-steps">${stats.today}</div>
+            <div class="stat-label">ШАГОВ СЕГОДНЯ</div>
+            <div class="stat-subvalue" id="today-distance">${stats.distanceToday.toFixed(2)} км</div>
+            <div style="font-size: 12px; color: #2CB4FF; margin-top: 5px;" id="active-steps">
+              Активно: ${stats.activeSteps} шагов
+            </div>
+          </div>
+          
+          <div class="pedometer-stat">
+            <div class="stat-value" id="week-steps">${stats.week}</div>
+            <div class="stat-label">ШАГОВ ЗА НЕДЕЛЮ</div>
+            <div class="stat-subvalue">${(stats.week * 0.00076).toFixed(2)} км</div>
+          </div>
+          
+          <div class="pedometer-stat">
+            <div class="stat-value" id="month-steps">${stats.month}</div>
+            <div class="stat-label">ШАГОВ ЗА МЕСЯЦ</div>
+            <div class="stat-subvalue">${(stats.month * 0.00076).toFixed(2)} км</div>
+          </div>
+          
+          <div class="pedometer-goal">
+            <div class="goal-title">ЦЕЛЬ НА ДЕНЬ: ${stats.goal} шагов</div>
+            <div class="goal-progress-bar">
+              <div class="goal-progress-fill" id="goal-progress" style="width: ${stats.goalProgress}%"></div>
+            </div>
+            <div class="goal-info">
+              <span>0</span>
+              <span id="goal-percent">${Math.round(stats.goalProgress)}%</span>
+              <span>${stats.goal}</span>
+            </div>
+            <div style="text-align: center; font-size: 12px; color: #34eb89; margin-top: 5px;" id="remaining-steps">
+              Осталось: ${stats.remainingSteps} шагов
+            </div>
+          </div>
+        </div>
+        
+        <div class="pedometer-actions">
+          <button class="pedometer-btn ${stats.isRunning ? 'btn-pause' : 'btn-start'}" id="pedometer-toggle-btn">
+            <span class="material-icons">${stats.isRunning ? 'pause' : 'play_arrow'}</span>
+            ${stats.isRunning ? 'Приостановить' : 'Запустить шагомер'}
+          </button>
+          <button class="pedometer-btn btn-simulate" id="pedometer-simulate-btn">
+            <span class="material-icons">shuffle</span>
+            Тест (50 шагов)
+          </button>
+          <button class="pedometer-btn btn-reset" id="pedometer-reset-btn" style="display: ${stats.today > 0 ? 'flex' : 'none'}">
+            <span class="material-icons">replay</span>
+            Сбросить сегодня
+          </button>
+        </div>
+      `;
+      
+      // Стили для кнопок
+      const style = document.createElement('style');
+      style.textContent = `
+        .btn-pause {
+          background: linear-gradient(135deg, #FF6B6B 0%, #FF4444 100%) !important;
+          color: white !important;
+        }
+        .btn-reset {
+          background: linear-gradient(135deg, #FFD166 0%, #FFB347 100%) !important;
+          color: white !important;
+        }
+        .step-animation {
+          animation: stepBounce 0.3s ease;
+        }
+        .pulse-animation {
+          animation: pulse 1s ease;
+        }
+        @keyframes stepBounce {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+          100% { transform: scale(1); }
+        }
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(52,235,137,0.7); }
+          70% { box-shadow: 0 0 0 10px rgba(52,235,137,0); }
+          100% { box-shadow: 0 0 0 0 rgba(52,235,137,0); }
+        }
+      `;
+      content.appendChild(style);
+      
+      overlay.classList.add('active');
+      
+      // Функция обновления статистики на экране
+      function updatePedometerDisplay(stats) {
+        const todaySteps = document.getElementById('today-steps');
+        const weekSteps = document.getElementById('week-steps');
+        const monthSteps = document.getElementById('month-steps');
+        const todayDistance = document.getElementById('today-distance');
+        const goalProgress = document.getElementById('goal-progress');
+        const goalPercent = document.getElementById('goal-percent');
+        const remainingSteps = document.getElementById('remaining-steps');
+        const activeSteps = document.getElementById('active-steps');
+        const toggleBtn = document.getElementById('pedometer-toggle-btn');
+        const resetBtn = document.getElementById('pedometer-reset-btn');
+        
+        if (todaySteps) {
+          // Анимация при изменении значения
+          if (parseInt(todaySteps.textContent) !== stats.today) {
+            todaySteps.classList.add('step-animation');
+            setTimeout(() => todaySteps.classList.remove('step-animation'), 300);
+          }
+          todaySteps.textContent = stats.today;
+        }
+        
+        if (weekSteps) weekSteps.textContent = stats.week;
+        if (monthSteps) monthSteps.textContent = stats.month;
+        if (todayDistance) todayDistance.textContent = stats.distanceToday.toFixed(2) + ' км';
+        if (goalProgress) {
+          goalProgress.style.width = stats.goalProgress + '%';
+          if (stats.goalProgress >= 100) {
+            goalProgress.classList.add('pulse-animation');
+          } else {
+            goalProgress.classList.remove('pulse-animation');
+          }
+        }
+        if (goalPercent) goalPercent.textContent = Math.round(stats.goalProgress) + '%';
+        if (remainingSteps) remainingSteps.textContent = `Осталось: ${stats.remainingSteps} шагов`;
+        if (activeSteps) activeSteps.textContent = `Активно: ${stats.activeSteps} шагов`;
+        
+        // Обновляем кнопки
+        if (toggleBtn) {
+          toggleBtn.innerHTML = `
+            <span class="material-icons">${stats.isRunning ? 'pause' : 'play_arrow'}</span>
+            ${stats.isRunning ? 'Приостановить' : 'Запустить шагомер'}
+          `;
+          toggleBtn.className = `pedometer-btn ${stats.isRunning ? 'btn-pause' : 'btn-start'}`;
+        }
+        
+        if (resetBtn) {
+          resetBtn.style.display = stats.today > 0 ? 'flex' : 'none';
+        }
+      }
+      
+      // Обработчик события обновления шагов
+      function handlePedometerUpdate(e) {
+        updatePedometerDisplay(e.detail);
+      }
+      
+      // Обработчик события отдельного шага (для анимации)
+      function handlePedometerStep(e) {
+        const todaySteps = document.getElementById('today-steps');
+        if (todaySteps && e.detail.step) {
+          // Мигание при каждом шаге
+          todaySteps.style.color = '#FFD700';
+          setTimeout(() => {
+            todaySteps.style.color = '#34eb89';
+          }, 100);
+        }
+      }
+      
+      // Добавляем обработчики событий
+      window.addEventListener('pedometerUpdate', handlePedometerUpdate);
+      window.addEventListener('pedometerStep', handlePedometerStep);
+      
+      // Сохраняем обработчики для последующего удаления
+      overlay.dataset.updateHandler = 'handlePedometerUpdate';
+      overlay.dataset.stepHandler = 'handlePedometerStep';
+      
+      // Обработчики кнопок шагомера
+      document.getElementById('pedometer-toggle-btn')?.addEventListener('click', function() {
+        const isRunning = Pedometer.toggleTracking();
+        const stats = Pedometer.getStats();
+        
+        if (isRunning) {
+          showTempMessage('Шагомер запущен. Носите устройство с собой для отслеживания шагов.');
+        } else {
+          showTempMessage('Шагомер приостановлен.');
+        }
+        
+        updatePedometerDisplay(stats);
+      });
+      
+      document.getElementById('pedometer-simulate-btn')?.addEventListener('click', function() {
+        const steps = Pedometer.simulateSteps();
+        showTempMessage(`Добавлено ${steps} тестовых шагов`);
+      });
+      
+      document.getElementById('pedometer-reset-btn')?.addEventListener('click', function() {
+        if (confirm('Сбросить статистику за сегодня?')) {
+          Pedometer.resetStats('today');
+          const stats = Pedometer.getStats();
+          updatePedometerDisplay(stats);
+          showTempMessage('Статистика за сегодня сброшена');
+        }
+      });
+      
+      // Обработчик закрытия шагомера
+      document.getElementById('pedometer-close-btn').addEventListener('click', function() {
+        // Удаляем обработчики событий
+        if (overlay.dataset.updateHandler) {
+          window.removeEventListener('pedometerUpdate', handlePedometerUpdate);
+        }
+        if (overlay.dataset.stepHandler) {
+          window.removeEventListener('pedometerStep', handlePedometerStep);
+        }
+        
+        // Останавливаем отслеживание при закрытии
+        Pedometer.stopTracking();
+        
+        closePedometerWindow();
+      });
+      
+      // Обновляем статистику сразу
+      updatePedometerDisplay(stats);
+    }
+    
+    function closePedometerWindow() {
+      const overlay = document.getElementById('pedometer-overlay');
+      overlay.classList.remove('active');
     }
     
     // ============================================
@@ -3298,7 +3479,12 @@
     }
     
     function openChat(userId) {
-      openChatWithUser(userId);
+      const user = UserSystem.getUserById(userId);
+      if (!user) return;
+      
+      showTempMessage('Открывается чат с ' + user.nickname);
+      // В будущем здесь будет открытие отдельной страницы чата
+      // window.location.href = `chat.html?userId=${userId}`;
     }
     
     function showUserProfile(userId) {
@@ -3390,10 +3576,11 @@
           
           if (chatId) {
             // Открываем существующий чат
-            openChatWithUser(userId);
+            window.location.href = `chat.html?chatId=${chatId}&userId=${userId}`;
           } else {
             // Создаем новый чат и открываем его
-            openChatWithUser(userId);
+            const chat = ChatSystem.createChat(currentUser.id, userId);
+            window.location.href = `chat.html?chatId=${chat.id}&userId=${userId}`;
           }
         });
       });
@@ -3409,125 +3596,6 @@
       } else {
         badge.style.display = 'none';
       }
-    }
-    
-    function openPedometerWindow() {
-      const overlay = document.getElementById('pedometer-overlay');
-      const content = document.getElementById('pedometer-content');
-      
-      // Проверяем поддержку шагомера
-      if (!Pedometer.isSupported()) {
-        content.innerHTML = `
-          <div class="pedometer-not-supported">
-            <span class="material-icons">directions_walk_off</span>
-            <div>Шагомер не поддерживается вашим устройством</div>
-            <div style="font-size: 12px; margin-top: 10px; color: #666;">
-              Для работы шагомера требуется устройство с акселерометром
-            </div>
-          </div>
-        `;
-        overlay.classList.add('active');
-        return;
-      }
-      
-      // Инициализируем шагомер
-      Pedometer.initialize();
-      const stats = Pedometer.getStats();
-      
-      content.innerHTML = `
-        <div class="pedometer-stats">
-          <div class="pedometer-stat">
-            <div class="stat-value">${stats.today}</div>
-            <div class="stat-label">ШАГОВ СЕГОДНЯ</div>
-            <div class="stat-subvalue">${stats.distanceToday.toFixed(2)} км</div>
-          </div>
-          
-          <div class="pedometer-stat">
-            <div class="stat-value">${stats.week}</div>
-            <div class="stat-label">ШАГОВ ЗА НЕДЕЛЮ</div>
-            <div class="stat-subvalue">${(stats.week * 0.00076).toFixed(2)} км</div>
-          </div>
-          
-          <div class="pedometer-stat">
-            <div class="stat-value">${stats.month}</div>
-            <div class="stat-label">ШАГОВ ЗА МЕСЯЦ</div>
-            <div class="stat-subvalue">${(stats.month * 0.00076).toFixed(2)} км</div>
-          </div>
-          
-          <div class="pedometer-goal">
-            <div class="goal-title">ЦЕЛЬ НА ДЕНЬ: ${stats.goal} шагов</div>
-            <div class="goal-progress-bar">
-              <div class="goal-progress-fill" style="width: ${stats.goalProgress}%"></div>
-            </div>
-            <div class="goal-info">
-              <span>0</span>
-              <span>${Math.round(stats.goalProgress)}%</span>
-              <span>${stats.goal}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="pedometer-actions">
-          <button class="pedometer-btn btn-start" id="pedometer-start-btn">
-            <span class="material-icons">play_arrow</span>
-            Запустить шагомер
-          </button>
-          <button class="pedometer-btn btn-simulate" id="pedometer-simulate-btn">
-            <span class="material-icons">shuffle</span>
-            Тест (50 шагов)
-          </button>
-        </div>
-      `;
-      
-      overlay.classList.add('active');
-      
-      // Обработчики кнопок шагомера
-      document.getElementById('pedometer-start-btn')?.addEventListener('click', function() {
-        showTempMessage('Шагомер запущен. Носите устройство с собой для отслеживания шагов.');
-      });
-      
-      document.getElementById('pedometer-simulate-btn')?.addEventListener('click', function() {
-        const steps = Pedometer.simulateSteps();
-        showTempMessage(`Добавлено ${steps} тестовых шагов`);
-        updatePedometerStats();
-      });
-      
-      // Обработчик закрытия шагомера
-      document.getElementById('pedometer-close-btn').addEventListener('click', function() {
-        closePedometerWindow();
-      });
-      
-      // Обновляем статистику каждые 5 секунд
-      window.addEventListener('pedometerUpdate', updatePedometerStats);
-    }
-    
-    function updatePedometerStats() {
-      const stats = Pedometer.getStats();
-      const content = document.getElementById('pedometer-content');
-      
-      if (content) {
-        const statValues = content.querySelectorAll('.stat-value');
-        const statSubvalues = content.querySelectorAll('.stat-subvalue');
-        const progressFill = content.querySelector('.goal-progress-fill');
-        const goalPercent = content.querySelector('.goal-info span:nth-child(2)');
-        
-        if (statValues[0]) statValues[0].textContent = stats.today;
-        if (statValues[1]) statValues[1].textContent = stats.week;
-        if (statValues[2]) statValues[2].textContent = stats.month;
-        
-        if (statSubvalues[0]) statSubvalues[0].textContent = stats.distanceToday.toFixed(2) + ' км';
-        if (statSubvalues[1]) statSubvalues[1].textContent = (stats.week * 0.00076).toFixed(2) + ' км';
-        if (statSubvalues[2]) statSubvalues[2].textContent = (stats.month * 0.00076).toFixed(2) + ' км';
-        
-        if (progressFill) progressFill.style.width = stats.goalProgress + '%';
-        if (goalPercent) goalPercent.textContent = Math.round(stats.goalProgress) + '%';
-      }
-    }
-    
-    function closePedometerWindow() {
-      const overlay = document.getElementById('pedometer-overlay');
-      overlay.classList.remove('active');
-      window.removeEventListener('pedometerUpdate', updatePedometerStats);
     }
     
     // Функции для создания встречи
@@ -4172,7 +4240,7 @@
       
       document.getElementById('user-card-chat-btn').addEventListener('click', function() {
         if (currentSelectedUser) {
-          openChatWithUser(currentSelectedUser.id);
+          openChat(currentSelectedUser.id);
           hideUserCard();
         }
       });
@@ -4320,4 +4388,3 @@
   </script>
 </body>
 </html>
-
