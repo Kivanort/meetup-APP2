@@ -99,7 +99,7 @@
       box-shadow: 0 8px 32px rgba(0,0,0,0.4);
       z-index: 99;
       display: none;
-      min-width: 220px;
+      min-width: 240px;
     }
     .display-panel.active {
       display: block;
@@ -1242,6 +1242,88 @@
       transform: translateX(-50%);
     }
     
+    /* Улучшенные стили для меню отображения */
+    .display-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      color: var(--text-light);
+      font-size: 14px;
+      cursor: pointer;
+    }
+    
+    .display-option-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .display-color-indicator {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--container);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.1);
+    }
+    
+    .display-option-text {
+      font-size: 14px;
+      color: var(--text-light);
+    }
+    
+    /* Цвета для индикаторов */
+    .color-all { background: linear-gradient(45deg, #2CB4FF, #B970FE); }
+    .color-friends { background: var(--primary); }
+    .color-online { background: #34eb89; }
+    .color-new { background: #FFD166; }
+    
+    /* Улучшенные стили для селектора маркеров */
+    .marker-style-preview {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    
+    .marker-preview-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: white;
+    }
+    
+    .marker-color-blue {
+      background: #2CB4FF;
+      border-color: #1a8fd8;
+    }
+    
+    .marker-color-green {
+      background: #34eb89;
+      border-color: #1ac97a;
+    }
+    
+    .marker-color-red {
+      background: #FF6B6B;
+      border-color: #ff3b3b;
+    }
+    
+    .marker-color-purple {
+      background: #B970FE;
+      border-color: #9a45fd;
+    }
+    
+    .marker-color-gold {
+      background: #FFD700;
+      border-color: #daa520;
+    }
+    
     @media (max-width: 768px) {
       .header-content {padding: 12px 15px;}
       .app-logo {font-size: 20px;}
@@ -1255,7 +1337,7 @@
       .map-controls-top {top: 15px; left: 15px;}
       .map-filter-btn-left {width: 50px; height: 50px;}
       .filter-panel {top: 60px; right: 15px; min-width: 180px;}
-      .display-panel {top: 60px; right: 15px; min-width: 180px;}
+      .display-panel {top: 60px; right: 15px; min-width: 200px;}
       .meetup-content {padding: 20px;}
       .invite-methods {flex-direction: column;}
       .route-controls {bottom: 90px; left: 15px;}
@@ -1419,34 +1501,72 @@
       
       <!-- Панель отображения -->
       <div class="display-panel" id="display-panel">
-        <h4 style="margin: 0 0 15px 0; color: var(--text-light);">Отображение пользователей</h4>
-        <label class="filter-option">
+        <h4 style="margin: 0 0 15px 0; color: var(--text-light); text-align: center;">Отображение пользователей</h4>
+        
+        <div class="display-option">
+          <div class="display-option-left">
+            <div class="display-color-indicator color-all"></div>
+            <span class="display-option-text">Все пользователи</span>
+          </div>
           <input type="checkbox" id="display-all" checked>
-          <span>Все пользователи</span>
-        </label>
-        <label class="filter-option">
+        </div>
+        
+        <div class="display-option">
+          <div class="display-option-left">
+            <div class="display-color-indicator color-friends"></div>
+            <span class="display-option-text">Только друзья</span>
+          </div>
           <input type="checkbox" id="display-friends" checked>
-          <span>Только друзья</span>
-        </label>
-        <label class="filter-option">
+        </div>
+        
+        <div class="display-option">
+          <div class="display-option-left">
+            <div class="display-color-indicator color-online"></div>
+            <span class="display-option-text">Только онлайн</span>
+          </div>
           <input type="checkbox" id="display-online" checked>
-          <span>Только онлайн</span>
-        </label>
-        <label class="filter-option">
+        </div>
+        
+        <div class="display-option">
+          <div class="display-option-left">
+            <div class="display-color-indicator color-new"></div>
+            <span class="display-option-text">Новые пользователи</span>
+          </div>
           <input type="checkbox" id="display-new" checked>
-          <span>Новые пользователи</span>
-        </label>
+        </div>
+        
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
           <label style="color: var(--text-muted); font-size: 12px; display: block; margin-bottom: 8px;">
             Маркеры друзей: <span id="friend-marker-style">синий</span>
           </label>
-          <select id="friend-marker-select" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--container); color: white; border: 1px solid var(--primary);">
+          <select id="friend-marker-select" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--container); color: white; border: 1px solid var(--primary); margin-bottom: 8px;">
             <option value="blue">Синий</option>
             <option value="green">Зеленый</option>
             <option value="red">Красный</option>
             <option value="purple">Фиолетовый</option>
             <option value="gold">Золотой</option>
           </select>
+          
+          <div class="marker-style-preview">
+            <div class="marker-preview-circle marker-color-blue" id="marker-preview-blue">
+              <span class="material-icons" style="font-size: 12px;">person</span>
+            </div>
+            <div class="marker-preview-circle marker-color-green" id="marker-preview-green" style="display: none;">
+              <span class="material-icons" style="font-size: 12px;">person</span>
+            </div>
+            <div class="marker-preview-circle marker-color-red" id="marker-preview-red" style="display: none;">
+              <span class="material-icons" style="font-size: 12px;">person</span>
+            </div>
+            <div class="marker-preview-circle marker-color-purple" id="marker-preview-purple" style="display: none;">
+              <span class="material-icons" style="font-size: 12px;">person</span>
+            </div>
+            <div class="marker-preview-circle marker-color-gold" id="marker-preview-gold" style="display: none;">
+              <span class="material-icons" style="font-size: 12px;">person</span>
+            </div>
+            <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">
+              <span id="marker-preview-text">синий</span> цвет
+            </span>
+          </div>
         </div>
       </div>
       
@@ -1540,7 +1660,7 @@
     <div class="route-type-container">
       <div class="route-type-header">
         <div class="route-type-title">Построить маршрут</div>
-        <div class="route-type-subtitle">Выберите тип маршрута</div>
+        <div class="route-type-subtitle">Выберите тип маршрута        </div>
       </div>
       <div class="route-type-content" id="route-type-content">
         <!-- Варианты маршрутов будут добавлены через JS -->
@@ -4133,6 +4253,43 @@
           document.getElementById('friend-marker-style').textContent = 
             markerSelect.options[markerSelect.selectedIndex].text;
         }
+        
+        // Обновляем превью маркера
+        updateMarkerPreview(displaySettings.friendMarker);
+      }
+    }
+    
+    function updateMarkerPreview(markerColor) {
+      // Скрываем все превью
+      document.getElementById('marker-preview-blue').style.display = 'none';
+      document.getElementById('marker-preview-green').style.display = 'none';
+      document.getElementById('marker-preview-red').style.display = 'none';
+      document.getElementById('marker-preview-purple').style.display = 'none';
+      document.getElementById('marker-preview-gold').style.display = 'none';
+      
+      // Показываем нужное превью
+      const previewElement = document.getElementById(`marker-preview-${markerColor}`);
+      if (previewElement) {
+        previewElement.style.display = 'flex';
+      }
+      
+      // Обновляем текст
+      const markerText = document.getElementById('marker-preview-text');
+      if (markerText) {
+        switch(markerColor) {
+          case 'blue': markerText.textContent = 'синий'; break;
+          case 'green': markerText.textContent = 'зеленый'; break;
+          case 'red': markerText.textContent = 'красный'; break;
+          case 'purple': markerText.textContent = 'фиолетовый'; break;
+          case 'gold': markerText.textContent = 'золотой'; break;
+          default: markerText.textContent = 'синий';
+        }
+      }
+      
+      // Обновляем текст в заголовке
+      const markerStyleText = document.getElementById('friend-marker-style');
+      if (markerStyleText) {
+        markerStyleText.textContent = markerText.textContent;
       }
     }
     
@@ -4270,6 +4427,38 @@
       document.getElementById('route-type-cancel-btn').addEventListener('click', closeRouteTypeSelector);
       document.getElementById('route-type-build-btn').addEventListener('click', buildRouteToUser);
       
+      // Обработчики для меню отображения
+      document.getElementById('display-all').addEventListener('change', function() {
+        displaySettings.all = this.checked;
+        saveDisplaySettings();
+        updateMap();
+      });
+      
+      document.getElementById('display-friends').addEventListener('change', function() {
+        displaySettings.friends = this.checked;
+        saveDisplaySettings();
+        updateMap();
+      });
+      
+      document.getElementById('display-online').addEventListener('change', function() {
+        displaySettings.online = this.checked;
+        saveDisplaySettings();
+        updateMap();
+      });
+      
+      document.getElementById('display-new').addEventListener('change', function() {
+        displaySettings.new = this.checked;
+        saveDisplaySettings();
+        updateMap();
+      });
+      
+      document.getElementById('friend-marker-select').addEventListener('change', function() {
+        displaySettings.friendMarker = this.value;
+        saveDisplaySettings();
+        updateMarkerPreview(this.value);
+        updateMap();
+      });
+      
       // Закрытие окон при клике вне
       document.getElementById('meetup-overlay').addEventListener('click', function(e) {
         if (e.target === this) {
@@ -4304,6 +4493,11 @@
           const balloonMenu = document.getElementById('balloon-menu');
           if (balloonMenu.classList.contains('active')) {
             hideBalloonMenu();
+          }
+          
+          const displayPanel = document.getElementById('display-panel');
+          if (displayPanel.classList.contains('active')) {
+            displayPanel.classList.remove('active');
           }
         }
       });
